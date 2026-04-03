@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-const BACKEND_URL = "http://10.112.66.2:5000";
+const BACKEND_URL = "http://192.168.1.117:5000";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],

@@ -1,13 +1,43 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import api from '../api/axios';
 import { ArrowLeft, Star, Phone, Video, MessageSquare, ShieldCheck, Clock } from 'lucide-react';
 
 const LawyerProfile = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { user } = useSelector(state => state.auth);
     const [lawyer, setLawyer] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [requestStatus, setRequestStatus] = useState(null);
+
+    useEffect(() => {
+        if (lawyer && user) {
+            const appointments = JSON.parse(localStorage.getItem('mockAppointments') || '[]');
+            const existing = appointments.find(a => 
+                String(a.lawyerId) === String(lawyer._id || lawyer.id) && 
+                String(a.userId) === String(user._id || user.id)
+            );
+            if (existing) setRequestStatus(existing.status);
+        }
+    }, [lawyer, user]);
+
+    const handleSendRequest = () => {
+        const appointments = JSON.parse(localStorage.getItem('mockAppointments') || '[]');
+        const newAppt = {
+            id: Date.now().toString(),
+            lawyerId: lawyer._id || lawyer.id,
+            userId: user._id || user.id,
+            userName: user.firstName ? `${user.firstName} ${user.lastName}` : (user.name || "User"),
+            lawyerName: lawyer.name || (lawyer.firstName ? `${lawyer.firstName} ${lawyer.lastName}` : "Lawyer"),
+            status: 'Pending',
+            timestamp: new Date().toISOString()
+        };
+        appointments.push(newAppt);
+        localStorage.setItem('mockAppointments', JSON.stringify(appointments));
+        setRequestStatus('Pending');
+    };
 
     useEffect(() => {
         const fetchLawyer = async () => {
@@ -144,28 +174,52 @@ const LawyerProfile = () => {
 
             {/* Floating Bottom Actions */}
             <div className="fixed bottom-0 w-full max-w-md bg-white border-t border-gray-200 p-4 pb-6 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] z-30">
-                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Connect Now</h4>
-                <div className="grid grid-cols-3 gap-3">
+                {requestStatus !== 'Accepted' ? (
+                    <div className="flex flex-col items-center">
+                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Consultation Access</h4>
+                        {requestStatus === 'Pending' ? (
+                            <button disabled className="w-full bg-amber-500 text-white font-bold py-3 rounded-xl opacity-70 cursor-not-allowed">
+                                Request Pending Approval...
+                            </button>
+                        ) : requestStatus === 'Rejected' ? (
+                            <button disabled className="w-full bg-red-500 text-white font-bold py-3 rounded-xl opacity-70 cursor-not-allowed">
+                                Request Declined
+                            </button>
+                        ) : (
+                            <button onClick={handleSendRequest} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition">
+                                Send Appointment Request
+                            </button>
+                        )}
+                        <p className="text-[10px] text-gray-400 mt-2 text-center items-center">
+                            Communication features will unlock once the lawyer accepts your request.
+                        </p>
+                    </div>
+                ) : (
+                    <>
+                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Request Accepted - Connect Now
+                        </h4>
+                        <div className="grid grid-cols-3 gap-3">
+                            <button onClick={() => handleConnect('audio')} className="flex flex-col items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-700 p-3 rounded-xl transition border border-blue-100">
+                                <Phone size={24} className="mb-1" />
+                                <span className="text-xs font-bold">Audio</span>
+                                <span className="text-[10px] opacity-70">₹{profile.consultationFee || 500}/min</span>
+                            </button>
 
-                    <button onClick={() => handleConnect('audio')} className="flex flex-col items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-700 p-3 rounded-xl transition border border-blue-100">
-                        <Phone size={24} className="mb-1" />
-                        <span className="text-xs font-bold">Audio</span>
-                        <span className="text-[10px] opacity-70">₹{profile.consultationFee || 500}/min</span>
-                    </button>
+                            <button onClick={() => handleConnect('video')} className="flex flex-col items-center justify-center bg-green-50 hover:bg-green-100 text-green-700 p-3 rounded-xl transition border border-green-100">
+                                <Video size={24} className="mb-1" />
+                                <span className="text-xs font-bold">Video</span>
+                                <span className="text-[10px] opacity-70">₹{(profile.consultationFee || 500) + 200}/min</span>
+                            </button>
 
-                    <button onClick={() => handleConnect('video')} className="flex flex-col items-center justify-center bg-green-50 hover:bg-green-100 text-green-700 p-3 rounded-xl transition border border-green-100">
-                        <Video size={24} className="mb-1" />
-                        <span className="text-xs font-bold">Video</span>
-                        <span className="text-[10px] opacity-70">₹{(profile.consultationFee || 500) + 200}/min</span>
-                    </button>
-
-                    <button onClick={() => handleConnect('chat')} className="flex flex-col items-center justify-center bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-xl transition shadow-lg shadow-purple-200">
-                        <MessageSquare size={24} className="mb-1" />
-                        <span className="text-xs font-bold">Chat</span>
-                        <span className="text-[10px] opacity-80">Free</span>
-                    </button>
-
-                </div>
+                            <button onClick={() => handleConnect('chat')} className="flex flex-col items-center justify-center bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-xl transition shadow-lg shadow-purple-200">
+                                <MessageSquare size={24} className="mb-1" />
+                                <span className="text-xs font-bold">Chat</span>
+                                <span className="text-[10px] opacity-80">Free</span>
+                            </button>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );

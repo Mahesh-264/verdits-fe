@@ -27,6 +27,29 @@ export default function Chat() {
     const { user } = useSelector(state => state.auth);
     const { conversations, availableLawyers, messages, activePartner, selectedMessages } = useSelector(state => state.chat);
 
+    // Mock check for communications
+    const [canChat, setCanChat] = useState(true);
+
+    useEffect(() => {
+        if (activePartner && user) {
+            const userId = user._id || user.id;
+            const partnerId = activePartner._id || activePartner.id;
+            
+            const isUserLawyer = user.role === 'lawyer';
+            const lawyerId = isUserLawyer ? userId : partnerId;
+            const clientId = isUserLawyer ? partnerId : userId;
+            
+            const appointments = JSON.parse(localStorage.getItem('mockAppointments') || '[]');
+            const existing = appointments.find(a => a.lawyerId === lawyerId && a.userId === clientId);
+            
+            if (!existing || existing.status !== 'Accepted') {
+                setCanChat(false);
+            } else {
+                setCanChat(true);
+            }
+        }
+    }, [activePartner, user]);
+
     const [text, setText] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
     const [isUploading, setIsUploading] = useState(false);
@@ -342,8 +365,17 @@ export default function Chat() {
                                 </div>
                             </div>
                             <div className="flex gap-6 text-[#aebac1] text-lg items-center">
-                                <FaVideo className="hover:text-white cursor-pointer" />
-                                <FaPhone className="hover:text-white cursor-pointer" />
+                                {canChat ? (
+                                    <>
+                                        <FaVideo className="hover:text-white cursor-pointer" />
+                                        <FaPhone className="hover:text-white cursor-pointer" />
+                                    </>
+                                ) : (
+                                    <>
+                                        <FaVideo className="opacity-30 cursor-not-allowed" />
+                                        <FaPhone className="opacity-30 cursor-not-allowed" />
+                                    </>
+                                )}
                                 <FaEllipsisV className="hover:text-white cursor-pointer" />
                             </div>
                         </div>
@@ -381,7 +413,11 @@ export default function Chat() {
                         </div>
 
                         <div className="min-h-[62px] p-3 bg-[#202c33] flex items-center gap-2 border-t border-[#222d34]">
-                            {isRecording ? (
+                            {!canChat ? (
+                                <div className="w-full flex items-center justify-center gap-2 p-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-500 font-semibold text-sm">
+                                    <FaTimes className="text-amber-500" /> Messaging is locked. An accepted appointment is required.
+                                </div>
+                            ) : isRecording ? (
                                 <div className="flex-1 flex items-center justify-between bg-[#2a3942] p-2.5 px-5 rounded-lg border border-red-500/30">
                                     <div className="flex items-center gap-3 text-red-500 font-bold"><FaMicrophone className="animate-pulse" />{Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}</div>
                                     <span className="text-[#aebac1] text-[13px] tracking-wide">Recording audio...</span>
@@ -399,10 +435,12 @@ export default function Chat() {
                                     </form>
                                 </>
                             )}
-                            <button onClick={text.trim() ? handleSend : isRecording ? stopRecording : startRecording}
-                                className={`p-3 rounded-full flex items-center justify-center transition-all ${text.trim() ? 'bg-[#00a884] text-[#111b21] hover:bg-[#00c99f]' : isRecording ? 'bg-red-500 text-white animate-pulse' : 'text-[#aebac1] hover:text-[#d1d7db]'}`}>
-                                {text.trim() ? <FaPaperPlane className="ml-1" size={16} /> : isRecording ? <FaStop size={18} /> : <FaMicrophone size={20} />}
-                            </button>
+                            {!canChat ? null : (
+                                <button onClick={text.trim() ? handleSend : isRecording ? stopRecording : startRecording}
+                                    className={`p-3 rounded-full flex items-center justify-center transition-all ${text.trim() ? 'bg-[#00a884] text-[#111b21] hover:bg-[#00c99f]' : isRecording ? 'bg-red-500 text-white animate-pulse' : 'text-[#aebac1] hover:text-[#d1d7db]'}`}>
+                                    {text.trim() ? <FaPaperPlane className="ml-1" size={16} /> : isRecording ? <FaStop size={18} /> : <FaMicrophone size={20} />}
+                                </button>
+                            )}
                         </div>
                     </>
                 ) : (

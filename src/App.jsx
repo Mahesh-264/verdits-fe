@@ -8,12 +8,14 @@ import Register from './pages/Register.jsx';
 // Existing Pages
 import Chat from './pages/Chat.jsx';
 
-// 🟢 NEW User Flow Pages (from Screens folder)
+import LandingPage from './LandingPage.jsx';
 import UserHome from './Screens/UserHome.jsx';
 import CaseSelection from './Screens/CaseSelection.jsx';
 import LawyerList from './Screens/LawyerList.jsx';
 import LawyerProfile from './Screens/LawyerProfile.jsx';
 import UserProfile from './Screens/UserProfile.jsx';
+import LawyerDashboard from './Screens/LawyerDashboard.jsx';
+import InstantConsult from './Screens/InstantConsult.jsx';
 
 // --- ROLE-BASED HUB ---
 const DashboardHub = () => {
@@ -23,9 +25,10 @@ const DashboardHub = () => {
   if (user.role === 'admin') return <Navigate to="/admin-dash" />;
 
   // 🟢 LOGIC UPDATE: 
-  // If role is 'lawyer', they go to Chat (to receive requests).
+  // If role is 'lawyer', they go to Lawyer Dashboard.
   // If role is 'user', they go to the new UserHome (to book lawyers).
-  if (user.role === 'lawyer') return <Navigate to="/chat" />;
+  if (user.role === 'lawyer') return <Navigate to="/lawyer-dash" />;
+  if (user.role === 'student') return <Navigate to="/student-home" />;
 
   return <Navigate to="/user-home" />;
 };
@@ -51,7 +54,7 @@ export default function App() {
         {/* --- Intelligent Redirector --- */}
         <Route
           path="/dashboard"
-          element={<ProtectedRoute allowedRoles={['user', 'lawyer', 'admin']}><DashboardHub /></ProtectedRoute>}
+          element={<ProtectedRoute allowedRoles={['user', 'lawyer', 'student', 'admin']}><DashboardHub /></ProtectedRoute>}
         />
 
         {/* 🟢 NEW USER FLOW ROUTES (Only for Users) */}
@@ -64,6 +67,12 @@ export default function App() {
         <Route path="/book-lawyer" element={
           <ProtectedRoute allowedRoles={['user']}>
             <CaseSelection />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/instant-consult" element={
+          <ProtectedRoute allowedRoles={['user']}>
+            <InstantConsult />
           </ProtectedRoute>
         } />
 
@@ -93,6 +102,12 @@ export default function App() {
           </ProtectedRoute>
         } />
 
+        <Route path="/lawyer-dash" element={
+          <ProtectedRoute allowedRoles={['lawyer']}>
+            <LawyerDashboard />
+          </ProtectedRoute>
+        } />
+
         {/* --- Admin Dashboard --- */}
         <Route path="/admin-dash" element={
           <ProtectedRoute allowedRoles={['admin']}>
@@ -103,9 +118,19 @@ export default function App() {
           </ProtectedRoute>
         } />
 
+        {/* --- Student Dashboard --- */}
+        <Route path="/student-home" element={
+          <ProtectedRoute allowedRoles={['student']}>
+            <div className="min-h-screen bg-zinc-950 text-white p-8">
+              <h1 className="text-3xl font-bold text-emerald-500">Student Portal</h1>
+              <p className="text-zinc-400 mt-2">Welcome to your academic and research space.</p>
+            </div>
+          </ProtectedRoute>
+        } />
+
         {/* --- Global Redirects --- */}
-        <Route path="/" element={<Navigate to="/dashboard" />} />
-        <Route path="*" element={<Navigate to="/login" />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
   );

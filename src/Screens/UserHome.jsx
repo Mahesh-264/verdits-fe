@@ -22,20 +22,29 @@ const UserHome = () => {
                 {/* Book a Lawyer */}
                 <div
                     onClick={() => navigate('/book-lawyer')}
-                    className="bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md transition"
+                    className="bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md transition text-center"
                 >
-                    <div className="h-14 w-14 bg-blue-500 rounded-full flex items-center justify-center text-white">
+                    <div className="h-14 w-14 bg-blue-500 rounded-full flex items-center justify-center text-white shrink-0 shadow-inner">
                         <BookOpen size={28} />
                     </div>
-                    <span className="font-medium text-gray-800">Book a Lawyer</span>
+                    <div>
+                        <span className="font-bold text-gray-800 block">Book a Lawyer</span>
+                        <span className="text-[10px] text-gray-500 font-medium mt-1">Appt requests, calls & chat</span>
+                    </div>
                 </div>
 
                 {/* Consult a Lawyer */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md transition">
-                    <div className="h-14 w-14 bg-green-500 rounded-full flex items-center justify-center text-white">
+                <div 
+                    onClick={() => navigate('/instant-consult')}
+                    className="bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md transition text-center border border-transparent hover:border-green-200"
+                >
+                    <div className="h-14 w-14 bg-green-500 rounded-full flex items-center justify-center text-white shrink-0 shadow-inner">
                         <MessageSquare size={28} />
                     </div>
-                    <span className="font-medium text-gray-800">Consult a Lawyer</span>
+                    <div>
+                        <span className="font-bold text-gray-800 block">Consult a Lawyer</span>
+                        <span className="text-[10px] text-gray-500 font-medium mt-1">Online lawyers for instant consult</span>
+                    </div>
                 </div>
 
                 {/* Know Your Document */}
