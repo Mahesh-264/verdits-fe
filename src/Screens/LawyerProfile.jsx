@@ -4,6 +4,18 @@ import { useSelector } from 'react-redux';
 import api from '../api/axios';
 import { ArrowLeft, Star, Phone, Video, MessageSquare, ShieldCheck, Clock } from 'lucide-react';
 
+const normalizeStatus = (status) => {
+    if (!status) return null;
+
+    const formattedStatus = String(status).toLowerCase();
+
+    if (formattedStatus === 'pending') return 'Pending';
+    if (formattedStatus === 'accepted') return 'Accepted';
+    if (formattedStatus === 'rejected') return 'Rejected';
+
+    return status;
+};
+
 const LawyerProfile = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -11,32 +23,49 @@ const LawyerProfile = () => {
     const [lawyer, setLawyer] = useState(null);
     const [loading, setLoading] = useState(true);
     const [requestStatus, setRequestStatus] = useState(null);
+    const [isSendingRequest, setIsSendingRequest] = useState(false);
 
     useEffect(() => {
-        if (lawyer && user) {
-            const appointments = JSON.parse(localStorage.getItem('mockAppointments') || '[]');
-            const existing = appointments.find(a => 
-                String(a.lawyerId) === String(lawyer._id || lawyer.id) && 
-                String(a.userId) === String(user._id || user.id)
-            );
-            if (existing) setRequestStatus(existing.status);
-        }
+        const loadExistingRequest = async () => {
+            if (!lawyer || !user) return;
+
+            try {
+                const lawyerId = lawyer._id || lawyer.id;
+                const userId = user._id || user.id;
+                const { data } = await api.get(`/appointments/${lawyerId}`);
+                const existing = data.find((appointment) => String(appointment.userId) === String(userId));
+
+                if (existing) {
+                    setRequestStatus(normalizeStatus(existing.status));
+                    return;
+                }
+
+                setRequestStatus(null);
+            } catch (error) {
+                console.error("Error fetching appointment status:", error);
+            }
+        };
+
+        loadExistingRequest();
     }, [lawyer, user]);
 
-    const handleSendRequest = () => {
-        const appointments = JSON.parse(localStorage.getItem('mockAppointments') || '[]');
-        const newAppt = {
-            id: Date.now().toString(),
-            lawyerId: lawyer._id || lawyer.id,
-            userId: user._id || user.id,
-            userName: user.firstName ? `${user.firstName} ${user.lastName}` : (user.name || "User"),
-            lawyerName: lawyer.name || (lawyer.firstName ? `${lawyer.firstName} ${lawyer.lastName}` : "Lawyer"),
-            status: 'Pending',
-            timestamp: new Date().toISOString()
-        };
-        appointments.push(newAppt);
-        localStorage.setItem('mockAppointments', JSON.stringify(appointments));
-        setRequestStatus('Pending');
+    const handleSendRequest = async () => {
+        if (!lawyer || !user || isSendingRequest) return;
+
+        try {
+            setIsSendingRequest(true);
+
+            const lawyerId = lawyer._id || lawyer.id;
+            const userId = user._id || user.id;
+            const { data } = await api.post('/appointments', { lawyerId, userId });
+
+            setRequestStatus(normalizeStatus(data?.status) || 'Pending');
+        } catch (error) {
+            console.error("Error sending appointment request:", error);
+            alert(error.response?.data?.message || 'Failed to send appointment request');
+        } finally {
+            setIsSendingRequest(false);
+        }
     };
 
     useEffect(() => {
@@ -177,9 +206,9 @@ const LawyerProfile = () => {
                 {requestStatus !== 'Accepted' ? (
                     <div className="flex flex-col items-center">
                         <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Consultation Access</h4>
-                        {requestStatus === 'Pending' ? (
+                        {requestStatus === 'Pending' || isSendingRequest ? (
                             <button disabled className="w-full bg-amber-500 text-white font-bold py-3 rounded-xl opacity-70 cursor-not-allowed">
-                                Request Pending Approval...
+                                {isSendingRequest ? 'Sending Request...' : 'Request Pending Approval...'}
                             </button>
                         ) : requestStatus === 'Rejected' ? (
                             <button disabled className="w-full bg-red-500 text-white font-bold py-3 rounded-xl opacity-70 cursor-not-allowed">

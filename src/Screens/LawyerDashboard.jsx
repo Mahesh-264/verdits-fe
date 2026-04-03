@@ -1,38 +1,85 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { FaCalendarPlus, FaGavel, FaFileSignature, FaBriefcase, FaCheck, FaTimes, FaCircle, FaUserCircle } from 'react-icons/fa';
+import api from '../api/axios';
+
+const normalizeStatus = (status) => {
+  const formattedStatus = String(status || '').toLowerCase();
+
+  if (formattedStatus === 'pending') return 'Pending';
+  if (formattedStatus === 'accepted') return 'Accepted';
+  if (formattedStatus === 'rejected') return 'Rejected';
+
+  return status || 'Pending';
+};
+
+const getUserName = (appointmentUser) => {
+  if (!appointmentUser) return 'Client';
+
+  const fullName = `${appointmentUser.firstName || ''} ${appointmentUser.lastName || ''}`.trim();
+  return fullName || appointmentUser.name || appointmentUser.phone || 'Client';
+};
 
 export default function LawyerDashboard() {
   const { user } = useSelector(state => state.auth);
   const [appointments, setAppointments] = useState([]);
+  const [loadingAppointments, setLoadingAppointments] = useState(false);
   
   // States for toggling UI
   const [showProfileInfo, setShowProfileInfo] = useState(false);
   const [showAppointmentsModal, setShowAppointmentsModal] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
+
     loadAppointments();
-    const intv = setInterval(loadAppointments, 2000);
-    return () => clearInterval(intv);
   }, [user]);
 
-  const loadAppointments = () => {
-    if (user) {
-      const allAppts = JSON.parse(localStorage.getItem('mockAppointments') || '[]');
-      const lawyerTargetId = String(user._id || user.id).trim();
-      const myAppts = allAppts.filter(a => String(a.lawyerId).trim() === lawyerTargetId);
-      setAppointments(myAppts);
+  const loadAppointments = async () => {
+    if (!user) return;
+
+    try {
+      setLoadingAppointments(true);
+
+      const lawyerId = String(user._id || user.id).trim();
+      const { data } = await api.get(`/appointments/${lawyerId}`);
+
+      const mappedAppointments = data.map((appointment) => ({
+        id: appointment._id,
+        userId: appointment.userId?._id || appointment.userId,
+        userName: getUserName(appointment.userId),
+        status: normalizeStatus(appointment.status),
+        timestamp: appointment.createdAt,
+      }));
+
+      setAppointments(mappedAppointments);
+    } catch (error) {
+      console.error('Error loading appointments:', error);
+    } finally {
+      setLoadingAppointments(false);
     }
   };
 
-  const updateStatus = (id, newStatus) => {
-    let allAppts = JSON.parse(localStorage.getItem('mockAppointments') || '[]');
-    allAppts = allAppts.map(a => {
-        if (a.id === id) return { ...a, status: newStatus };
-        return a;
-    });
-    localStorage.setItem('mockAppointments', JSON.stringify(allAppts));
-    loadAppointments();
+  const updateStatus = async (id, newStatus) => {
+    try {
+      const { data } = await api.put(`/appointments/${id}`, {
+        status: newStatus.toLowerCase()
+      });
+
+      setAppointments((currentAppointments) =>
+        currentAppointments.map((appointment) =>
+          appointment.id === id
+            ? {
+                ...appointment,
+                status: normalizeStatus(data?.status || newStatus)
+              }
+            : appointment
+        )
+      );
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+      alert(error.response?.data?.message || 'Failed to update appointment status');
+    }
   };
 
   const pendingCount = appointments.filter(a => a.status === 'Pending').length;
@@ -128,7 +175,14 @@ export default function LawyerDashboard() {
             
             {/* Modal Body */}
             <div className="overflow-y-auto p-6 flex-1 custom-scrollbar">
-              {appointments.length === 0 ? (
+              {loadingAppointments ? (
+                <div className="text-center py-16 border border-dashed border-zinc-800 rounded-xl bg-zinc-950/50">
+                    <div className="w-16 h-16 bg-zinc-900 text-zinc-700 rounded-full flex flex-col items-center justify-center mx-auto mb-4 animate-pulse">
+                      <FaCalendarPlus size={24} />
+                    </div>
+                    <p className="text-zinc-400 font-medium">Loading appointment requests...</p>
+                </div>
+              ) : appointments.length === 0 ? (
                 <div className="text-center py-16 border border-dashed border-zinc-800 rounded-xl bg-zinc-950/50">
                     <div className="w-16 h-16 bg-zinc-900 text-zinc-700 rounded-full flex flex-col items-center justify-center mx-auto mb-4">
                       <FaCalendarPlus size={24} />

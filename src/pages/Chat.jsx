@@ -8,6 +8,7 @@ import {
     clearSelection, removeMessageLocally, sendMediaMessage
 } from '../redux/chatSlice';
 import { logout } from '../redux/authSlice';
+import api from '../api/axios';
 import { io } from "socket.io-client";
 import {
     FaPhone, FaVideo, FaEllipsisV, FaPaperPlane, FaTimes,
@@ -19,6 +20,13 @@ import {
 // This makes the connection invincible against React's re-renders and unmounts.
 let globalSocket = null;
 
+const hasAcceptedAppointment = (appointments, lawyerId, clientId) =>
+    appointments.some((appointment) =>
+        String(appointment.lawyerId?._id || appointment.lawyerId) === String(lawyerId) &&
+        String(appointment.userId?._id || appointment.userId) === String(clientId) &&
+        String(appointment.status).toLowerCase() === 'accepted'
+    );
+
 export default function Chat() {
     const dispatch = useDispatch();
     const location = useLocation();
@@ -27,27 +35,37 @@ export default function Chat() {
     const { user } = useSelector(state => state.auth);
     const { conversations, availableLawyers, messages, activePartner, selectedMessages } = useSelector(state => state.chat);
 
-    // Mock check for communications
     const [canChat, setCanChat] = useState(true);
+    const [isCheckingChatAccess, setIsCheckingChatAccess] = useState(false);
 
     useEffect(() => {
-        if (activePartner && user) {
-            const userId = user._id || user.id;
-            const partnerId = activePartner._id || activePartner.id;
-            
-            const isUserLawyer = user.role === 'lawyer';
-            const lawyerId = isUserLawyer ? userId : partnerId;
-            const clientId = isUserLawyer ? partnerId : userId;
-            
-            const appointments = JSON.parse(localStorage.getItem('mockAppointments') || '[]');
-            const existing = appointments.find(a => a.lawyerId === lawyerId && a.userId === clientId);
-            
-            if (!existing || existing.status !== 'Accepted') {
-                setCanChat(false);
-            } else {
+        const checkChatAccess = async () => {
+            if (!activePartner || !user) {
                 setCanChat(true);
+                return;
+            }
+
+            try {
+                setIsCheckingChatAccess(true);
+
+                const userId = user._id || user.id;
+                const partnerId = activePartner._id || activePartner.id;
+
+                const isUserLawyer = user.role === 'lawyer';
+                const lawyerId = isUserLawyer ? userId : partnerId;
+                const clientId = isUserLawyer ? partnerId : userId;
+
+                const { data } = await api.get(`/appointments/${lawyerId}`);
+                setCanChat(hasAcceptedAppointment(data, lawyerId, clientId));
+            } catch (error) {
+                console.error('Error checking appointment access:', error);
+                setCanChat(false);
+            } finally {
+                setIsCheckingChatAccess(false);
             }
         }
+
+        checkChatAccess();
     }, [activePartner, user]);
 
     const [text, setText] = useState("");
@@ -365,7 +383,7 @@ export default function Chat() {
                                 </div>
                             </div>
                             <div className="flex gap-6 text-[#aebac1] text-lg items-center">
-                                {canChat ? (
+                                {canChat && !isCheckingChatAccess ? (
                                     <>
                                         <FaVideo className="hover:text-white cursor-pointer" />
                                         <FaPhone className="hover:text-white cursor-pointer" />
@@ -413,7 +431,11 @@ export default function Chat() {
                         </div>
 
                         <div className="min-h-[62px] p-3 bg-[#202c33] flex items-center gap-2 border-t border-[#222d34]">
-                            {!canChat ? (
+                            {isCheckingChatAccess ? (
+                                <div className="w-full flex items-center justify-center gap-2 p-2.5 rounded-lg border border-zinc-700 bg-[#111b21] text-[#aebac1] font-semibold text-sm">
+                                    Checking appointment access...
+                                </div>
+                            ) : !canChat ? (
                                 <div className="w-full flex items-center justify-center gap-2 p-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-500 font-semibold text-sm">
                                     <FaTimes className="text-amber-500" /> Messaging is locked. An accepted appointment is required.
                                 </div>
@@ -435,7 +457,7 @@ export default function Chat() {
                                     </form>
                                 </>
                             )}
-                            {!canChat ? null : (
+                            {!canChat || isCheckingChatAccess ? null : (
                                 <button onClick={text.trim() ? handleSend : isRecording ? stopRecording : startRecording}
                                     className={`p-3 rounded-full flex items-center justify-center transition-all ${text.trim() ? 'bg-[#00a884] text-[#111b21] hover:bg-[#00c99f]' : isRecording ? 'bg-red-500 text-white animate-pulse' : 'text-[#aebac1] hover:text-[#d1d7db]'}`}>
                                     {text.trim() ? <FaPaperPlane className="ml-1" size={16} /> : isRecording ? <FaStop size={18} /> : <FaMicrophone size={20} />}
