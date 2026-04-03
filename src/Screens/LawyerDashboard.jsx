@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { FaCalendarPlus, FaGavel, FaFileSignature, FaBriefcase, FaCheck, FaTimes, FaCircle, FaUserCircle } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import { FaCalendarPlus, FaGavel, FaFileSignature, FaBriefcase, FaCheck, FaTimes, FaCircle } from 'react-icons/fa';
 import api from '../api/axios';
 
 const normalizeStatus = (status) => {
@@ -22,6 +23,7 @@ const getUserName = (appointmentUser) => {
 
 export default function LawyerDashboard() {
   const { user } = useSelector(state => state.auth);
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   
@@ -47,6 +49,7 @@ export default function LawyerDashboard() {
       const mappedAppointments = data.map((appointment) => ({
         id: appointment._id,
         userId: appointment.userId?._id || appointment.userId,
+        user: appointment.userId || null,
         userName: getUserName(appointment.userId),
         status: normalizeStatus(appointment.status),
         timestamp: appointment.createdAt,
@@ -80,6 +83,20 @@ export default function LawyerDashboard() {
       console.error('Error updating appointment status:', error);
       alert(error.response?.data?.message || 'Failed to update appointment status');
     }
+  };
+
+  const handleOpenChat = (appointment) => {
+    const selectedPartner = appointment.user && typeof appointment.user === 'object'
+      ? { ...appointment.user, role: appointment.user.role || 'user' }
+      : {
+          _id: appointment.userId,
+          id: appointment.userId,
+          name: appointment.userName,
+          role: 'user',
+        };
+
+    navigate('/chat', { state: { selectedPartner } });
+    setShowAppointmentsModal(false);
   };
 
   const pendingCount = appointments.filter(a => a.status === 'Pending').length;
@@ -211,7 +228,15 @@ export default function LawyerDashboard() {
                         </div>
                       )}
                       {appt.status === 'Accepted' && (
-                         <p className="text-xs text-zinc-400 font-medium">✨ Client Communication unlocked</p>
+                        <div className="flex flex-col items-stretch sm:items-end gap-2 w-full sm:w-auto">
+                          <p className="text-xs text-zinc-400 font-medium">✨ Client Communication unlocked</p>
+                          <button
+                            onClick={() => handleOpenChat(appt)}
+                            className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 rounded-lg font-bold transition-transform active:scale-95"
+                          >
+                            Go to Chat
+                          </button>
+                        </div>
                       )}
                     </div>
                   ))}
