@@ -1,0 +1,173 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { MessageSquare, Plus, TrendingUp, Users } from 'lucide-react';
+import api from '../api/axios.jsx';
+import StudentLayout from './StudentLayout.jsx';
+
+const getDisplayName = (user) => {
+  if (!user) return 'Student';
+  const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+  return fullName || user.name || 'Student';
+};
+
+export default function StudentJamSessions() {
+  const [students, setStudents] = useState([]);
+  const [lawyers, setLawyers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadJamData = async () => {
+      try {
+        setLoading(true);
+        const [studentsResponse, lawyersResponse] = await Promise.all([
+          api.get('/auth/students'),
+          api.get('/auth/lawyers'),
+        ]);
+
+        setStudents(studentsResponse.data || []);
+        setLawyers(lawyersResponse.data || []);
+      } catch (error) {
+        console.error('Error loading jam sessions data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadJamData();
+  }, []);
+
+  const trendingTopics = useMemo(() => {
+    const topics = lawyers
+      .map((lawyer) => lawyer.lawyerProfile?.specialization)
+      .filter(Boolean);
+
+    return [...new Set(topics)].slice(0, 5);
+  }, [lawyers]);
+
+  const sessions = useMemo(() => {
+    return students.slice(0, 4).map((student, index) => {
+      const topic = lawyers[index % Math.max(lawyers.length, 1)]?.lawyerProfile?.specialization || 'Legal Studies';
+
+      return {
+        id: student._id || student.id,
+        title: `Discussion on ${topic}`,
+        author: getDisplayName(student),
+        meta: student.studentProfile?.collegeName || 'Registered law student',
+        time: student.createdAt ? new Date(student.createdAt).toLocaleDateString() : 'Recently joined',
+        topic,
+        summary:
+          `A discussion thread started by a registered student around ${topic}. This section is now connected to registered student data, and we can connect real jam session creation next.`,
+        participants: `${12 + index} participants`,
+        comments: `${2 + index} comments`,
+        profileImage: student.profileImage,
+        avatar: getDisplayName(student).charAt(0).toUpperCase(),
+      };
+    });
+  }, [students, lawyers]);
+
+  return (
+    <StudentLayout>
+      <div className="space-y-8">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight">Jam Sessions</h1>
+            <p className="text-[#5e6c87] text-lg mt-3">
+              Discuss legal cases and share insights with fellow law students
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0d1024] px-6 py-4 text-[18px] font-semibold text-white hover:bg-[#171b34] transition"
+          >
+            <Plus size={20} />
+            Start New Session
+          </button>
+        </div>
+
+        <section className="rounded-[28px] border border-[#dbe2ef] bg-gradient-to-r from-[#eef5ff] to-[#f9f0ff] p-8 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
+          <div className="flex items-center gap-3">
+            <TrendingUp className="text-[#2456f5]" size={24} />
+            <h2 className="text-[22px] font-semibold">Trending Topics</h2>
+          </div>
+
+          <div className="flex flex-wrap gap-3 mt-8">
+            {(trendingTopics.length > 0 ? trendingTopics : ['Legal Research']).map((topic) => (
+              <button
+                key={topic}
+                type="button"
+                className="rounded-full bg-white px-4 py-2 text-[16px] font-medium text-[#0b1f44] hover:bg-[#f6f9ff] transition"
+              >
+                {topic}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <div className="space-y-6">
+          {loading ? (
+            <div className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 text-[#7f8ba2] shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
+              Loading registered student discussions...
+            </div>
+          ) : sessions.length === 0 ? (
+            <div className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 text-[#7f8ba2] shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
+              No registered student discussions are available yet.
+            </div>
+          ) : sessions.map((session) => (
+            <article
+              key={session.id}
+              className="rounded-[28px] border border-[#dbe2ef] bg-white shadow-[0_2px_12px_rgba(11,31,68,0.04)] overflow-hidden"
+            >
+              <div className="p-6 md:p-8">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    {session.profileImage ? (
+                      <img src={session.profileImage} alt={session.author} className="h-16 w-16 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <div className="h-16 w-16 rounded-full bg-gradient-to-br from-[#1e293b] to-[#334155] text-white text-xl font-bold flex items-center justify-center shrink-0">
+                        {session.avatar}
+                      </div>
+                    )}
+                    <div>
+                      <h3 className="text-[20px] font-semibold">{session.author}</h3>
+                      <p className="text-[#44516d] text-[18px] mt-1">{session.meta}</p>
+                      <p className="text-[#7f8ba2] text-[16px] mt-2">{session.time}</p>
+                    </div>
+                  </div>
+
+                  <span className="rounded-full bg-[#f0e3ff] px-4 py-2 text-sm font-medium text-[#8c2bff]">
+                    {session.topic}
+                  </span>
+                </div>
+
+                <h2 className="text-[22px] md:text-[26px] font-semibold mt-10">{session.title}</h2>
+                <p className="mt-6 text-[18px] leading-9 text-[#243b67]">{session.summary}</p>
+
+                <div className="mt-8 flex flex-wrap items-center gap-8 text-[#5e6c87] text-[18px]">
+                  <div className="inline-flex items-center gap-2">
+                    <Users size={18} />
+                    {session.participants}
+                  </div>
+                  <div className="inline-flex items-center gap-2">
+                    <MessageSquare size={18} />
+                    {session.comments}
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-[#e3e8f3] px-6 py-5 md:px-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <button type="button" className="inline-flex items-center gap-2 text-[18px] font-semibold text-[#0d1024] hover:text-[#2456f5] transition">
+                  <Users size={18} />
+                  Join Session
+                </button>
+                <button type="button" className="inline-flex items-center gap-2 text-[18px] font-semibold text-[#0d1024] hover:text-[#2456f5] transition">
+                  <MessageSquare size={18} />
+                  View Comments
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </StudentLayout>
+  );
+}

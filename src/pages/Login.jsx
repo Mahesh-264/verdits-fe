@@ -27,6 +27,7 @@ export default function Login() {
         dispatch(setLoading(true));
         try {
             const { data } = await api.post('/auth/login', { email, password });
+            localStorage.setItem('accessToken', data.accessToken);
             dispatch(setAuth(data.user));
             dispatch(setLoading(false));
             handleRedirect(data.user);

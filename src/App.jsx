@@ -16,6 +16,11 @@ import LawyerProfile from './Screens/LawyerProfile.jsx';
 import UserProfile from './Screens/UserProfile.jsx';
 import LawyerDashboard from './Screens/LawyerDashboard.jsx';
 import InstantConsult from './Screens/InstantConsult.jsx';
+import StudentHome from './Screens/StudentHome.jsx';
+import StudentProfile from './Screens/StudentProfile.jsx';
+import StudentExplore from './Screens/StudentExplore.jsx';
+import StudentNetwork from './Screens/StudentNetwork.jsx';
+import StudentJamSessions from './Screens/StudentJamSessions.jsx';
 
 // --- ROLE-BASED HUB ---
 const DashboardHub = () => {
@@ -121,10 +126,31 @@ export default function App() {
         {/* --- Student Dashboard --- */}
         <Route path="/student-home" element={
           <ProtectedRoute allowedRoles={['student']}>
-            <div className="min-h-screen bg-zinc-950 text-white p-8">
-              <h1 className="text-3xl font-bold text-emerald-500">Student Portal</h1>
-              <p className="text-zinc-400 mt-2">Welcome to your academic and research space.</p>
-            </div>
+            <StudentHome />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/student-profile" element={
+          <ProtectedRoute allowedRoles={['student']}>
+            <StudentProfile />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/student-explore" element={
+          <ProtectedRoute allowedRoles={['student']}>
+            <StudentExplore />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/student-network" element={
+          <ProtectedRoute allowedRoles={['student']}>
+            <StudentNetwork />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/student-jam" element={
+          <ProtectedRoute allowedRoles={['student']}>
+            <StudentJamSessions />
           </ProtectedRoute>
         } />
 
