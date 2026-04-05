@@ -30,6 +30,7 @@ export default function LawyerDashboard() {
   // States for toggling UI
   const [showProfileInfo, setShowProfileInfo] = useState(false);
   const [showAppointmentsModal, setShowAppointmentsModal] = useState(false);
+  const [showClientsModal, setShowClientsModal] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -97,15 +98,19 @@ export default function LawyerDashboard() {
 
     navigate('/chat', { state: { selectedPartner } });
     setShowAppointmentsModal(false);
+    setShowClientsModal(false);
   };
 
-  const pendingCount = appointments.filter(a => a.status === 'Pending').length;
+  const pendingAppointments = appointments.filter((appointment) => appointment.status !== 'Accepted');
+  const acceptedClients = appointments.filter((appointment) => appointment.status === 'Accepted');
+  const pendingCount = pendingAppointments.filter(a => a.status === 'Pending').length;
+  const clientCount = acceptedClients.length;
 
   const cards = [
     { title: 'New Appointments', badge: pendingCount > 0 ? pendingCount : null, icon: <FaCalendarPlus className="text-4xl text-amber-500" />, desc: 'Review and manage incoming consultation requests.', onClick: () => setShowAppointmentsModal(true) },
     { title: 'Next Hearings', icon: <FaGavel className="text-4xl text-emerald-500" />, desc: 'Track your upcoming court dates and schedules.' },
     { title: 'Notice Generator', icon: <FaFileSignature className="text-4xl text-blue-500" />, desc: 'Quickly draft and send legal notices to parties.' },
-    { title: 'Other Services', icon: <FaBriefcase className="text-4xl text-purple-500" />, desc: 'Access additional tools and tailored services.' }
+    { title: 'My Clients', badge: clientCount > 0 ? clientCount : null, icon: <FaBriefcase className="text-4xl text-purple-500" />, desc: 'See all clients whose requests you have accepted.', onClick: () => setShowClientsModal(true) }
   ];
 
   return (
@@ -199,16 +204,16 @@ export default function LawyerDashboard() {
                     </div>
                     <p className="text-zinc-400 font-medium">Loading appointment requests...</p>
                 </div>
-              ) : appointments.length === 0 ? (
+              ) : pendingAppointments.length === 0 ? (
                 <div className="text-center py-16 border border-dashed border-zinc-800 rounded-xl bg-zinc-950/50">
                     <div className="w-16 h-16 bg-zinc-900 text-zinc-700 rounded-full flex flex-col items-center justify-center mx-auto mb-4">
                       <FaCalendarPlus size={24} />
                     </div>
-                    <p className="text-zinc-400 font-medium">No appointment requests perfectly matching your profile yet.</p>
+                    <p className="text-zinc-400 font-medium">No pending or rejected appointment requests right now.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4">
-                  {appointments.slice().reverse().map((appt) => (
+                  {pendingAppointments.slice().reverse().map((appt) => (
                     <div key={appt.id} className="bg-zinc-950 border border-zinc-800 hover:border-amber-500/30 rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all">
                       <div>
                         <h3 className="font-bold text-lg text-white group-hover:text-amber-500 transition-colors">{appt.userName}</h3>
@@ -227,17 +232,70 @@ export default function LawyerDashboard() {
                           </button>
                         </div>
                       )}
-                      {appt.status === 'Accepted' && (
+                      {appt.status === 'Rejected' && (
                         <div className="flex flex-col items-stretch sm:items-end gap-2 w-full sm:w-auto">
-                          <p className="text-xs text-zinc-400 font-medium">✨ Client Communication unlocked</p>
-                          <button
-                            onClick={() => handleOpenChat(appt)}
-                            className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 rounded-lg font-bold transition-transform active:scale-95"
-                          >
-                            Go to Chat
-                          </button>
+                          <p className="text-xs text-red-300 font-medium">Request rejected</p>
                         </div>
                       )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showClientsModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-3xl flex flex-col max-h-[85vh] shadow-2xl relative z-[101]">
+            <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/50 rounded-t-2xl">
+              <h2 className="text-2xl font-bold flex items-center gap-3">
+                <FaBriefcase className="text-purple-500" /> My Clients
+              </h2>
+              <button
+                onClick={() => setShowClientsModal(false)}
+                className="text-zinc-400 hover:text-red-500 bg-zinc-800/50 hover:bg-zinc-800 rounded-full transition p-2"
+              >
+                <FaTimes size={20} />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto p-6 flex-1 custom-scrollbar">
+              {loadingAppointments ? (
+                <div className="text-center py-16 border border-dashed border-zinc-800 rounded-xl bg-zinc-950/50">
+                  <div className="w-16 h-16 bg-zinc-900 text-zinc-700 rounded-full flex flex-col items-center justify-center mx-auto mb-4 animate-pulse">
+                    <FaBriefcase size={24} />
+                  </div>
+                  <p className="text-zinc-400 font-medium">Loading accepted clients...</p>
+                </div>
+              ) : acceptedClients.length === 0 ? (
+                <div className="text-center py-16 border border-dashed border-zinc-800 rounded-xl bg-zinc-950/50">
+                  <div className="w-16 h-16 bg-zinc-900 text-zinc-700 rounded-full flex flex-col items-center justify-center mx-auto mb-4">
+                    <FaBriefcase size={24} />
+                  </div>
+                  <p className="text-zinc-400 font-medium">No accepted clients yet.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {acceptedClients.slice().reverse().map((client) => (
+                    <div key={client.id} className="bg-zinc-950 border border-zinc-800 hover:border-purple-500/30 rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all">
+                      <div>
+                        <h3 className="font-bold text-lg text-white">{client.userName}</h3>
+                        <p className="text-xs text-zinc-500 mb-2">Accepted on: {new Date(client.timestamp).toLocaleString()}</p>
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full border bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+                          <FaCircle className="text-[8px]" /> Accepted Client
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-stretch sm:items-end gap-2 w-full sm:w-auto">
+                        <p className="text-xs text-zinc-400 font-medium">Client communication unlocked</p>
+                        <button
+                          onClick={() => handleOpenChat(client)}
+                          className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 rounded-lg font-bold transition-transform active:scale-95"
+                        >
+                          Go to Chat
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

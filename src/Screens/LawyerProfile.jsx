@@ -16,6 +16,8 @@ const normalizeStatus = (status) => {
     return status;
 };
 
+const getAppointmentUserId = (appointment) => appointment?.userId?._id || appointment?.userId;
+
 const LawyerProfile = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -33,7 +35,7 @@ const LawyerProfile = () => {
                 const lawyerId = lawyer._id || lawyer.id;
                 const userId = user._id || user.id;
                 const { data } = await api.get(`/appointments/${lawyerId}`);
-                const existing = data.find((appointment) => String(appointment.userId) === String(userId));
+                const existing = data.find((appointment) => String(getAppointmentUserId(appointment)) === String(userId));
 
                 if (existing) {
                     setRequestStatus(normalizeStatus(existing.status));
@@ -211,17 +213,24 @@ const LawyerProfile = () => {
                                 {isSendingRequest ? 'Sending Request...' : 'Request Pending Approval...'}
                             </button>
                         ) : requestStatus === 'Rejected' ? (
-                            <button disabled className="w-full bg-red-500 text-white font-bold py-3 rounded-xl opacity-70 cursor-not-allowed">
-                                Request Declined
-                            </button>
+                            <>
+                                <button disabled className="w-full bg-red-500 text-white font-bold py-3 rounded-xl opacity-70 cursor-not-allowed">
+                                    Appointment Rejected
+                                </button>
+                                <p className="text-[11px] text-red-500 mt-2 text-center">
+                                    This appointment request was rejected by the lawyer.
+                                </p>
+                            </>
                         ) : (
                             <button onClick={handleSendRequest} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition">
                                 Send Appointment Request
                             </button>
                         )}
-                        <p className="text-[10px] text-gray-400 mt-2 text-center items-center">
-                            Communication features will unlock once the lawyer accepts your request.
-                        </p>
+                        {requestStatus !== 'Rejected' && (
+                            <p className="text-[10px] text-gray-400 mt-2 text-center items-center">
+                                Communication features will unlock once the lawyer accepts your request.
+                            </p>
+                        )}
                     </div>
                 ) : (
                     <>
@@ -232,13 +241,13 @@ const LawyerProfile = () => {
                             <button onClick={() => handleConnect('audio')} className="flex flex-col items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-700 p-3 rounded-xl transition border border-blue-100">
                                 <Phone size={24} className="mb-1" />
                                 <span className="text-xs font-bold">Audio</span>
-                                <span className="text-[10px] opacity-70">₹{profile.consultationFee || 500}/min</span>
+                                <span className="text-[10px] opacity-70">₹10/min</span>
                             </button>
 
                             <button onClick={() => handleConnect('video')} className="flex flex-col items-center justify-center bg-green-50 hover:bg-green-100 text-green-700 p-3 rounded-xl transition border border-green-100">
                                 <Video size={24} className="mb-1" />
                                 <span className="text-xs font-bold">Video</span>
-                                <span className="text-[10px] opacity-70">₹{(profile.consultationFee || 500) + 200}/min</span>
+                                <span className="text-[10px] opacity-70">₹20/min</span>
                             </button>
 
                             <button onClick={() => handleConnect('chat')} className="flex flex-col items-center justify-center bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-xl transition shadow-lg shadow-purple-200">
