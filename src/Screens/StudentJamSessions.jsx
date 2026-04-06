@@ -3,66 +3,30 @@ import { MessageSquare, Plus, TrendingUp, Users } from 'lucide-react';
 import api from '../api/axios.jsx';
 import StudentLayout from './StudentLayout.jsx';
 
-const getDisplayName = (user) => {
-  if (!user) return 'Student';
-  const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
-  return fullName || user.name || 'Student';
-};
-
 export default function StudentJamSessions() {
-  const [students, setStudents] = useState([]);
-  const [lawyers, setLawyers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sessions, setSessions] = useState([]);
 
   useEffect(() => {
-    const loadJamData = async () => {
+    const loadPublishedJamSessions = async () => {
       try {
         setLoading(true);
-        const [studentsResponse, lawyersResponse] = await Promise.all([
-          api.get('/auth/students'),
-          api.get('/auth/lawyers'),
-        ]);
-
-        setStudents(studentsResponse.data || []);
-        setLawyers(lawyersResponse.data || []);
+        const { data } = await api.get('/auth/published-jam-sessions');
+        setSessions(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error('Error loading jam sessions data:', error);
+        console.error('Error loading jam sessions:', error);
+        setSessions([]);
       } finally {
         setLoading(false);
       }
     };
 
-    loadJamData();
+    loadPublishedJamSessions();
   }, []);
 
   const trendingTopics = useMemo(() => {
-    const topics = lawyers
-      .map((lawyer) => lawyer.lawyerProfile?.specialization)
-      .filter(Boolean);
-
-    return [...new Set(topics)].slice(0, 5);
-  }, [lawyers]);
-
-  const sessions = useMemo(() => {
-    return students.slice(0, 4).map((student, index) => {
-      const topic = lawyers[index % Math.max(lawyers.length, 1)]?.lawyerProfile?.specialization || 'Legal Studies';
-
-      return {
-        id: student._id || student.id,
-        title: `Discussion on ${topic}`,
-        author: getDisplayName(student),
-        meta: student.studentProfile?.collegeName || 'Registered law student',
-        time: student.createdAt ? new Date(student.createdAt).toLocaleDateString() : 'Recently joined',
-        topic,
-        summary:
-          `A discussion thread started by a registered student around ${topic}. This section is now connected to registered student data, and we can connect real jam session creation next.`,
-        participants: `${12 + index} participants`,
-        comments: `${2 + index} comments`,
-        profileImage: student.profileImage,
-        avatar: getDisplayName(student).charAt(0).toUpperCase(),
-      };
-    });
-  }, [students, lawyers]);
+    return [...new Set(sessions.map((session) => session.topic).filter(Boolean))].slice(0, 5);
+  }, [sessions]);
 
   return (
     <StudentLayout>
@@ -91,7 +55,7 @@ export default function StudentJamSessions() {
           </div>
 
           <div className="flex flex-wrap gap-3 mt-8">
-            {(trendingTopics.length > 0 ? trendingTopics : ['Legal Research']).map((topic) => (
+            {(trendingTopics.length > 0 ? trendingTopics : ['No topics yet']).map((topic) => (
               <button
                 key={topic}
                 type="button"
@@ -106,11 +70,11 @@ export default function StudentJamSessions() {
         <div className="space-y-6">
           {loading ? (
             <div className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 text-[#7f8ba2] shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
-              Loading registered student discussions...
+              Loading jam sessions...
             </div>
           ) : sessions.length === 0 ? (
             <div className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 text-[#7f8ba2] shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
-              No registered student discussions are available yet.
+              No jam sessions have been posted yet. When a student or lawyer posts a jam session, it will appear here.
             </div>
           ) : sessions.map((session) => (
             <article

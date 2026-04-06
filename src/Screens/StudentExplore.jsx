@@ -14,34 +14,6 @@ import StudentLayout from './StudentLayout.jsx';
 
 const specializationOptions = ['All Specializations', 'Criminal Law', 'Corporate Law', 'Constitutional Law'];
 
-const getDisplayName = (user) => {
-  if (!user) return 'Verified Lawyer';
-  const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
-  return fullName || user.name || 'Verified Lawyer';
-};
-
-const formatInternshipCard = (lawyer) => {
-  const specialization = lawyer.lawyerProfile?.specialization || 'General Law';
-
-  return {
-    id: lawyer._id || lawyer.id,
-    title: `${specialization} Intern`,
-    lawyerName: getDisplayName(lawyer),
-    firm: lawyer.address?.city || lawyer.address?.district || 'Registered Lawin Lawyer',
-    specialization: [specialization],
-    description:
-      lawyer.lawyerProfile?.about ||
-      `Internship opportunity under a registered lawyer specializing in ${specialization}. Students can explore drafting, research, and practical legal workflow exposure through this listing.`,
-    duration: `${Math.max(lawyer.lawyerProfile?.experienceYears || 1, 1)} months`,
-    location: lawyer.address?.city || lawyer.address?.district || 'India',
-    stipend: `Rs. ${lawyer.lawyerProfile?.consultationFee || 5000}/month`,
-    postedAt: lawyer.createdAt ? `Posted ${new Date(lawyer.createdAt).toLocaleDateString()}` : 'Recently posted',
-    skills: [specialization, 'Legal Research', 'Drafting'],
-    profileImage: lawyer.profileImage,
-    avatar: getDisplayName(lawyer).charAt(0).toUpperCase(),
-  };
-};
-
 export default function StudentExplore() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSpecialization, setSelectedSpecialization] = useState('All Specializations');
@@ -49,19 +21,20 @@ export default function StudentExplore() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadLawyerInternships = async () => {
+    const loadPublishedInternships = async () => {
       try {
         setLoading(true);
-        const { data } = await api.get('/auth/lawyers');
-        setInternships((data || []).map(formatInternshipCard));
+        const { data } = await api.get('/auth/published-internships');
+        setInternships(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Error loading internship listings:', error);
+        setInternships([]);
       } finally {
         setLoading(false);
       }
     };
 
-    loadLawyerInternships();
+    loadPublishedInternships();
   }, []);
 
   const filteredInternships = useMemo(() => {
@@ -77,7 +50,7 @@ export default function StudentExplore() {
 
       return matchesSearch && matchesSpecialization;
     });
-  }, [searchTerm, selectedSpecialization]);
+  }, [internships, searchTerm, selectedSpecialization]);
 
   return (
     <StudentLayout>
@@ -133,7 +106,7 @@ export default function StudentExplore() {
             </div>
           ) : filteredInternships.length === 0 ? (
             <div className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 text-[#7f8ba2] shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
-              No internship listings are available from registered lawyers yet.
+              No internship posts are available yet. When a student or lawyer posts an internship, it will appear here.
             </div>
           ) : filteredInternships.map((internship) => (
             <article
