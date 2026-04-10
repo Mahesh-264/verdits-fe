@@ -1,13 +1,28 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, MessageSquare, Lightbulb, MoreHorizontal, User } from 'lucide-react';
+import { BookOpen, MessageSquare, Lightbulb, MoreHorizontal, Send, User } from 'lucide-react';
+import api from '../api/axios';
 
 const UserHome = () => {
     const navigate = useNavigate();
     const scanInputRef = useRef(null);
     const uploadInputRef = useRef(null);
+    const messagesEndRef = useRef(null);
     const [selectedDocumentName, setSelectedDocumentName] = useState('');
     const [showDocumentOptions, setShowDocumentOptions] = useState(false);
+    const [input, setInput] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [messages, setMessages] = useState([
+        {
+            sender: 'ai',
+            text: 'Ask me a legal question and I will explain it simply and suggest matching lawyers when available.',
+            lawyers: []
+        }
+    ]);
+
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, isLoading]);
 
     const handleDocumentCardClick = () => {
         setShowDocumentOptions(true);
@@ -29,8 +44,49 @@ const UserHome = () => {
         uploadInputRef.current?.click();
     };
 
+    const handleSendMessage = async () => {
+        const trimmedInput = input.trim();
+        if (!trimmedInput || isLoading) return;
+
+        setMessages((prev) => [...prev, { sender: 'user', text: trimmedInput, lawyers: [] }]);
+        setInput('');
+        setIsLoading(true);
+
+        try {
+            const { data } = await api.post('/ai/chat', { message: trimmedInput });
+
+            setMessages((prev) => [
+                ...prev,
+                {
+                    sender: 'ai',
+                    text: data?.reply || 'I could not process that legal question right now.',
+                    lawyers: Array.isArray(data?.lawyers) ? data.lawyers : []
+                }
+            ]);
+        } catch (error) {
+            console.error('AI chat request failed:', error);
+            setMessages((prev) => [
+                ...prev,
+                {
+                    sender: 'ai',
+                    text: 'I could not process that legal question right now. Please try again in a moment.',
+                    lawyers: []
+                }
+            ]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleInputKeyDown = (event) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            handleSendMessage();
+        }
+    };
+
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center">
+        <div className="min-h-screen bg-gray-50 flex flex-col items-center pb-52">
             {/* Header */}
             <div className="w-full bg-black text-white p-4 flex justify-between items-center shadow-md">
                 <div className="flex items-center gap-2">
@@ -95,6 +151,57 @@ const UserHome = () => {
 
             </div>
 
+            <div className="w-full max-w-md px-4 mt-2">
+                <div className="rounded-3xl bg-white shadow-sm border border-gray-100 p-4 space-y-3 max-h-[360px] overflow-y-auto">
+                    {messages.map((message, index) => {
+                        const isUser = message.sender === 'user';
+
+                        return (
+                            <div
+                                key={`${message.sender}-${index}`}
+                                className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+                            >
+                                <div className={`max-w-[88%] ${isUser ? 'items-end' : 'items-start'} flex flex-col gap-2`}>
+                                    <div
+                                        className={`rounded-2xl px-4 py-3 text-sm shadow-sm ${isUser ? 'bg-black text-white rounded-br-md' : 'bg-gray-100 text-gray-800 rounded-bl-md'}`}
+                                    >
+                                        {message.text}
+                                    </div>
+
+                                    {!isUser && Array.isArray(message.lawyers) && message.lawyers.length > 0 && (
+                                        <div className="w-full space-y-2">
+                                            {message.lawyers.map((lawyer) => (
+                                                <div key={lawyer._id} className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+                                                    <p className="font-semibold text-gray-900">{lawyer.name}</p>
+                                                    <p className="text-xs text-gray-500 mt-1">{lawyer.specialization}</p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => navigate(`/lawyer-profile/${lawyer._id}`)}
+                                                        className="mt-3 rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
+                                                    >
+                                                        Book Appointment
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+
+                    {isLoading && (
+                        <div className="flex justify-start">
+                            <div className="rounded-2xl rounded-bl-md bg-gray-100 px-4 py-3 text-sm text-gray-600 shadow-sm">
+                                AI is typing...
+                            </div>
+                        </div>
+                    )}
+
+                    <div ref={messagesEndRef} />
+                </div>
+            </div>
+
             <input
                 ref={scanInputRef}
                 type="file"
@@ -147,14 +254,27 @@ const UserHome = () => {
                 </div>
             )}
 
-            {/* Chat Bot Input Area (Visual Only as per image) */}
+            {/* Chat Bot Input Area */}
             <div className="w-full max-w-md fixed bottom-0 bg-black p-4 rounded-t-3xl">
                 <h3 className="text-white text-sm mb-2 font-semibold">AI Legal Chat Bot</h3>
-                <input
-                    type="text"
-                    placeholder="Ask a legal question"
-                    className="w-full p-3 rounded-xl bg-white text-gray-800 outline-none"
-                />
+                <div className="flex items-center gap-2">
+                    <input
+                        type="text"
+                        value={input}
+                        onChange={(event) => setInput(event.target.value)}
+                        onKeyDown={handleInputKeyDown}
+                        placeholder="Ask a legal question"
+                        className="w-full p-3 rounded-xl bg-white text-gray-800 outline-none"
+                    />
+                    <button
+                        type="button"
+                        onClick={handleSendMessage}
+                        disabled={isLoading || !input.trim()}
+                        className="h-12 w-12 rounded-xl bg-white text-black flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <Send size={18} />
+                    </button>
+                </div>
             </div>
         </div>
     );
