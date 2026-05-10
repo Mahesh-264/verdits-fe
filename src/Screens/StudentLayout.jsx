@@ -1,7 +1,7 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Compass, Home, LogOut, MessageSquare, Search, User, Users } from 'lucide-react';
+import { Compass, Home, LogOut, Search, User, Users } from 'lucide-react';
 import { logout, updateUser } from '../redux/authSlice';
 import api from '../api/axios.jsx';
 
@@ -10,7 +10,6 @@ const navItems = [
   { label: 'Profile', path: '/student-profile', Icon: User },
   { label: 'Explore', path: '/student-explore', Icon: Compass },
   { label: 'Network', path: '/student-network', Icon: Users },
-  { label: 'Jam Sessions', path: '/student-jam', Icon: MessageSquare },
 ];
 
 const getDisplayName = (user) => {
@@ -61,21 +60,21 @@ export default function StudentLayout({ children }) {
               </Link>
 
               <nav className="flex items-center gap-2 overflow-x-auto">
-                {navItems.map(({ label, path, Icon }) => {
-                  const isActive = location.pathname === path;
+                {navItems.map((item) => {
+                  const isActive = location.pathname === item.path;
 
                   return (
                     <Link
-                      key={path}
-                      to={path}
+                      key={item.path}
+                      to={item.path}
                       className={`inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium whitespace-nowrap transition ${
                         isActive
                           ? 'bg-[#eaf1ff] text-[#2456f5]'
                           : 'text-[#44516d] hover:bg-[#f3f6fc] hover:text-[#0b1f44]'
                       }`}
                     >
-                      <Icon size={20} />
-                      {label}
+                      <item.Icon size={20} />
+                      {item.label}
                     </Link>
                   );
                 })}

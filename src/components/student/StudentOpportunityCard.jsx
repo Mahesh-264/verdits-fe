@@ -1,0 +1,197 @@
+import React from 'react';
+import {
+  BriefcaseBusiness,
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
+  IndianRupee,
+  MapPin,
+  Users,
+} from 'lucide-react';
+
+const typeStyles = {
+  internship: {
+    badge: 'bg-[#e8f1ff] text-[#2456f5]',
+    button: 'bg-[#0d1024] text-white hover:bg-[#171b34]',
+    joined: 'bg-[#e9fff1] text-[#14804a]',
+  },
+  jam: {
+    badge: 'bg-[#eafbf4] text-[#0e8f5b]',
+    button: 'bg-[#114a38] text-white hover:bg-[#176049]',
+    joined: 'bg-[#e9fff1] text-[#14804a]',
+  },
+};
+
+const getPrimaryActionLabel = (post) => {
+  if (post.type === 'internship') {
+    if (post.status === 'closed' && !post.applied) return 'Applications Closed';
+    return post.applied ? 'Applied ✓' : 'Apply Now';
+  }
+
+  return post.joined ? 'Joined ✓' : 'Join Session';
+};
+
+export default function StudentOpportunityCard({
+  post,
+  mode = 'feed',
+  onApply,
+  onJoin,
+}) {
+  const styles = typeStyles[post.type] || typeStyles.internship;
+  const isInternship = post.type === 'internship';
+  const isCompleted = isInternship ? post.applied || post.status === 'closed' : post.joined;
+
+  return (
+    <article className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 shadow-[0_8px_30px_rgba(11,31,68,0.06)]">
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="flex items-start gap-4">
+            {post.profileImage ? (
+              <img
+                src={post.profileImage}
+                alt={post.lawyerName}
+                className="h-[68px] w-[68px] shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-[68px] w-[68px] shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#ffb76b] via-[#ff8b5f] to-[#ff6f61] text-2xl font-bold text-white">
+                {post.avatar}
+              </div>
+            )}
+
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-[19px] font-semibold text-[#0b1f44]">{post.lawyerName}</p>
+                <span className={`rounded-full px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.16em] ${styles.badge}`}>
+                  {isInternship ? 'Internship' : 'Jam Session'}
+                </span>
+              </div>
+              <h2 className="mt-3 text-[24px] font-semibold tracking-tight text-[#102144]">{post.title}</h2>
+              <p className="mt-2 text-[15px] text-[#62708a]">{post.postedAt || post.time}</p>
+            </div>
+          </div>
+
+          {mode === 'explore' && (
+            <div className="rounded-2xl bg-[#f5f7fb] px-4 py-3 text-right">
+              <p className="text-[12px] uppercase tracking-[0.16em] text-[#7d8aa5]">Host</p>
+              <p className="mt-1 text-[14px] font-semibold text-[#243b67]">{post.lawyerName}</p>
+            </div>
+          )}
+        </div>
+
+        <p className="text-[16px] leading-8 text-[#243b67]">
+          {isInternship ? post.description : post.summary}
+        </p>
+
+        {isInternship ? (
+          <>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl bg-[#f7f9fd] px-4 py-4 text-[#44516d]">
+                <div className="flex items-center gap-2 text-sm font-medium text-[#7d8aa5]">
+                  <MapPin size={16} />
+                  Location
+                </div>
+                <p className="mt-2 text-[15px] font-semibold text-[#0b1f44]">{post.location}</p>
+              </div>
+              <div className="rounded-2xl bg-[#f7f9fd] px-4 py-4 text-[#44516d]">
+                <div className="flex items-center gap-2 text-sm font-medium text-[#7d8aa5]">
+                  <CalendarDays size={16} />
+                  Duration
+                </div>
+                <p className="mt-2 text-[15px] font-semibold text-[#0b1f44]">{post.duration}</p>
+              </div>
+              <div className="rounded-2xl bg-[#f7f9fd] px-4 py-4 text-[#44516d]">
+                <div className="flex items-center gap-2 text-sm font-medium text-[#7d8aa5]">
+                  <IndianRupee size={16} />
+                  Stipend
+                </div>
+                <p className="mt-2 text-[15px] font-semibold text-[#0b1f44]">{post.stipend}</p>
+              </div>
+              <div className="rounded-2xl bg-[#f7f9fd] px-4 py-4 text-[#44516d]">
+                <div className="flex items-center gap-2 text-sm font-medium text-[#7d8aa5]">
+                  <BriefcaseBusiness size={16} />
+                  Specialization
+                </div>
+                <p className="mt-2 text-[15px] font-semibold text-[#0b1f44]">
+                  {post.specialization?.length ? post.specialization.join(', ') : 'General'}
+                </p>
+              </div>
+            </div>
+
+            {post.skills?.length > 0 && (
+              <div>
+                <p className="text-[14px] font-semibold uppercase tracking-[0.18em] text-[#6d7a92]">
+                  Skills
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {post.skills.map((skill) => (
+                    <span
+                      key={skill}
+                      className="rounded-full border border-[#dbe2ef] bg-[#fbfcff] px-4 py-2 text-sm font-medium text-[#0b1f44]"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-2xl bg-[#f7f9fd] px-4 py-4 text-[#44516d]">
+              <div className="flex items-center gap-2 text-sm font-medium text-[#7d8aa5]">
+                <Users size={16} />
+                Host
+              </div>
+              <p className="mt-2 text-[15px] font-semibold text-[#0b1f44]">{post.lawyerName}</p>
+            </div>
+            <div className="rounded-2xl bg-[#f7f9fd] px-4 py-4 text-[#44516d]">
+              <div className="flex items-center gap-2 text-sm font-medium text-[#7d8aa5]">
+                <Clock3 size={16} />
+                Date & Time
+              </div>
+              <p className="mt-2 text-[15px] font-semibold text-[#0b1f44]">{post.schedule || 'To be announced'}</p>
+            </div>
+            <div className="rounded-2xl bg-[#f7f9fd] px-4 py-4 text-[#44516d]">
+              <div className="flex items-center gap-2 text-sm font-medium text-[#7d8aa5]">
+                <MapPin size={16} />
+                Format
+              </div>
+              <p className="mt-2 text-[15px] font-semibold text-[#0b1f44]">{post.location || 'Online / TBA'}</p>
+            </div>
+            <div className="rounded-2xl bg-[#f7f9fd] px-4 py-4 text-[#44516d]">
+              <div className="flex items-center gap-2 text-sm font-medium text-[#7d8aa5]">
+                <Users size={16} />
+                Participation
+              </div>
+              <p className="mt-2 text-[15px] font-semibold text-[#0b1f44]">
+                {post.participantCount || 0} joined
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm text-[#6d7a92]">
+            {isInternship
+              ? `${post.applicationCount || 0} application${post.applicationCount === 1 ? '' : 's'} so far`
+              : `${post.participantCount || 0} student${post.participantCount === 1 ? '' : 's'} joined`}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => (isInternship ? onApply?.(post) : onJoin?.(post))}
+            disabled={isCompleted}
+            className={`inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-4 text-base font-semibold transition ${
+              isCompleted
+                ? `${styles.joined} cursor-not-allowed`
+                : styles.button
+            }`}
+          >
+            {isCompleted && <CheckCircle2 size={18} />}
+            {getPrimaryActionLabel(post)}
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
