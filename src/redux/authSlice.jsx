@@ -1,21 +1,14 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { clearAuthStorage, getStoredUser, migrateLegacyAuthStorage, setStoredUser } from '../utils/authStorage';
 
-// Helper to safely get user from local storage
-const getUserFromStorage = () => {
-    try {
-        const user = localStorage.getItem('user');
-        return user ? JSON.parse(user) : null;
-    } catch (error) {
-        console.error("Error parsing user from storage", error);
-        return null;
-    }
-};
+migrateLegacyAuthStorage();
+const initialUser = getStoredUser();
 
 const authSlice = createSlice({
     name: 'auth',
     initialState: {
-        user: getUserFromStorage(),
-        isAuthenticated: !!getUserFromStorage(),
+        user: initialUser,
+        isAuthenticated: !!initialUser,
         loading: false,
         error: null,
     },
@@ -26,7 +19,7 @@ const authSlice = createSlice({
             state.isAuthenticated = true;
             state.loading = false;
             state.error = null;
-            localStorage.setItem('user', JSON.stringify(action.payload));
+            setStoredUser(action.payload);
         },
 
         // 2. Update User Profile (New Feature)
@@ -34,7 +27,7 @@ const authSlice = createSlice({
         updateUser: (state, action) => {
             if (state.user) {
                 state.user = { ...state.user, ...action.payload };
-                localStorage.setItem('user', JSON.stringify(state.user));
+                setStoredUser(state.user);
             }
         },
 
@@ -44,9 +37,7 @@ const authSlice = createSlice({
             state.isAuthenticated = false;
             state.loading = false;
             state.error = null;
-            localStorage.removeItem('user');
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
+            clearAuthStorage();
         },
 
         // 4. Loading State

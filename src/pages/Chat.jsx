@@ -10,6 +10,7 @@ import {
 import { logout } from '../redux/authSlice';
 import api from '../api/axios';
 import { io } from "socket.io-client";
+import { getAccessToken } from '../utils/authStorage';
 import {
     FaEllipsisV, FaPaperPlane, FaTimes, FaPhone, FaVideo, FaCommentDots,
     FaPaperclip, FaSignOutAlt, FaSearch, FaCheckDouble,
@@ -130,7 +131,7 @@ export default function Chat() {
     // 🟢 1. THE FLAWLESS SOCKET CONNECTION (React 18 Strict Mode Safe)
     useEffect(() => {
         const userId = user?._id || user?.id;
-        const token = localStorage.getItem("accessToken") || localStorage.getItem("token") || user?.token || "";
+        const token = getAccessToken() || user?.token || "";
 
         if (!userId || !token) return;
 

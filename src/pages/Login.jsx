@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { setAuth, setLoading } from '../redux/authSlice';
 import api from '../api/axios';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { setAccessToken, setRefreshToken } from '../utils/authStorage';
 
 export default function Login() {
     const [searchParams] = useSearchParams();
@@ -26,8 +27,9 @@ export default function Login() {
         e.preventDefault();
         dispatch(setLoading(true));
         try {
-            const { data } = await api.post('/auth/login', { email, password });
-            localStorage.setItem('accessToken', data.accessToken);
+            const { data } = await api.post('/auth/login', { email, password, role });
+            setAccessToken(data.accessToken);
+            setRefreshToken(data.refreshToken);
             dispatch(setAuth(data.user));
             dispatch(setLoading(false));
             handleRedirect(data.user);

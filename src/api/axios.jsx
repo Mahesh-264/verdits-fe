@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { clearAuthStorage, getAccessToken, getRefreshToken, setAccessToken } from '../utils/authStorage';
 
 const api = axios.create({
     baseURL: '/api',
@@ -8,7 +9,7 @@ const api = axios.create({
 
 // 🛡️ Request Interceptor: Attach Token to every call
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
@@ -23,17 +24,26 @@ api.interceptors.response.use(
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
             try {
+                const refreshToken = getRefreshToken();
+                if (!refreshToken) {
+                    throw new Error('No refresh token found for this tab');
+                }
+
                 // Use a separate axios call to avoid infinite loops
-                const { data } = await axios.post('/api/auth/refresh', {}, { withCredentials: true });
+                const { data } = await axios.post(
+                    '/api/auth/refresh',
+                    { refreshToken },
+                    { withCredentials: true }
+                );
 
                 // Update local storage with the new token
-                localStorage.setItem('accessToken', data.accessToken);
+                setAccessToken(data.accessToken);
 
                 // Retry the original request with the new token
                 originalRequest.headers['Authorization'] = `Bearer ${data.accessToken}`;
                 return api(originalRequest);
             } catch (err) {
-                localStorage.clear();
+                clearAuthStorage();
                 window.location.href = '/login';
                 return Promise.reject(err);
             }
