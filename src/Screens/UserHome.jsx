@@ -15,7 +15,7 @@ const UserHome = () => {
     const [messages, setMessages] = useState([
         {
             sender: 'ai',
-            text: 'Ask me a legal question and I will explain it simply and suggest matching lawyers when available.',
+            text: 'Ask me a legal question only. I can explain it simply and suggest matching lawyers when available.',
             lawyers: []
         }
     ]);
@@ -263,7 +263,7 @@ const UserHome = () => {
                         value={input}
                         onChange={(event) => setInput(event.target.value)}
                         onKeyDown={handleInputKeyDown}
-                        placeholder="Ask a legal question"
+                        placeholder="Ask a legal question only"
                         className="w-full p-3 rounded-xl bg-white text-gray-800 outline-none"
                     />
                     <button
