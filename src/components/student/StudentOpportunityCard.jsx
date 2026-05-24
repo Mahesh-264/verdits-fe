@@ -8,6 +8,7 @@ import {
   MapPin,
   Users,
 } from 'lucide-react';
+import { formatDistanceLabel } from '../../utils/lawyerDiscovery.js';
 
 const typeStyles = {
   internship: {
@@ -22,6 +23,7 @@ const typeStyles = {
   },
 };
 
+// Opportunity card shared by internships and jam sessions, now with host distance hints.
 const getPrimaryActionLabel = (post) => {
   if (post.type === 'internship') {
     if (post.status === 'closed' && !post.applied) return 'Applications Closed';
@@ -171,10 +173,15 @@ export default function StudentOpportunityCard({
         )}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-sm text-[#6d7a92]">
-            {isInternship
-              ? `${post.applicationCount || 0} application${post.applicationCount === 1 ? '' : 's'} so far`
-              : `${post.participantCount || 0} student${post.participantCount === 1 ? '' : 's'} joined`}
+          <div className="space-y-1 text-sm text-[#6d7a92]">
+            <p>
+              {isInternship
+                ? `${post.applicationCount || 0} application${post.applicationCount === 1 ? '' : 's'} so far`
+                : `${post.participantCount || 0} student${post.participantCount === 1 ? '' : 's'} joined`}
+            </p>
+            {Number.isFinite(Number(post.distanceKm)) ? (
+              <p className="font-medium text-[#2456f5]">{formatDistanceLabel(post.distanceKm)}</p>
+            ) : null}
           </div>
 
           <button

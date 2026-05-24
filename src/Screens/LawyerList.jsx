@@ -1,152 +1,189 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, MapPin, Star } from 'lucide-react';
 import api from '../api/axios';
-import { ArrowLeft, Star, MapPin } from 'lucide-react';
+import LocationSearchCard from '../components/location/LocationSearchCard.jsx';
+import useSearchLocation from '../hooks/useSearchLocation.js';
+import {
+  formatDistanceLabel,
+  getCategoryDiscoveryConfig,
+  getRadiusValue,
+  RADIUS_FILTERS,
+} from '../utils/lawyerDiscovery.js';
 
-const categoryKeywordMap = {
-    criminal: ['criminal'],
-    civil: ['civil'],
-    marital: ['family', 'marital', 'matrimonial', 'divorce', 'domestic'],
-    property: ['property', 'land', 'real estate'],
-    corporate: ['corporate', 'business', 'commercial', 'company'],
-    other: [],
-};
-
-const getDisplayName = (lawyer) => {
-    const fullName = `${lawyer?.firstName || ''} ${lawyer?.lastName || ''}`.trim();
-    return fullName || lawyer?.name || 'Lawyer';
-};
-
+// Book-a-lawyer discovery page powered by backend geospatial search.
 const LawyerList = () => {
-    const { category } = useParams();
-    const navigate = useNavigate();
-    const [lawyers, setLawyers] = useState([]);
-    const [loading, setLoading] = useState(true);
+  const { category } = useParams();
+  const navigate = useNavigate();
+  const [lawyers, setLawyers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [selectedRadius, setSelectedRadius] = useState('25');
+  const locationState = useSearchLocation();
 
-    useEffect(() => {
-        const fetchLawyers = async () => {
-            try {
-                setLoading(true);
+  useEffect(() => {
+    const loadNearbyLawyers = async () => {
+      if (!locationState.location) return;
 
-                const normalizedCategory = String(category || '').toLowerCase();
-                const keywords = categoryKeywordMap[normalizedCategory] || [];
-                const { data } = await api.get('/auth/lawyers');
-                const allLawyers = Array.isArray(data) ? data : [];
+      try {
+        setLoading(true);
+        setError('');
 
-                const filteredLawyers = keywords.length
-                    ? allLawyers.filter((lawyer) => {
-                        const specialization = String(
-                            lawyer?.lawyerProfile?.specialization || ''
-                        ).toLowerCase();
-
-                        return keywords.some((keyword) => specialization.includes(keyword));
-                    })
-                    : allLawyers;
-
-                setLawyers(filteredLawyers);
-            } catch (error) {
-                console.error('Error fetching lawyers:', error);
-            } finally {
-                setLoading(false);
-            }
+        const categoryConfig = getCategoryDiscoveryConfig(category);
+        const radiusKm = getRadiusValue(selectedRadius);
+        const params = {
+          latitude: locationState.location.latitude,
+          longitude: locationState.location.longitude,
+          limit: 30,
         };
 
-        if (category) {
-            fetchLawyers();
+        if (radiusKm !== 'all') {
+          params.radiusKm = radiusKm;
+        } else {
+          params.radiusKm = 'all';
         }
-    }, [category]);
 
-    const categoryTitle = category ? category.charAt(0).toUpperCase() + category.slice(1) : 'All';
+        if (categoryConfig.specializationTerms.length) {
+          params.specialization = categoryConfig.specializationTerms.join(',');
+        }
 
-    return (
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center">
-            <div className="w-full bg-black text-white p-4 flex items-center gap-4 shadow-md sticky top-0 z-10">
-                <ArrowLeft onClick={() => navigate(-1)} className="cursor-pointer" />
-                <span className="text-xl font-bold tracking-wide">Nyaya Setu</span>
-            </div>
+        const { data } = await api.get('/auth/lawyers/nearby', { params });
+        setLawyers(Array.isArray(data?.lawyers) ? data.lawyers : []);
+      } catch (requestError) {
+        console.error('Error fetching nearby lawyers:', requestError);
+        setLawyers([]);
+        setError(requestError.response?.data?.message || 'Unable to load nearby lawyers right now.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-            <div className="w-full max-w-md p-4">
-                <h2 className="text-xl font-bold text-gray-800">Available Lawyers</h2>
-                <p className="text-gray-500 text-sm mb-6">
-                    Showing results for:{' '}
-                    <span className="font-semibold text-blue-600">{categoryTitle}</span>
-                </p>
+    loadNearbyLawyers();
+  }, [category, locationState.location, selectedRadius]);
 
-                {loading ? (
-                    <div className="flex justify-center mt-10">
-                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-                    </div>
-                ) : (
-                    <div className="flex flex-col gap-4">
-                        {lawyers.length > 0 ? (
-                            lawyers.map((lawyer) => (
-                                <div
-                                    key={lawyer._id}
-                                    onClick={() => navigate(`/lawyer-profile/${lawyer._id}`)}
-                                    className="bg-white p-4 rounded-xl shadow-sm flex items-center gap-4 cursor-pointer hover:shadow-md transition border border-transparent hover:border-blue-100"
-                                >
-                                    <div className="h-16 w-16 rounded-full overflow-hidden bg-gray-200 shrink-0">
-                                        {lawyer.profileImage ? (
-                                            <img
-                                                src={lawyer.profileImage}
-                                                alt={getDisplayName(lawyer)}
-                                                className="h-full w-full object-cover"
-                                            />
-                                        ) : (
-                                            <div className="h-full w-full flex items-center justify-center bg-blue-100 text-blue-500 font-bold text-xl">
-                                                {getDisplayName(lawyer).charAt(0)}
-                                            </div>
-                                        )}
-                                    </div>
+  const categoryConfig = getCategoryDiscoveryConfig(category);
 
-                                    <div className="flex-1">
-                                        <div className="flex justify-between items-start">
-                                            <h3 className="font-bold text-gray-800 text-lg">
-                                                {getDisplayName(lawyer)}
-                                            </h3>
-                                            <span className="flex items-center text-amber-500 font-bold text-xs bg-amber-50 px-2 py-1 rounded-full gap-1">
-                                                <Star size={10} fill="currentColor" /> 4.8
-                                            </span>
-                                        </div>
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="sticky top-0 z-10 flex items-center gap-4 bg-black p-4 text-white shadow-md">
+        <ArrowLeft onClick={() => navigate(-1)} className="cursor-pointer" />
+        <span className="text-xl font-bold tracking-wide">Nyaya Setu</span>
+      </div>
 
-                                        <p className="text-sm font-medium text-blue-600">
-                                            {lawyer.lawyerProfile?.specialization || 'General'} Law
-                                        </p>
-
-                                        <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                                            <span>{lawyer.lawyerProfile?.experienceYears || 0} Yrs Exp</span>
-                                            <span>•</span>
-                                            <span className="flex items-center gap-1">
-                                                <MapPin size={10} /> {lawyer.address?.city || lawyer.address?.district || 'Location not added'}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex gap-1 mt-2 flex-wrap">
-                                            {(lawyer.lawyerProfile?.languages || []).slice(0, 2).map((lang, idx) => (
-                                                <span
-                                                    key={idx}
-                                                    className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded"
-                                                >
-                                                    {lang}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="text-center py-20 bg-white rounded-xl shadow-sm">
-                                <p className="text-gray-400 mb-2">No lawyers found.</p>
-                                <p className="text-sm text-gray-500">
-                                    Newly registered lawyers only appear here when their specialization matches this case category.
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Nearby Lawyers</h1>
+          <p className="mt-2 text-sm text-gray-500">
+            Showing {categoryConfig.label} lawyers nearest to you.
+          </p>
         </div>
-    );
+
+        <LocationSearchCard
+          title="Book a Lawyer Nearby"
+          description="Allow location access to discover lawyers closest to you, or choose a city as a fallback."
+          error={error || locationState.error}
+          loading={locationState.status === 'requesting'}
+          location={locationState.location}
+          needsCityFallback={locationState.needsCityFallback}
+          onRequestLocation={locationState.requestBrowserLocation}
+          onSelectFallbackCity={locationState.selectFallbackCity}
+        />
+
+        <div className="flex flex-wrap gap-3">
+          {RADIUS_FILTERS.map((filter) => (
+            <button
+              key={filter.id}
+              type="button"
+              onClick={() => setSelectedRadius(filter.id)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                selectedRadius === filter.id
+                  ? 'bg-[#0d1024] text-white'
+                  : 'bg-white text-[#44516d] border border-[#dbe2ef] hover:border-[#2456f5]'
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+
+        {locationState.status === 'requesting' || loading ? (
+          <div className="rounded-3xl bg-white p-8 text-center text-sm font-medium text-[#5e6c87] shadow-sm">
+            Finding the closest lawyers for you...
+          </div>
+        ) : !locationState.location ? (
+          <div className="rounded-3xl bg-white p-8 text-center text-sm font-medium text-[#5e6c87] shadow-sm">
+            Choose your location to see nearby lawyers.
+          </div>
+        ) : lawyers.length === 0 ? (
+          <div className="rounded-3xl bg-white p-8 text-center shadow-sm">
+            <p className="text-base font-semibold text-[#0b1f44]">No nearby lawyers found.</p>
+            <p className="mt-2 text-sm text-[#5e6c87]">
+              Try a larger search radius or switch to another city.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {lawyers.map((lawyer) => (
+              <article
+                key={lawyer._id || lawyer.id}
+                onClick={() => navigate(`/lawyer-profile/${lawyer._id || lawyer.id}`)}
+                className="cursor-pointer rounded-3xl border border-[#dbe2ef] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                  <div className="h-16 w-16 overflow-hidden rounded-full bg-[#e9eefc]">
+                    {lawyer.profileImage ? (
+                      <img src={lawyer.profileImage} alt={lawyer.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-xl font-bold text-[#2456f5]">
+                        {lawyer.name?.charAt(0) || 'L'}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1">
+                    <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <h2 className="text-lg font-semibold text-[#0b1f44]">{lawyer.name}</h2>
+                        <p className="text-sm font-medium text-[#2456f5]">
+                          {lawyer.specialization || 'General Practice'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 self-start rounded-full bg-[#fff7e5] px-3 py-1 text-sm font-semibold text-[#b7791f]">
+                        <Star size={14} fill="currentColor" />
+                        {Number(lawyer.rating || 4.8).toFixed(1)}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[#5e6c87]">
+                      <span>{lawyer.experienceYears || 0} years experience</span>
+                      <span className="flex items-center gap-1">
+                        <MapPin size={14} />
+                        {lawyer.city || lawyer.locationLabel || 'Location not added'}
+                      </span>
+                      <span>{formatDistanceLabel(lawyer.distanceKm)}</span>
+                    </div>
+
+                    {lawyer.languages?.length ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {lawyer.languages.slice(0, 4).map((language) => (
+                          <span
+                            key={language}
+                            className="rounded-full bg-[#f4f6fb] px-3 py-1 text-xs font-medium text-[#44516d]"
+                          >
+                            {language}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default LawyerList;

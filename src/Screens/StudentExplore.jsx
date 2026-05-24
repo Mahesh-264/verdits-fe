@@ -2,9 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ChevronDown, Search, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 import api from '../api/axios.jsx';
+import LocationSearchCard from '../components/location/LocationSearchCard.jsx';
 import StudentLayout from './StudentLayout.jsx';
 import StudentOpportunityCard from '../components/student/StudentOpportunityCard.jsx';
 import { InternshipApplicationModal, JamJoinModal } from '../components/student/StudentActionModals.jsx';
+import useSearchLocation from '../hooks/useSearchLocation.js';
 import {
   createInitialApplicationForm,
   createInitialInternshipFilters,
@@ -14,8 +16,10 @@ import {
   matchesCollectionSearch,
   uniqueOptions,
 } from '../components/student/studentDiscoveryUtils.js';
+import { formatDistanceLabel, getRadiusValue, RADIUS_FILTERS } from '../utils/lawyerDiscovery.js';
 import { updateUser } from '../redux/authSlice.jsx';
 
+// Student discovery now prioritizes nearby lawyers and their opportunities.
 export default function StudentExplore() {
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
@@ -23,18 +27,32 @@ export default function StudentExplore() {
   const [searchTerm, setSearchTerm] = useState('');
   const [internshipFilters, setInternshipFilters] = useState(createInitialInternshipFilters());
   const [discovery, setDiscovery] = useState({ internships: [], jamSessions: [], lawyers: [] });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [selectedRadius, setSelectedRadius] = useState('25');
+  const [discoveryError, setDiscoveryError] = useState('');
   const [applicationTarget, setApplicationTarget] = useState(null);
   const [joinTarget, setJoinTarget] = useState(null);
   const [submittingApplication, setSubmittingApplication] = useState(false);
   const [joiningSession, setJoiningSession] = useState(false);
   const [actionError, setActionError] = useState('');
+  const locationState = useSearchLocation();
 
   useEffect(() => {
     const loadDiscovery = async () => {
+      if (!locationState.location) return;
+
       try {
         setLoading(true);
-        const { data } = await api.get('/auth/student/discovery');
+        setDiscoveryError('');
+        const radiusKm = getRadiusValue(selectedRadius);
+        const { data } = await api.get('/auth/student/discovery', {
+          params: {
+            latitude: locationState.location.latitude,
+            longitude: locationState.location.longitude,
+            radiusKm: radiusKm === 'all' ? 'all' : radiusKm,
+            limit: 36,
+          },
+        });
         setDiscovery({
           internships: Array.isArray(data?.internships) ? data.internships : [],
           jamSessions: Array.isArray(data?.jamSessions) ? data.jamSessions : [],
@@ -42,6 +60,7 @@ export default function StudentExplore() {
         });
       } catch (error) {
         console.error('Error loading student discovery data:', error);
+        setDiscoveryError(error.response?.data?.message || 'Unable to load nearby opportunities right now.');
         setDiscovery({ internships: [], jamSessions: [], lawyers: [] });
       } finally {
         setLoading(false);
@@ -49,7 +68,7 @@ export default function StudentExplore() {
     };
 
     loadDiscovery();
-  }, []);
+  }, [locationState.location, selectedRadius]);
 
   const locationOptions = useMemo(
     () => uniqueOptions(discovery.internships.map((item) => item.location), 'All locations'),
@@ -199,6 +218,34 @@ export default function StudentExplore() {
         </div>
 
         <section className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
+          <LocationSearchCard
+            title="Nearby Opportunities"
+            description="Student discovery now prioritizes nearby lawyers, internships, and mentor sessions."
+            error={discoveryError || locationState.error}
+            loading={locationState.status === 'requesting'}
+            location={locationState.location}
+            needsCityFallback={locationState.needsCityFallback}
+            onRequestLocation={locationState.requestBrowserLocation}
+            onSelectFallbackCity={locationState.selectFallbackCity}
+          />
+
+          <div className="mt-5 flex flex-wrap gap-3">
+            {RADIUS_FILTERS.map((filter) => (
+              <button
+                key={filter.id}
+                type="button"
+                onClick={() => setSelectedRadius(filter.id)}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  selectedRadius === filter.id
+                    ? 'bg-[#0d1024] text-white'
+                    : 'bg-[#f4f6fb] text-[#44516d] hover:bg-[#eaf1ff]'
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap gap-3">
               {DISCOVERY_TABS.map((tab) => (
@@ -272,7 +319,11 @@ export default function StudentExplore() {
               : `${filteredLawyers.length} lawyers found`}
         </p>
 
-        {loading ? (
+        {!locationState.location ? (
+          <div className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 text-[#7f8ba2] shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
+            Choose your location to discover nearby lawyers, internships, and sessions.
+          </div>
+        ) : loading ? (
           <div className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 text-[#7f8ba2] shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
             Loading discovery data...
           </div>
@@ -344,6 +395,9 @@ export default function StudentExplore() {
                       </div>
                       <p className="mt-3 text-[15px] text-[#33415c]">{lawyer.specialization}</p>
                       <p className="mt-2 text-[14px] text-[#6d7a92]">{lawyer.location}</p>
+                      <p className="mt-2 text-[14px] font-medium text-[#2456f5]">
+                        {formatDistanceLabel(lawyer.distanceKm)}
+                      </p>
                     </div>
                   </div>
                 </article>

@@ -1,110 +1,385 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/axios.jsx';
-import { FaMapMarkerAlt, FaSpinner, FaUser, FaGavel, FaUserGraduate } from "react-icons/fa";
+import { FaGavel, FaMapMarkerAlt, FaSpinner, FaUser, FaUserGraduate } from 'react-icons/fa';
+
+const LOCATION_HINT_DEFAULT = 'Enter a 6-digit pincode to auto-fill city, district, and state, use current location to fill those fields automatically, or enter city, district, and state manually to generate coordinates automatically.';
+
+const normalizePincode = (value) => String(value || '').replace(/\D/g, '').slice(0, 6);
+
+const normalizeAddressPayload = (address = {}) => ({
+    pincode: normalizePincode(address.pincode),
+    city: String(address.city || '').trim(),
+    district: String(address.district || '').trim(),
+    state: String(address.state || '').trim(),
+    country: String(address.country || 'India').trim() || 'India',
+    latitude: address.latitude === null || address.latitude === undefined || address.latitude === ''
+        ? null
+        : Number(address.latitude),
+    longitude: address.longitude === null || address.longitude === undefined || address.longitude === ''
+        ? null
+        : Number(address.longitude),
+});
+
+const buildAddressSignature = (address = {}) => {
+    const normalized = normalizeAddressPayload(address);
+    return [
+        normalized.pincode,
+        normalized.city.toLowerCase(),
+        normalized.district.toLowerCase(),
+        normalized.state.toLowerCase(),
+        normalized.country.toLowerCase(),
+    ].join('|');
+};
+
+const hasManualLocationInput = (address = {}) => {
+    const normalized = normalizeAddressPayload(address);
+    return Boolean(
+        normalized.pincode
+        || normalized.city
+        || normalized.district
+        || normalized.state
+        || normalized.latitude !== null
+        || normalized.longitude !== null
+    );
+};
+
+const hasGeocodingInput = (address = {}) => {
+    const normalized = normalizeAddressPayload(address);
+    return Boolean(normalized.state && (normalized.city || normalized.district));
+};
+
+const hasValidCoordinates = (address = {}) => {
+    const normalized = normalizeAddressPayload(address);
+    return Number.isFinite(normalized.latitude) && Number.isFinite(normalized.longitude);
+};
 
 export default function Register() {
     const [searchParams] = useSearchParams();
     const role = searchParams.get('role') || 'user';
     const navigate = useNavigate();
-    
+    const pincodeLookupTimerRef = useRef(null);
+    const geocodeTimerRef = useRef(null);
+    const lastResolvedPincodeRef = useRef('');
+    const lastGeocodedSignatureRef = useRef('');
+    const pincodeLookupRequestRef = useRef(0);
+    const geocodeRequestRef = useRef(0);
+
     const [loadingAddr, setLoadingAddr] = useState(false);
+    const [locationHint, setLocationHint] = useState('');
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
         email: '',
         phone: '',
         password: '',
-        
-        // Lawyer Specific
         barId: '',
         specialization: '',
         experienceYears: '',
         languages: '',
-        
-        // Student Specific
         collegeName: '',
         collegeEmail: '',
-
-        // Address
         address: {
-            latitude: null, longitude: null, pincode: '',
-            state: '', district: '', city: '', country: 'India'
-        }
+            latitude: null,
+            longitude: null,
+            pincode: '',
+            state: '',
+            district: '',
+            city: '',
+            country: 'India',
+        },
     });
 
-    useEffect(() => {
-        if (role === 'lawyer' && navigator.geolocation) {
-            setLoadingAddr(true);
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                const { latitude, longitude } = pos.coords;
-                updateAddressField('latitude', latitude);
-                updateAddressField('longitude', longitude);
-                try {
-                    const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
-                    const addr = res.data.address;
-                    setFormData(prev => ({
-                        ...prev,
-                        address: {
-                            ...prev.address,
-                            pincode: addr.postcode || '',
-                            state: addr.state || '',
-                            district: addr.state_district || addr.county || '',
-                            city: addr.city || addr.town || addr.village || '',
-                        }
-                    }));
-                } catch (err) { console.error("Geocode error", err); }
-                setLoadingAddr(false);
-            }, () => setLoadingAddr(false));
-        }
-    }, [role]);
+    const syncResolvedAddress = useCallback((resolvedAddress, hint = '') => {
+        const normalizedAddress = normalizeAddressPayload(resolvedAddress);
 
-    const handlePincodeBlur = async () => {
-        if (formData.address.pincode.length === 6) {
-            setLoadingAddr(true);
-            try {
-                const res = await axios.get(`https://nominatim.openstreetmap.org/search?postalcode=${formData.address.pincode}&country=india&format=json&addressdetails=1`);
-                if (res.data.length > 0) {
-                    const addr = res.data[0].address;
-                    setFormData(prev => ({
-                        ...prev,
-                        address: {
-                            ...prev.address,
-                            state: addr.state || '',
-                            district: addr.state_district || addr.county || '',
-                            city: addr.city || addr.town || addr.village || '',
-                            latitude: res.data[0].lat,
-                            longitude: res.data[0].lon
-                        }
-                    }));
-                }
-            } catch (err) { console.error("Pincode error", err); }
-            setLoadingAddr(false);
+        setFormData((prev) => ({
+            ...prev,
+            address: {
+                ...prev.address,
+                ...normalizedAddress,
+            },
+        }));
+
+        if (normalizedAddress.pincode.length === 6) {
+            lastResolvedPincodeRef.current = normalizedAddress.pincode;
         }
-    };
+
+        if (hasValidCoordinates(normalizedAddress)) {
+            lastGeocodedSignatureRef.current = buildAddressSignature(normalizedAddress);
+        }
+
+        if (hint) {
+            setLocationHint(hint);
+        }
+
+        return normalizedAddress;
+    }, []);
 
     const updateAddressField = (field, value) => {
-        setFormData(prev => ({ ...prev, address: { ...prev.address, [field]: value } }));
+        const nextValue = field === 'pincode' ? normalizePincode(value) : value;
+
+        if (field === 'pincode' && nextValue.length < 6) {
+            lastResolvedPincodeRef.current = '';
+        }
+
+        if (['pincode', 'city', 'district', 'state'].includes(field)) {
+            lastGeocodedSignatureRef.current = '';
+        }
+
+        setFormData((prev) => ({
+            ...prev,
+            address: {
+                ...prev.address,
+                [field]: nextValue,
+                ...(['pincode', 'city', 'district', 'state'].includes(field)
+                    ? { latitude: null, longitude: null }
+                    : {}),
+            },
+        }));
     };
 
+    const geocodeAddress = useCallback(async (addressInput, options = {}) => {
+        const address = normalizeAddressPayload(addressInput);
+        if (!hasGeocodingInput(address)) {
+            return address;
+        }
 
+        const requestId = ++geocodeRequestRef.current;
+        setLoadingAddr(true);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+        if (options.loadingMessage) {
+            setLocationHint(options.loadingMessage);
+        }
+
         try {
-            const payload = { ...formData, role };
-            
+            const { data } = await api.post('/auth/location/geocode', { address });
+
+            if (requestId !== geocodeRequestRef.current) {
+                return address;
+            }
+
+            syncResolvedAddress(data.address, options.successHint || 'Coordinates generated automatically from the resolved location.');
+            return normalizeAddressPayload(data.address);
+        } catch (error) {
+            if (requestId !== geocodeRequestRef.current) {
+                return address;
+            }
+
+            const responseData = error.response?.data;
+
+            if (responseData?.address) {
+                syncResolvedAddress(responseData.address);
+            }
+
+            const nextMessage = responseData?.message || options.failureHint || 'Unable to generate coordinates automatically from the entered location.';
+            setLocationHint(nextMessage);
+
+            if (options.throwOnError) {
+                throw new Error(nextMessage);
+            }
+
+            return address;
+        } finally {
+            if (requestId === geocodeRequestRef.current) {
+                setLoadingAddr(false);
+            }
+        }
+    }, [syncResolvedAddress]);
+
+    const lookupPincode = useCallback(async (rawPincode) => {
+        const pincode = normalizePincode(rawPincode);
+        if (pincode.length !== 6 || lastResolvedPincodeRef.current === pincode) {
+            return null;
+        }
+
+        const requestId = ++pincodeLookupRequestRef.current;
+        setLoadingAddr(true);
+        setLocationHint('Looking up city, district, and state from pincode...');
+
+        try {
+            const { data } = await api.get(`/auth/location/pincode/${pincode}`);
+
+            if (requestId !== pincodeLookupRequestRef.current) {
+                return null;
+            }
+
+            syncResolvedAddress({
+                ...data.address,
+                latitude: null,
+                longitude: null,
+            }, 'City, district, and state populated from pincode. Generating coordinates next...');
+
+            return data.address;
+        } catch (error) {
+            if (requestId !== pincodeLookupRequestRef.current) {
+                return null;
+            }
+
+            lastResolvedPincodeRef.current = '';
+            setLocationHint(error.response?.data?.message || 'Pincode lookup failed. Enter city, district, and state manually and coordinates will still be generated automatically.');
+            return null;
+        } finally {
+            if (requestId === pincodeLookupRequestRef.current) {
+                setLoadingAddr(false);
+            }
+        }
+    }, [syncResolvedAddress]);
+
+    const detectCurrentLocation = useCallback(() => {
+        if (!navigator.geolocation) {
+            setLocationHint('Location access is not supported. Enter pincode manually.');
+            return;
+        }
+
+        setLoadingAddr(true);
+        setLocationHint('Detecting your current location...');
+
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const latitude = Number(position.coords.latitude.toFixed(6));
+            const longitude = Number(position.coords.longitude.toFixed(6));
+
+            try {
+                const { data } = await api.get('/auth/location/reverse-geocode', {
+                    params: { latitude, longitude },
+                });
+
+                syncResolvedAddress({
+                    city: data.address?.city || '',
+                    district: data.address?.district || '',
+                    state: data.address?.state || '',
+                    country: data.address?.country || 'India',
+                    pincode: '',
+                    latitude,
+                    longitude,
+                }, 'City, district, and state were filled from your current location.');
+            } catch (error) {
+                syncResolvedAddress({
+                    city: '',
+                    district: '',
+                    state: '',
+                    country: 'India',
+                    pincode: '',
+                    latitude,
+                    longitude,
+                }, 'Current coordinates captured, but city, district, and state could not be resolved.');
+                console.error('Reverse geocode error', error);
+            } finally {
+                setLoadingAddr(false);
+            }
+        }, () => {
+            setLoadingAddr(false);
+            setLocationHint('Allow location access or enter a pincode manually.');
+        });
+    }, [syncResolvedAddress]);
+
+    useEffect(() => {
+        if (role !== 'lawyer') {
+            return undefined;
+        }
+
+        const pincode = normalizePincode(formData.address.pincode);
+        if (pincode.length !== 6 || lastResolvedPincodeRef.current === pincode) {
+            return undefined;
+        }
+
+        pincodeLookupTimerRef.current = window.setTimeout(() => {
+            lookupPincode(pincode);
+        }, 400);
+
+        return () => {
+            if (pincodeLookupTimerRef.current) {
+                window.clearTimeout(pincodeLookupTimerRef.current);
+            }
+        };
+    }, [formData.address.pincode, lookupPincode, role]);
+
+    useEffect(() => {
+        if (role !== 'lawyer') {
+            return undefined;
+        }
+
+        const currentAddress = {
+            pincode: formData.address.pincode,
+            city: formData.address.city,
+            district: formData.address.district,
+            state: formData.address.state,
+            country: formData.address.country,
+            latitude: formData.address.latitude,
+            longitude: formData.address.longitude,
+        };
+
+        const signature = buildAddressSignature(currentAddress);
+        if (!hasGeocodingInput(currentAddress) || signature === lastGeocodedSignatureRef.current) {
+            return undefined;
+        }
+
+        geocodeTimerRef.current = window.setTimeout(() => {
+            geocodeAddress(currentAddress, {
+                loadingMessage: 'Generating coordinates from the resolved location...',
+                successHint: 'Coordinates generated automatically.',
+            });
+        }, 700);
+
+        return () => {
+            if (geocodeTimerRef.current) {
+                window.clearTimeout(geocodeTimerRef.current);
+            }
+        };
+    }, [
+        formData.address.city,
+        formData.address.country,
+        formData.address.district,
+        formData.address.latitude,
+        formData.address.longitude,
+        formData.address.pincode,
+        formData.address.state,
+        geocodeAddress,
+        role,
+    ]);
+
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+
+        try {
+            const payload = {
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                email: formData.email,
+                phone: formData.phone,
+                password: formData.password,
+                role,
+            };
+
             if (role === 'lawyer') {
+                let resolvedAddress = normalizeAddressPayload(formData.address);
+
+                if (hasManualLocationInput(resolvedAddress) && !hasValidCoordinates(resolvedAddress)) {
+                    resolvedAddress = await geocodeAddress(resolvedAddress, {
+                        loadingMessage: 'Finalizing location details before registration...',
+                        successHint: 'Location details are ready for registration.',
+                        failureHint: 'Unable to generate coordinates from the provided location. Please verify city, district, and state.',
+                        throwOnError: true,
+                    });
+                }
+
                 payload.experienceYears = Number(formData.experienceYears);
-                payload.languages = formData.languages.split(',').map(lang => lang.trim());
+                payload.languages = formData.languages.split(',').map((language) => language.trim()).filter(Boolean);
+                payload.barId = formData.barId;
+                payload.specialization = formData.specialization;
+                payload.address = resolvedAddress;
+            }
+
+            if (role === 'student') {
+                payload.collegeName = formData.collegeName;
+                payload.collegeEmail = formData.collegeEmail;
             }
 
             await api.post('/auth/register', payload);
             alert('Registration Successful! Please Login.');
             navigate(`/login?role=${role}`);
-        } catch (err) {
-            alert(err.response?.data?.message || 'Signup Failed');
+        } catch (error) {
+            alert(error.response?.data?.message || error.message || 'Signup Failed');
         }
     };
 
@@ -123,27 +398,36 @@ export default function Register() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Common Name Fields */}
-                    <input type="text" placeholder="First Name" required
+                    <input
+                        type="text"
+                        placeholder="First Name"
+                        required
                         className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-blue-500 outline-none w-full"
-                        onChange={e => setFormData({ ...formData, firstName: e.target.value })}
+                        onChange={(event) => setFormData({ ...formData, firstName: event.target.value })}
                     />
-                    <input type="text" placeholder="Last Name" required
+                    <input
+                        type="text"
+                        placeholder="Last Name"
+                        required
                         className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-blue-500 outline-none w-full"
-                        onChange={e => setFormData({ ...formData, lastName: e.target.value })}
+                        onChange={(event) => setFormData({ ...formData, lastName: event.target.value })}
                     />
-                    <input type="email" placeholder="Personal Email ID" required
+                    <input
+                        type="email"
+                        placeholder="Personal Email ID"
+                        required
                         className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-blue-500 outline-none w-full md:col-span-2"
-                        onChange={e => setFormData({ ...formData, email: e.target.value })}
+                        onChange={(event) => setFormData({ ...formData, email: event.target.value })}
                     />
 
-                    {/* Mobile Number - required for everyone */}
                     <div className="md:col-span-2 flex gap-4">
-                        <input type="text" placeholder="Mobile Number" required
+                        <input
+                            type="text"
+                            placeholder="Mobile Number"
+                            required
                             className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-blue-500 outline-none flex-1"
-                            onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                            onChange={(event) => setFormData({ ...formData, phone: event.target.value })}
                         />
-                        {/* Student specific static button without logic per request */}
                         {role === 'student' && (
                             <button type="button" className="px-6 py-3 bg-zinc-700 text-zinc-400 rounded-xl font-bold whitespace-nowrap cursor-not-allowed">
                                 Verify Mobile
@@ -151,67 +435,124 @@ export default function Register() {
                         )}
                     </div>
 
-                    {/* Password - Everyone */}
-                    <input type="password" placeholder="Password" required
+                    <input
+                        type="password"
+                        placeholder="Password"
+                        required
                         className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-blue-500 outline-none w-full md:col-span-2"
-                        onChange={e => setFormData({ ...formData, password: e.target.value })}
+                        onChange={(event) => setFormData({ ...formData, password: event.target.value })}
                     />
 
-                    {/* Lawyer Fields */}
                     {role === 'lawyer' && (
                         <>
-                            <input type="text" placeholder="Bar Council Number" required
+                            <input
+                                type="text"
+                                placeholder="Bar Council Number"
+                                required
                                 className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-amber-500 outline-none"
-                                onChange={e => setFormData({ ...formData, barId: e.target.value })}
+                                onChange={(event) => setFormData({ ...formData, barId: event.target.value })}
                             />
-                            <input type="text" placeholder="Specialization (e.g. Criminal, Civil)" required
+                            <input
+                                type="text"
+                                placeholder="Specialization (e.g. Criminal, Civil)"
+                                required
                                 className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-amber-500 outline-none"
-                                onChange={e => setFormData({ ...formData, specialization: e.target.value })}
+                                onChange={(event) => setFormData({ ...formData, specialization: event.target.value })}
                             />
-                            <input type="text" placeholder="Languages Known (comma separated)" required
+                            <input
+                                type="text"
+                                placeholder="Languages Known (comma separated)"
+                                required
                                 className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-amber-500 outline-none"
-                                onChange={e => setFormData({ ...formData, languages: e.target.value })}
+                                onChange={(event) => setFormData({ ...formData, languages: event.target.value })}
                             />
-                            <input type="number" placeholder="Experience (Years)" required
+                            <input
+                                type="number"
+                                placeholder="Experience (Years)"
+                                required
                                 className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-amber-500 outline-none"
-                                onChange={e => setFormData({ ...formData, experienceYears: e.target.value })}
+                                onChange={(event) => setFormData({ ...formData, experienceYears: event.target.value })}
                             />
 
                             <div className="md:col-span-2 space-y-4 pt-4 border-t border-zinc-800">
                                 <div className="flex items-center text-zinc-400">
                                     <FaMapMarkerAlt className="mr-2" />
-                                    <span className="font-semibold text-sm uppercase">Location & Pincode</span>
+                                    <span className="font-semibold text-sm uppercase">Location Details</span>
                                     {loadingAddr && <FaSpinner className="animate-spin ml-3 text-amber-500" />}
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <input type="text" placeholder="Pincode" value={formData.address.pincode} onBlur={handlePincodeBlur}
-                                        onChange={e => updateAddressField('pincode', e.target.value)}
+                                <button
+                                    type="button"
+                                    onClick={detectCurrentLocation}
+                                    className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-300 transition hover:bg-amber-500/20"
+                                >
+                                    Use Current Location
+                                </button>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        placeholder="Pincode"
+                                        value={formData.address.pincode}
+                                        onChange={(event) => updateAddressField('pincode', event.target.value)}
                                         className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-amber-500 outline-none"
                                     />
-                                    <input type="text" placeholder="City" value={formData.address.city} readOnly
-                                        className="bg-zinc-800 text-zinc-400 p-3 rounded-xl border border-zinc-700 outline-none"
+                                    <input
+                                        type="text"
+                                        placeholder="City"
+                                        value={formData.address.city}
+                                        onChange={(event) => updateAddressField('city', event.target.value)}
+                                        className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-amber-500 outline-none"
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="State"
+                                        value={formData.address.state}
+                                        onChange={(event) => updateAddressField('state', event.target.value)}
+                                        className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-amber-500 outline-none"
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="District"
+                                        value={formData.address.district}
+                                        onChange={(event) => updateAddressField('district', event.target.value)}
+                                        className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-amber-500 outline-none"
                                     />
                                 </div>
+                                <p className="text-xs text-zinc-500">
+                                    {locationHint || LOCATION_HINT_DEFAULT}
+                                </p>
                             </div>
                         </>
                     )}
 
-                    {/* Student Fields */}
                     {role === 'student' && (
                         <>
-                            <input type="text" placeholder="College Name" required
+                            <input
+                                type="text"
+                                placeholder="College Name"
+                                required
                                 className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-emerald-500 outline-none"
-                                onChange={e => setFormData({ ...formData, collegeName: e.target.value })}
+                                onChange={(event) => setFormData({ ...formData, collegeName: event.target.value })}
                             />
-                            <input type="email" placeholder="College Email Address" required
+                            <input
+                                type="email"
+                                placeholder="College Email Address"
+                                required
                                 className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-emerald-500 outline-none"
-                                onChange={e => setFormData({ ...formData, collegeEmail: e.target.value })}
+                                onChange={(event) => setFormData({ ...formData, collegeEmail: event.target.value })}
                             />
                         </>
                     )}
 
-                    <button type="submit" className={`md:col-span-2 w-full font-bold py-4 rounded-xl mt-6 transition-all shadow-lg text-white
-                        ${role === 'lawyer' ? 'bg-amber-600 hover:bg-amber-700' : role === 'student' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                    <button
+                        type="submit"
+                        className={`md:col-span-2 w-full font-bold py-4 rounded-xl mt-6 transition-all shadow-lg text-white ${
+                            role === 'lawyer'
+                                ? 'bg-amber-600 hover:bg-amber-700'
+                                : role === 'student'
+                                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                                    : 'bg-blue-600 hover:bg-blue-700'
+                        }`}
                     >
                         Create Account
                     </button>

@@ -12,6 +12,9 @@ export default function Login() {
     // States for All users
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
+    const [errorCode, setErrorCode] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -25,17 +28,27 @@ export default function Login() {
 
     const handleEmailLogin = async (e) => {
         e.preventDefault();
+        setErrorMessage('');
+        setErrorCode('');
+        setIsSubmitting(true);
         dispatch(setLoading(true));
+
         try {
-            const { data } = await api.post('/auth/login', { email, password, role });
+            const { data } = await api.post('/auth/login', {
+                email: email.trim(),
+                password,
+                role,
+            });
             setAccessToken(data.accessToken);
             setRefreshToken(data.refreshToken);
             dispatch(setAuth(data.user));
-            dispatch(setLoading(false));
             handleRedirect(data.user);
         } catch (err) {
-            alert(err.response?.data?.message || 'Login Failed');
+            setErrorMessage(err.response?.data?.message || 'Login failed. Please try again.');
+            setErrorCode(err.response?.data?.code || '');
+        } finally {
             dispatch(setLoading(false));
+            setIsSubmitting(false);
         }
     };
 
@@ -54,18 +67,49 @@ export default function Login() {
                         type="email"
                         placeholder="Email Address"
                         required
+                        value={email}
                         className="w-full bg-zinc-800 p-4 rounded-xl outline-none border border-transparent focus:border-blue-500 transition"
-                        onChange={e => setEmail(e.target.value)}
+                        onChange={e => {
+                            setEmail(e.target.value);
+                            if (errorMessage) {
+                                setErrorMessage('');
+                                setErrorCode('');
+                            }
+                        }}
                     />
                     <input
                         type="password"
                         placeholder="Password"
                         required
+                        value={password}
                         className="w-full bg-zinc-800 p-4 rounded-xl outline-none border border-transparent focus:border-blue-500 transition"
-                        onChange={e => setPassword(e.target.value)}
+                        onChange={e => {
+                            setPassword(e.target.value);
+                            if (errorMessage) {
+                                setErrorMessage('');
+                                setErrorCode('');
+                            }
+                        }}
                     />
-                    <button className={`w-full py-4 rounded-xl font-bold shadow-lg transition active:scale-95 ${role === 'lawyer' ? 'bg-amber-600 hover:bg-amber-700' : role === 'student' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
-                        Sign In
+                    {errorMessage && (
+                        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                            <p>{errorMessage}</p>
+                            {errorCode === 'ACCOUNT_NOT_FOUND' && (
+                                <p className="mt-2 text-red-100">
+                                    New here?{' '}
+                                    <Link to={`/register?role=${role}`} className="font-semibold underline underline-offset-2">
+                                        Create your account
+                                    </Link>
+                                </p>
+                            )}
+                        </div>
+                    )}
+                    <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className={`w-full py-4 rounded-xl font-bold shadow-lg transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-70 ${role === 'lawyer' ? 'bg-amber-600 hover:bg-amber-700' : role === 'student' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                    >
+                        {isSubmitting ? 'Signing In...' : 'Sign In'}
                     </button>
                 </form>
 

@@ -1,171 +1,353 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { ArrowLeft, User, Calendar, Mail, Phone, MapPin, LogOut, Edit2, Save, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  Calendar,
+  Edit2,
+  LogOut,
+  Mail,
+  MapPin,
+  Navigation,
+  Phone,
+  Save,
+  User,
+  X,
+} from 'lucide-react';
 import api from '../api/axios';
-import { updateUser, logout } from '../redux/authSlice';
+import { logout, updateUser } from '../redux/authSlice';
 
+// Shared profile editor for users and lawyers, including location refresh for discovery accuracy.
 const UserProfile = () => {
-    const navigate = useNavigate();
-    const dispatch = useDispatch();
-    const { user } = useSelector((state) => state.auth);
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
+  const isLawyer = user?.role === 'lawyer';
 
-    const [isEditing, setIsEditing] = useState(false);
-    const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadingLocation, setLoadingLocation] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
+    age: user?.age || '',
+    gender: user?.gender || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    city: user?.address?.city || '',
+    state: user?.address?.state || '',
+    country: user?.address?.country || 'India',
+    latitude: user?.address?.latitude || '',
+    longitude: user?.address?.longitude || '',
+    barId: user?.lawyerProfile?.barId || '',
+    specialization: user?.lawyerProfile?.specialization || '',
+    experienceYears: user?.lawyerProfile?.experienceYears || '',
+    languages: Array.isArray(user?.lawyerProfile?.languages) ? user.lawyerProfile.languages.join(', ') : '',
+    consultationFee: user?.lawyerProfile?.consultationFee || '',
+    about: user?.lawyerProfile?.about || '',
+    isOnline: Boolean(user?.lawyerProfile?.isOnline),
+  });
 
-    // Form State (initialized with Redux user data)
-    const [formData, setFormData] = useState({
-        name: user?.name || '',
-        age: user?.age || '',
-        gender: user?.gender || '',
-        email: user?.email || '',
-        phone: user?.phone || '',
-        // Flatten address for easier editing
-        city: user?.address?.city || '',
-        country: user?.address?.country || 'India'
-    });
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate('/login');
+  };
 
-    const handleLogout = () => {
-        dispatch(logout());
-        navigate('/login');
-    };
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target;
+    setFormData((current) => ({
+      ...current,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
 
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Browser location is not supported on this device.');
+      return;
+    }
 
-    const handleSave = async () => {
+    setLoadingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const nextLatitude = Number(position.coords.latitude).toFixed(6);
+        const nextLongitude = Number(position.coords.longitude).toFixed(6);
+
+        setFormData((current) => ({
+          ...current,
+          latitude: nextLatitude,
+          longitude: nextLongitude,
+        }));
+
         try {
-            setLoading(true);
+          const response = await axios.get(
+            `https://nominatim.openstreetmap.org/reverse?lat=${nextLatitude}&lon=${nextLongitude}&format=json`
+          );
+          const address = response.data?.address || {};
 
-            // Construct payload matching your backend structure
-            const payload = {
-                name: formData.name,
-                age: formData.age,
-                gender: formData.gender,
-                email: formData.email,
-                address: {
-                    city: formData.city,
-                    country: formData.country
-                }
-            };
-
-            const res = await api.put('/auth/update-profile', payload);
-
-            // Update Redux Store immediately
-            dispatch(updateUser(res.data.user));
-            setIsEditing(false);
-            alert("Profile Updated Successfully!");
+          setFormData((current) => ({
+            ...current,
+            city: address.city || address.town || address.village || current.city,
+            state: address.state || current.state,
+            country: address.country || current.country,
+            latitude: nextLatitude,
+            longitude: nextLongitude,
+          }));
         } catch (error) {
-            console.error("Update failed", error);
-            alert("Failed to update profile.");
+          console.error('Error reverse geocoding current location:', error);
         } finally {
-            setLoading(false);
+          setLoadingLocation(false);
         }
-    };
-
-    // Reusable Card Component for Fields
-    const ProfileField = ({ icon: Icon, label, name, value, type = "text" }) => (
-        <div className="bg-white p-4 rounded-2xl shadow-sm flex items-center gap-4 border border-gray-100">
-            <div className="h-10 w-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-500 shrink-0">
-                <Icon size={20} />
-            </div>
-            <div className="flex-1">
-                <p className="text-xs text-gray-400 font-medium mb-1">{label}</p>
-                {isEditing && name !== 'phone' ? ( // Phone usually shouldn't be editable
-                    <input
-                        type={type}
-                        name={name}
-                        value={value}
-                        onChange={handleChange}
-                        className="w-full text-gray-800 font-semibold border-b border-blue-500 outline-none pb-1"
-                    />
-                ) : (
-                    <p className="text-gray-800 font-semibold text-lg">{value || "Not set"}</p>
-                )}
-            </div>
-        </div>
+      },
+      (error) => {
+        console.error('Error getting browser location:', error);
+        setLoadingLocation(false);
+        alert('Unable to access your location right now.');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000,
+      }
     );
+  };
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+
+      const payload = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        age: formData.age,
+        gender: formData.gender,
+        email: formData.email,
+        address: {
+          city: formData.city,
+          state: formData.state,
+          country: formData.country,
+          latitude: formData.latitude,
+          longitude: formData.longitude,
+        },
+      };
+
+      if (isLawyer) {
+        payload.lawyerProfile = {
+          barId: formData.barId,
+          specialization: formData.specialization,
+          experienceYears: formData.experienceYears,
+          languages: formData.languages,
+          consultationFee: formData.consultationFee,
+          about: formData.about,
+          isOnline: formData.isOnline,
+        };
+      }
+
+      const response = await api.put('/auth/update-profile', payload);
+      dispatch(updateUser(response.data.user));
+      setIsEditing(false);
+      alert('Profile updated successfully.');
+    } catch (error) {
+      console.error('Update failed', error);
+      alert(error.response?.data?.message || 'Failed to update profile.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderField = ({ icon, label, name, value, type = 'text', readOnly = false }) => {
+    const FieldIcon = icon;
 
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col items-center pb-10">
-
-            {/* Header */}
-            <div className="w-full bg-black text-white p-4 flex items-center justify-between shadow-md sticky top-0 z-10">
-                <div className="flex items-center gap-4">
-                    <ArrowLeft onClick={() => navigate(-1)} className="cursor-pointer hover:text-gray-300" />
-                    <span className="text-xl font-bold tracking-wide">Nyaya Setu</span>
-                </div>
-                {isEditing ? (
-                    <div className="flex gap-4">
-                        <button onClick={() => setIsEditing(false)} className="text-gray-400 hover:text-white"><X /></button>
-                    </div>
-                ) : (
-                    <div className="w-6"></div> // Spacer
-                )}
-            </div>
-
-            {/* Profile Avatar Section */}
-            <div className="w-full bg-white pb-8 pt-4 flex flex-col items-center rounded-b-[2.5rem] shadow-sm mb-6 relative">
-                <div className="h-24 w-24 rounded-full p-1 border-2 border-blue-500">
-                    <img
-                        src={user?.profileImage || `https://ui-avatars.com/api/?name=${formData.name}&background=0D8ABC&color=fff`}
-                        alt="Profile"
-                        className="h-full w-full rounded-full object-cover"
-                    />
-                </div>
-                {/* Visual purple circle from design */}
-                <div className="absolute top-0 w-20 h-10 bg-purple-600 rounded-b-full blur-xl opacity-20"></div>
-            </div>
-
-            {/* Fields Container */}
-            <div className="w-full max-w-md px-4 flex flex-col gap-4">
-
-                <ProfileField icon={User} label="Name" name="name" value={formData.name} />
-
-                <ProfileField icon={Calendar} label="Age" name="age" value={formData.age} type="number" />
-
-                <ProfileField icon={User} label="Gender" name="gender" value={formData.gender} />
-
-                <ProfileField icon={Mail} label="Email" name="email" value={formData.email} type="email" />
-
-                <ProfileField icon={Phone} label="Phone" name="phone" value={formData.phone} />
-
-                <ProfileField icon={MapPin} label="Location" name="city" value={`${formData.city}${formData.city && formData.country ? ', ' : ''}${formData.country}`} />
-
-            </div>
-
-            {/* Buttons */}
-            <div className="w-full max-w-md px-4 mt-8 flex flex-col gap-3">
-                {isEditing ? (
-                    <button
-                        onClick={handleSave}
-                        disabled={loading}
-                        className="w-full bg-green-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition"
-                    >
-                        {loading ? "Saving..." : <><Save size={20} /> Save Changes</>}
-                    </button>
-                ) : (
-                    <button
-                        onClick={() => setIsEditing(true)}
-                        className="w-full bg-black text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition"
-                    >
-                        <Edit2 size={20} /> Edit Profile
-                    </button>
-                )}
-
-                {!isEditing && (
-                    <button
-                        onClick={handleLogout}
-                        className="w-full bg-red-500 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition"
-                    >
-                        <LogOut size={20} /> Logout
-                    </button>
-                )}
-            </div>
-
+    <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-50 text-gray-500">
+          <FieldIcon size={18} />
         </div>
+        <div className="flex-1">
+          <p className="mb-1 text-xs font-medium text-gray-400">{label}</p>
+          {isEditing && !readOnly ? (
+            <input
+              type={type}
+              name={name}
+              value={value}
+              onChange={handleChange}
+              className="w-full border-b border-blue-500 pb-1 text-lg font-semibold text-gray-800 outline-none"
+            />
+          ) : (
+            <p className="text-lg font-semibold text-gray-800">{value || 'Not set'}</p>
+          )}
+        </div>
+      </div>
+    </div>
     );
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 pb-10">
+      <div className="sticky top-0 z-10 flex items-center justify-between bg-black p-4 text-white shadow-md">
+        <div className="flex items-center gap-4">
+          <ArrowLeft onClick={() => navigate(-1)} className="cursor-pointer hover:text-gray-300" />
+          <span className="text-xl font-bold tracking-wide">Nyaya Setu</span>
+        </div>
+        {isEditing ? (
+          <button onClick={() => setIsEditing(false)} className="text-gray-300 hover:text-white">
+            <X />
+          </button>
+        ) : (
+          <div className="w-6" />
+        )}
+      </div>
+
+      <div className="mx-auto max-w-3xl px-4">
+        <div className="relative mb-6 rounded-b-[2.5rem] bg-white px-6 pb-8 pt-5 text-center shadow-sm">
+          <div className="mx-auto h-24 w-24 rounded-full border-2 border-blue-500 p-1">
+            <img
+              src={user?.profileImage || `https://ui-avatars.com/api/?name=${formData.firstName}+${formData.lastName}&background=0D8ABC&color=fff`}
+              alt="Profile"
+              className="h-full w-full rounded-full object-cover"
+            />
+          </div>
+          <h1 className="mt-4 text-2xl font-bold text-gray-900">
+            {`${formData.firstName} ${formData.lastName}`.trim() || 'Profile'}
+          </h1>
+          <p className="mt-1 text-sm text-gray-500 capitalize">{user?.role || 'user'} account</p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {renderField({ icon: User, label: 'First Name', name: 'firstName', value: formData.firstName })}
+          {renderField({ icon: User, label: 'Last Name', name: 'lastName', value: formData.lastName })}
+          {renderField({ icon: Calendar, label: 'Age', name: 'age', value: formData.age, type: 'number' })}
+          {renderField({ icon: User, label: 'Gender', name: 'gender', value: formData.gender })}
+          {renderField({ icon: Mail, label: 'Email', name: 'email', value: formData.email, type: 'email' })}
+          {renderField({ icon: Phone, label: 'Phone', name: 'phone', value: formData.phone, readOnly: true })}
+          {renderField({ icon: MapPin, label: 'City', name: 'city', value: formData.city })}
+          {renderField({ icon: MapPin, label: 'State', name: 'state', value: formData.state })}
+          {renderField({ icon: MapPin, label: 'Country', name: 'country', value: formData.country })}
+          {renderField({ icon: Navigation, label: 'Latitude', name: 'latitude', value: formData.latitude })}
+          {renderField({ icon: Navigation, label: 'Longitude', name: 'longitude', value: formData.longitude })}
+        </div>
+
+        {isLawyer ? (
+          <section className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-[#0b1f44]">Lawyer Discovery Settings</h2>
+                <p className="mt-1 text-sm text-[#5e6c87]">
+                  Keep these details updated so clients can discover you accurately nearby.
+                </p>
+              </div>
+              {isEditing ? (
+                <button
+                  type="button"
+                  onClick={handleUseCurrentLocation}
+                  disabled={loadingLocation}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0d1024] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#171b34] disabled:opacity-60"
+                >
+                  <Navigation size={16} />
+                  {loadingLocation ? 'Updating location...' : 'Use current location'}
+                </button>
+              ) : null}
+            </div>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              {renderField({ icon: User, label: 'Bar ID', name: 'barId', value: formData.barId })}
+              {renderField({ icon: User, label: 'Specialization', name: 'specialization', value: formData.specialization })}
+              {renderField({ icon: Calendar, label: 'Experience (years)', name: 'experienceYears', value: formData.experienceYears, type: 'number' })}
+              {renderField({ icon: User, label: 'Languages', name: 'languages', value: formData.languages })}
+              {renderField({ icon: User, label: 'Consultation Fee', name: 'consultationFee', value: formData.consultationFee, type: 'number' })}
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-gray-100 bg-gray-50 p-4">
+              <p className="mb-2 text-xs font-medium text-gray-400">About</p>
+              {isEditing ? (
+                <textarea
+                  name="about"
+                  value={formData.about}
+                  onChange={handleChange}
+                  rows={4}
+                  className="w-full resize-none rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-800 outline-none focus:border-blue-500"
+                />
+              ) : (
+                <p className="text-sm leading-7 text-gray-700">{formData.about || 'No bio added yet.'}</p>
+              )}
+            </div>
+
+            <div className="mt-4 flex items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 p-4">
+              <div>
+                <p className="font-semibold text-gray-900">Available for instant consult</p>
+                <p className="text-sm text-gray-500">This controls whether you appear on the nearby online consult list.</p>
+              </div>
+              {isEditing ? (
+                <label className="inline-flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name="isOnline"
+                    checked={formData.isOnline}
+                    onChange={handleChange}
+                    className="h-4 w-4"
+                  />
+                  <span className="text-sm font-semibold text-gray-700">
+                    {formData.isOnline ? 'Online' : 'Offline'}
+                  </span>
+                </label>
+              ) : (
+                <span className={`rounded-full px-3 py-1 text-sm font-semibold ${formData.isOnline ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600'}`}>
+                  {formData.isOnline ? 'Online' : 'Offline'}
+                </span>
+              )}
+            </div>
+          </section>
+        ) : null}
+
+        {!isLawyer && isEditing ? (
+          <div className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+            <button
+              type="button"
+              onClick={handleUseCurrentLocation}
+              disabled={loadingLocation}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0d1024] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#171b34] disabled:opacity-60"
+            >
+              <Navigation size={16} />
+              {loadingLocation ? 'Updating location...' : 'Use current location'}
+            </button>
+          </div>
+        ) : null}
+
+        <div className="mt-8 flex flex-col gap-3">
+          {isEditing ? (
+            <button
+              onClick={handleSave}
+              disabled={loading}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-green-600 py-4 font-bold text-white shadow-lg transition active:scale-95 disabled:opacity-60"
+            >
+              <Save size={20} />
+              {loading ? 'Saving...' : 'Save Changes'}
+            </button>
+          ) : (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-black py-4 font-bold text-white shadow-lg transition active:scale-95"
+            >
+              <Edit2 size={20} />
+              Edit Profile
+            </button>
+          )}
+
+          {!isEditing ? (
+            <button
+              onClick={handleLogout}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-red-500 py-4 font-bold text-white shadow-lg transition active:scale-95"
+            >
+              <LogOut size={20} />
+              Logout
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default UserProfile;
