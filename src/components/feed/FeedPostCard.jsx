@@ -1,5 +1,7 @@
 import React from 'react';
-import { BriefcaseBusiness, CalendarDays, Clock3, Heart, IndianRupee, MapPin, MessageSquare, Users } from 'lucide-react';
+import { BriefcaseBusiness, CalendarDays, Clock3, IndianRupee, MapPin, Users } from 'lucide-react';
+import api from '../../api/axios.jsx';
+import ReactionBar from './ReactionBar.jsx';
 
 const badgeStyles = {
   general: 'bg-[#eef2ff] text-[#4a54e1]',
@@ -22,16 +24,33 @@ export default function FeedPostCard({ post, onApply, onJoin }) {
   const isJam = post.type === 'jam';
   const hasPrimaryAction = isInternship || isJam;
   const isDisabled = isInternship ? post.applied || post.status === 'closed' : post.joined;
+  const canPersistReaction = post.sourceModel !== 'LegacyInternship';
 
   const actionLabel = isInternship
     ? post.applied
-      ? 'Applied ✓'
+      ? 'Applied'
       : post.status === 'closed'
         ? 'Applications Closed'
         : 'Apply Now'
     : post.joined
-      ? 'Joined ✓'
+      ? 'Joined'
       : 'Join';
+
+  const handleLike = async () => {
+    const endpoint = post.sourceModel === 'LegacyJamSession'
+      ? `/auth/jam-sessions/${post.id}/like`
+      : `/posts/${post.id}/like`;
+    const { data } = await api.post(endpoint);
+    return data;
+  };
+
+  const handleComment = async (_post, text) => {
+    const endpoint = post.sourceModel === 'LegacyJamSession'
+      ? `/auth/jam-sessions/${post.id}/comments`
+      : `/posts/${post.id}/comments`;
+    const { data } = await api.post(endpoint, { text });
+    return data;
+  };
 
   return (
     <article className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 shadow-[0_8px_30px_rgba(11,31,68,0.06)]">
@@ -56,14 +75,14 @@ export default function FeedPostCard({ post, onApply, onJoin }) {
                   {typeLabels[post.type] || 'Post'}
                 </span>
               </div>
-              <p className="mt-2 text-sm text-[#6d7a92]">{post.postedAt}</p>
+              <p className="mt-2 text-sm text-[#6d7a92]">{post.postedAt || post.time}</p>
             </div>
           </div>
         </div>
 
         {post.title ? <h2 className="text-[24px] font-semibold tracking-tight text-[#102144]">{post.title}</h2> : null}
 
-        <p className="text-[16px] leading-8 text-[#243b67]">{post.content}</p>
+        <p className="text-[16px] leading-8 text-[#243b67]">{post.content || post.summary || post.description}</p>
 
         {post.media?.length ? (
           <div className={`grid gap-3 ${post.media.length === 1 ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3'}`}>
@@ -100,28 +119,30 @@ export default function FeedPostCard({ post, onApply, onJoin }) {
           </div>
         ) : null}
 
-        <div className="flex flex-col gap-3 border-t border-[#e9eef7] pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-5 text-sm text-[#6d7a92]">
-            <span className="inline-flex items-center gap-2">
-              <Heart size={16} />
-              {post.likesCount || 0}
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <MessageSquare size={16} />
-              {post.commentsCount || 0}
-            </span>
-            {isInternship ? (
-              <span className="inline-flex items-center gap-2">
-                <BriefcaseBusiness size={16} />
-                {post.applicationCount || 0} applied
-              </span>
-            ) : null}
-            {isJam ? (
-              <span className="inline-flex items-center gap-2">
-                <Users size={16} />
-                {post.participantCount || 0} joined
-              </span>
-            ) : null}
+        <div className="flex flex-col gap-4 border-t border-[#e9eef7] pt-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <ReactionBar
+              item={post}
+              itemLabel={isJam ? 'jam session' : isInternship ? 'internship' : 'post'}
+              compact
+              onLike={canPersistReaction ? handleLike : undefined}
+              onComment={canPersistReaction ? handleComment : undefined}
+            />
+
+            <div className="flex flex-wrap items-center gap-5 text-sm text-[#6d7a92]">
+              {isInternship ? (
+                <span className="inline-flex items-center gap-2">
+                  <BriefcaseBusiness size={16} />
+                  {post.applicationCount || 0} applied
+                </span>
+              ) : null}
+              {isJam ? (
+                <span className="inline-flex items-center gap-2">
+                  <Users size={16} />
+                  {post.participantCount || 0} joined
+                </span>
+              ) : null}
+            </div>
           </div>
 
           {hasPrimaryAction ? (
@@ -129,7 +150,7 @@ export default function FeedPostCard({ post, onApply, onJoin }) {
               type="button"
               onClick={() => (isInternship ? onApply?.(post) : onJoin?.(post))}
               disabled={isDisabled}
-              className={`rounded-2xl px-5 py-3 text-sm font-semibold transition ${
+              className={`self-start rounded-2xl px-5 py-3 text-sm font-semibold transition ${
                 isDisabled
                   ? 'cursor-not-allowed bg-[#e9fff1] text-[#14804a]'
                   : isInternship
@@ -139,16 +160,7 @@ export default function FeedPostCard({ post, onApply, onJoin }) {
             >
               {actionLabel}
             </button>
-          ) : (
-            <div className="flex items-center gap-3">
-              <button type="button" className="rounded-2xl border border-[#dbe2ef] px-4 py-3 text-sm font-semibold text-[#243b67]">
-                Like
-              </button>
-              <button type="button" className="rounded-2xl border border-[#dbe2ef] px-4 py-3 text-sm font-semibold text-[#243b67]">
-                Comment
-              </button>
-            </div>
-          )}
+          ) : null}
         </div>
       </div>
     </article>

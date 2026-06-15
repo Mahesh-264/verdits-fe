@@ -8,6 +8,7 @@ import {
   FaCircle,
   FaFileSignature,
   FaGavel,
+  FaMagic,
   FaPlus,
   FaTimes,
   FaUserGraduate,
@@ -16,6 +17,7 @@ import { Users } from 'lucide-react';
 import api from '../api/axios';
 import FeedPostCard from '../components/feed/FeedPostCard.jsx';
 import PostComposerModal from '../components/feed/PostComposerModal.jsx';
+import ReactionBar from '../components/feed/ReactionBar.jsx';
 
 const normalizeStatus = (status) => {
   const formattedStatus = String(status || '').toLowerCase();
@@ -62,6 +64,23 @@ const emptyDrawerState = {
   items: [],
 };
 
+const noticeDocumentTypes = [
+  'Legal Notice for Recovery of Money',
+  'Legal Notice for Breach of Contract',
+  'Tenant Eviction Notice',
+  'Consumer Complaint Notice',
+  'Employment Termination Dispute Notice',
+  'Cheque Bounce Notice',
+  'Property Dispute Notice',
+  'Defamation Notice',
+  'Custom Legal Notice',
+];
+
+const initialNoticeForm = {
+  documentType: noticeDocumentTypes[0],
+  details: '',
+};
+
 export default function LawyerDashboard() {
   const { user } = useSelector((state) => state.auth);
   const navigate = useNavigate();
@@ -71,6 +90,7 @@ export default function LawyerDashboard() {
   const [showAppointmentsModal, setShowAppointmentsModal] = useState(false);
   const [showClientsModal, setShowClientsModal] = useState(false);
   const [showStudentInteractionModal, setShowStudentInteractionModal] = useState(false);
+  const [showNoticeGenerator, setShowNoticeGenerator] = useState(false);
   const [studentInteractionTab, setStudentInteractionTab] = useState('internships');
   const [publishedInternships, setPublishedInternships] = useState([]);
   const [publishedJamSessions, setPublishedJamSessions] = useState([]);
@@ -85,6 +105,13 @@ export default function LawyerDashboard() {
   const [postLoading, setPostLoading] = useState(false);
   const [postError, setPostError] = useState('');
   const [posting, setPosting] = useState(false);
+  const [noticeForm, setNoticeForm] = useState(initialNoticeForm);
+  const [noticeDraft, setNoticeDraft] = useState('');
+  const [noticeEditPrompt, setNoticeEditPrompt] = useState('');
+  const [noticeLoading, setNoticeLoading] = useState(false);
+  const [noticeEditing, setNoticeEditing] = useState(false);
+  const [noticeError, setNoticeError] = useState('');
+  const [noticeMessage, setNoticeMessage] = useState('');
   const [updatingApplicantId, setUpdatingApplicantId] = useState('');
   const [togglingInternshipId, setTogglingInternshipId] = useState('');
   const [deletingInternshipId, setDeletingInternshipId] = useState('');
@@ -297,6 +324,26 @@ export default function LawyerDashboard() {
     }
   };
 
+  const handleJamLike = async (session) => {
+    const { data } = await api.post(`/auth/jam-sessions/${session.id}/like`);
+    return data;
+  };
+
+  const handleJamComment = async (session, text) => {
+    const { data } = await api.post(`/auth/jam-sessions/${session.id}/comments`, { text });
+    return data;
+  };
+
+  const handleInternshipLike = async (internship) => {
+    const { data } = await api.post(`/auth/lawyer/internships/${internship.id}/like`);
+    return data;
+  };
+
+  const handleInternshipComment = async (internship, text) => {
+    const { data } = await api.post(`/auth/lawyer/internships/${internship.id}/comments`, { text });
+    return data;
+  };
+
   const handleOpenApplicantsDrawer = (internship) => {
     setDrawer({
       open: true,
@@ -400,6 +447,72 @@ export default function LawyerDashboard() {
     }
   };
 
+  const handleNoticeInput = (event) => {
+    const { name, value } = event.target;
+    setNoticeForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleGenerateNotice = async (event) => {
+    event.preventDefault();
+
+    if (!noticeForm.documentType || !noticeForm.details.trim()) {
+      setNoticeError('Please select a document type and add the basic details.');
+      return;
+    }
+
+    try {
+      setNoticeLoading(true);
+      setNoticeError('');
+      setNoticeMessage('');
+      const { data } = await api.post('/ai/notice/generate', noticeForm);
+      setNoticeDraft(data?.draft || '');
+    } catch (error) {
+      console.error('Error generating notice:', error);
+      setNoticeError(error.response?.data?.message || 'Failed to generate notice.');
+    } finally {
+      setNoticeLoading(false);
+    }
+  };
+
+  const handleEditNotice = async (event) => {
+    event.preventDefault();
+
+    if (!noticeDraft.trim() || !noticeEditPrompt.trim()) {
+      setNoticeError('Generate a draft and add an edit instruction first.');
+      return;
+    }
+
+    try {
+      setNoticeEditing(true);
+      setNoticeError('');
+      setNoticeMessage('');
+      const { data } = await api.post('/ai/notice/edit', {
+        documentType: noticeForm.documentType,
+        currentDraft: noticeDraft,
+        editInstruction: noticeEditPrompt,
+      });
+      setNoticeDraft(data?.draft || noticeDraft);
+      setNoticeEditPrompt('');
+    } catch (error) {
+      console.error('Error editing notice:', error);
+      setNoticeError(error.response?.data?.message || 'Failed to edit notice.');
+    } finally {
+      setNoticeEditing(false);
+    }
+  };
+
+  const handleCopyNotice = async () => {
+    if (!noticeDraft.trim()) return;
+
+    try {
+      await navigator.clipboard.writeText(noticeDraft);
+      setNoticeMessage('Draft copied.');
+    } catch (error) {
+      console.error('Error copying notice:', error);
+      setNoticeMessage('Select the draft text and copy it manually.');
+    }
+  };
+
   const handleApplicantDecision = async (applicationId, status) => {
     if (!drawer.parentId) return;
 
@@ -463,6 +576,7 @@ export default function LawyerDashboard() {
       title: 'Notice Generator',
       icon: <FaFileSignature className="text-4xl text-blue-500" />,
       desc: 'Quickly draft and send legal notices to parties.',
+      onClick: () => setShowNoticeGenerator(true),
     },
     {
       title: 'My Clients',
@@ -770,6 +884,16 @@ export default function LawyerDashboard() {
                               <div>{internship.applicationCount || 0} Applied</div>
                             </div>
 
+                            <div className="mt-5 rounded-xl border border-zinc-800 bg-white p-4 text-zinc-950">
+                              <ReactionBar
+                                item={internship}
+                                itemLabel="internship"
+                                compact
+                                onLike={handleInternshipLike}
+                                onComment={handleInternshipComment}
+                              />
+                            </div>
+
                             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                               <button
                                 type="button"
@@ -841,6 +965,16 @@ export default function LawyerDashboard() {
                               <div>Date: {new Date(session.createdAt).toLocaleDateString()}</div>
                               <div>Location: {session.location || 'Not specified'}</div>
                               <div>{session.participantCount || 0} Participants</div>
+                            </div>
+
+                            <div className="mt-5 rounded-xl border border-zinc-800 bg-white p-4 text-zinc-950">
+                              <ReactionBar
+                                item={session}
+                                itemLabel="jam session"
+                                compact
+                                onLike={handleJamLike}
+                                onComment={handleJamComment}
+                              />
                             </div>
 
                             <div className="mt-5">
@@ -1056,6 +1190,103 @@ export default function LawyerDashboard() {
         </div>
       )}
 
+      {showNoticeGenerator ? (
+        <ModalShell
+          title="AI Notice Generator"
+          icon={<FaFileSignature className="text-blue-500" />}
+          onClose={() => setShowNoticeGenerator(false)}
+          maxWidthClass="max-w-6xl"
+        >
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+            <form onSubmit={handleGenerateNotice} className="space-y-5">
+              <div>
+                <label className="block text-sm font-bold text-zinc-200 mb-2">Document Type</label>
+                <select
+                  name="documentType"
+                  value={noticeForm.documentType}
+                  onChange={handleNoticeInput}
+                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-blue-500"
+                >
+                  {noticeDocumentTypes.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-zinc-200 mb-2">Basic Information</label>
+                <textarea
+                  name="details"
+                  value={noticeForm.details}
+                  onChange={handleNoticeInput}
+                  rows="13"
+                  placeholder="Add party names, addresses, facts, dates, amounts, obligations, notices already sent, relief required, deadline, and jurisdiction."
+                  className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-blue-500"
+                />
+              </div>
+
+              {noticeError ? (
+                <p className="rounded-xl border border-red-900/50 bg-red-950/50 px-4 py-3 text-sm text-red-100">{noticeError}</p>
+              ) : null}
+
+              <button
+                type="submit"
+                disabled={noticeLoading}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-500 px-5 py-3 font-bold text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <FaMagic />
+                {noticeLoading ? 'Generating...' : 'Generate Document'}
+              </button>
+            </form>
+
+            <div className="min-w-0 space-y-5">
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label className="block text-sm font-bold text-zinc-200">Generated Draft</label>
+                  <button
+                    type="button"
+                    onClick={handleCopyNotice}
+                    disabled={!noticeDraft.trim()}
+                    className="rounded-lg border border-zinc-700 px-3 py-2 text-xs font-bold text-zinc-200 transition hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <textarea
+                  value={noticeDraft}
+                  onChange={(event) => setNoticeDraft(event.target.value)}
+                  rows="18"
+                  placeholder="Your generated notice will appear here."
+                  className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-4 font-mono text-sm leading-7 text-zinc-100 outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <form onSubmit={handleEditNotice} className="space-y-3">
+                <label className="block text-sm font-bold text-zinc-200">Edit With AI</label>
+                <div className="flex flex-col gap-3 lg:flex-row">
+                  <input
+                    value={noticeEditPrompt}
+                    onChange={(event) => setNoticeEditPrompt(event.target.value)}
+                    placeholder="Example: make it stronger, add 15-day compliance deadline, simplify paragraph 3"
+                    className="min-w-0 flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-blue-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={noticeEditing || !noticeDraft.trim()}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 font-bold text-zinc-950 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <FaMagic />
+                    {noticeEditing ? 'Editing...' : 'Apply Edit'}
+                  </button>
+                </div>
+              </form>
+
+              {noticeMessage ? <p className="text-sm font-semibold text-blue-300">{noticeMessage}</p> : null}
+            </div>
+          </div>
+        </ModalShell>
+      ) : null}
+
       <PostComposerModal
         key={showPostComposer ? 'lawyer-post-open' : 'lawyer-post-closed'}
         open={showPostComposer}
@@ -1073,10 +1304,10 @@ export default function LawyerDashboard() {
   );
 }
 
-function ModalShell({ title, icon, onClose, children }) {
+function ModalShell({ title, icon, onClose, children, maxWidthClass = 'max-w-3xl' }) {
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-3xl flex flex-col max-h-[85vh] shadow-2xl relative z-[101]">
+      <div className={`bg-zinc-900 border border-zinc-800 rounded-2xl w-full ${maxWidthClass} flex flex-col max-h-[85vh] shadow-2xl relative z-[101]`}>
         <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/50 rounded-t-2xl">
           <h2 className="text-2xl font-bold flex items-center gap-3">
             {icon} {title}

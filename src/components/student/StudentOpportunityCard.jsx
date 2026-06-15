@@ -8,6 +8,8 @@ import {
   MapPin,
   Users,
 } from 'lucide-react';
+import api from '../../api/axios.jsx';
+import ReactionBar from '../feed/ReactionBar.jsx';
 import { formatDistanceLabel } from '../../utils/lawyerDiscovery.js';
 
 const typeStyles = {
@@ -42,6 +44,16 @@ export default function StudentOpportunityCard({
   const styles = typeStyles[post.type] || typeStyles.internship;
   const isInternship = post.type === 'internship';
   const isCompleted = isInternship ? post.applied || post.status === 'closed' : post.joined;
+
+  const handleJamLike = async () => {
+    const { data } = await api.post(`/auth/jam-sessions/${post.id}/like`);
+    return data;
+  };
+
+  const handleJamComment = async (_post, text) => {
+    const { data } = await api.post(`/auth/jam-sessions/${post.id}/comments`, { text });
+    return data;
+  };
 
   return (
     <article className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 shadow-[0_8px_30px_rgba(11,31,68,0.06)]">
@@ -171,6 +183,10 @@ export default function StudentOpportunityCard({
             </div>
           </div>
         )}
+
+        {!isInternship ? (
+          <ReactionBar item={post} itemLabel="jam session" compact onLike={handleJamLike} onComment={handleJamComment} />
+        ) : null}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1 text-sm text-[#6d7a92]">

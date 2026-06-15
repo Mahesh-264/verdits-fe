@@ -3,6 +3,7 @@ import { BriefcaseBusiness, GraduationCap, MapPin, X } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import api from '../api/axios.jsx';
 import { updateUser } from '../redux/authSlice.jsx';
+import ReactionBar from '../components/feed/ReactionBar.jsx';
 import StudentLayout from './StudentLayout.jsx';
 
 const defaultSpecializations = ['Criminal Law', 'Constitutional Law'];
@@ -62,6 +63,13 @@ export default function StudentProfile() {
   const skills = user?.studentProfile?.skills?.length ? user.studentProfile.skills : defaultSkills;
   const internships = user?.studentProfile?.internships?.length ? user.studentProfile.internships : defaultInternships;
   const currentYearLabel = user?.studentProfile?.currentYear || 'Not added yet';
+  const profileReactionItem = useMemo(() => ({
+    id: user?._id || user?.id || 'student-profile',
+    title: `${studentName}'s student profile`,
+    likesCount: user?.studentProfile?.profileLikesCount || 0,
+    commentsCount: user?.studentProfile?.profileCommentsCount || 0,
+    comments: [],
+  }), [studentName, user]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -190,6 +198,10 @@ export default function StudentProfile() {
               >
                 Edit Profile
               </button>
+            </div>
+
+            <div className="mt-8 border-t border-[#e9eef7] pt-5">
+              <ReactionBar item={profileReactionItem} itemLabel="student profile" compact />
             </div>
           </div>
         </section>

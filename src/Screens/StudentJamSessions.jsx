@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MessageSquare, Plus, TrendingUp, Users } from 'lucide-react';
 import api from '../api/axios.jsx';
+import ReactionBar from '../components/feed/ReactionBar.jsx';
 import StudentLayout from './StudentLayout.jsx';
 
 export default function StudentJamSessions() {
@@ -27,6 +28,16 @@ export default function StudentJamSessions() {
   const trendingTopics = useMemo(() => {
     return [...new Set(sessions.map((session) => session.topic).filter(Boolean))].slice(0, 5);
   }, [sessions]);
+
+  const handleJamLike = async (session) => {
+    const { data } = await api.post(`/auth/jam-sessions/${session.id}/like`);
+    return data;
+  };
+
+  const handleJamComment = async (session, text) => {
+    const { data } = await api.post(`/auth/jam-sessions/${session.id}/comments`, { text });
+    return data;
+  };
 
   return (
     <StudentLayout>
@@ -113,8 +124,17 @@ export default function StudentJamSessions() {
                   </div>
                   <div className="inline-flex items-center gap-2">
                     <MessageSquare size={18} />
-                    {session.comments}
+                    {session.commentsLabel || `${session.commentsCount || 0} comments`}
                   </div>
+                </div>
+
+                <div className="mt-6">
+                  <ReactionBar
+                    item={session}
+                    itemLabel="jam session"
+                    onLike={handleJamLike}
+                    onComment={handleJamComment}
+                  />
                 </div>
               </div>
 
