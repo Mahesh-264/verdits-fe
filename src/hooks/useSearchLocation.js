@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import api from '../api/axios.jsx';
 import { FALLBACK_CITY_OPTIONS } from '../utils/lawyerDiscovery.js';
 
 const STORAGE_KEY = 'nyaya-setu-search-location';
@@ -44,12 +45,22 @@ const buildFallbackLocationPayload = (option) => ({
   fallbackCityId: option.id,
 });
 
+const buildSearchedLocationPayload = (query, resolvedAddress, resolvedLocation) => ({
+  latitude: resolvedAddress.latitude ?? resolvedLocation?.coordinates?.[1],
+  longitude: resolvedAddress.longitude ?? resolvedLocation?.coordinates?.[0],
+  city: resolvedAddress.city || query,
+  state: resolvedAddress.state || '',
+  label: [resolvedAddress.city || query, resolvedAddress.state].filter(Boolean).join(', '),
+  source: 'city-search',
+});
+
 export default function useSearchLocation({ autoRequest = true } = {}) {
   const storedLocation = readStoredLocation();
   const [location, setLocation] = useState(storedLocation);
   const [status, setStatus] = useState(storedLocation ? 'ready' : 'idle');
   const [error, setError] = useState('');
   const [needsCityFallback, setNeedsCityFallback] = useState(false);
+  const [citySearchStatus, setCitySearchStatus] = useState('idle');
 
   const requestBrowserLocation = () => {
     if (!navigator.geolocation) {
@@ -110,11 +121,48 @@ export default function useSearchLocation({ autoRequest = true } = {}) {
     storeLocation(nextLocation);
   };
 
+  const searchLocation = async (query) => {
+    const trimmedQuery = String(query || '').trim();
+    if (!trimmedQuery) {
+      setError('Enter a city or district to search.');
+      return;
+    }
+
+    try {
+      setCitySearchStatus('searching');
+      setError('');
+
+      const { data } = await api.post('/auth/location/geocode', {
+        address: { city: trimmedQuery },
+      });
+      const resolvedAddress = data?.address || {};
+      const resolvedLocation = data?.location;
+      const nextLocation = buildSearchedLocationPayload(trimmedQuery, resolvedAddress, resolvedLocation);
+
+      if (!Number.isFinite(Number(nextLocation.latitude)) || !Number.isFinite(Number(nextLocation.longitude))) {
+        setError('We could not find that location. Try a nearby city or district.');
+        return;
+      }
+
+      setLocation(nextLocation);
+      setStatus('ready');
+      setNeedsCityFallback(false);
+      storeLocation(nextLocation);
+    } catch (searchError) {
+      console.error('Unable to search location', searchError);
+      setError(searchError.response?.data?.message || 'We could not find that location. Try another city.');
+    } finally {
+      setCitySearchStatus('idle');
+    }
+  };
+
   return {
+    citySearchStatus,
     error,
     location,
     needsCityFallback,
     requestBrowserLocation,
+    searchLocation,
     selectFallbackCity,
     status,
   };

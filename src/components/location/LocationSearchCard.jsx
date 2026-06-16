@@ -1,5 +1,5 @@
-import React from 'react';
-import { MapPin, Navigation, RefreshCcw } from 'lucide-react';
+import React, { useState } from 'react';
+import { MapPin, Navigation, RefreshCcw, Search } from 'lucide-react';
 import { FALLBACK_CITY_OPTIONS } from '../../utils/lawyerDiscovery.js';
 
 export default function LocationSearchCard({
@@ -10,8 +10,17 @@ export default function LocationSearchCard({
   location,
   needsCityFallback,
   onRequestLocation,
+  onSearchLocation,
   onSelectFallbackCity,
+  searchingLocation,
 }) {
+  const [cityQuery, setCityQuery] = useState('');
+
+  const handleCitySearch = (event) => {
+    event.preventDefault();
+    onSearchLocation?.(cityQuery);
+  };
+
   return (
     <section className="rounded-3xl border border-[#dbe2ef] bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -46,6 +55,32 @@ export default function LocationSearchCard({
           {loading ? 'Checking location...' : 'Use my location'}
         </button>
       </div>
+
+      {onSearchLocation ? (
+        <form onSubmit={handleCitySearch} className="mt-4 grid gap-3 rounded-2xl bg-[#f8fafc] p-4 md:grid-cols-[minmax(0,1fr)_auto]">
+          <label className="sr-only" htmlFor="location-city-search">
+            Search city or district
+          </label>
+          <div className="flex items-center gap-3 rounded-2xl border border-[#dbe2ef] bg-white px-4 py-3">
+            <Search size={17} className="text-[#7f8ba2]" />
+            <input
+              id="location-city-search"
+              value={cityQuery}
+              onChange={(event) => setCityQuery(event.target.value)}
+              type="search"
+              placeholder="Search city or district"
+              className="w-full bg-transparent text-sm text-[#0b1f44] outline-none placeholder:text-[#7f8ba2]"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={searchingLocation}
+            className="inline-flex items-center justify-center rounded-2xl bg-[#2456f5] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1d46c8] disabled:opacity-60"
+          >
+            {searchingLocation ? 'Searching...' : 'Search'}
+          </button>
+        </form>
+      ) : null}
 
       {needsCityFallback ? (
         <div className="mt-4 rounded-2xl bg-[#f8fafc] p-4">

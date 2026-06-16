@@ -113,7 +113,9 @@ const InstantConsult = () => {
           location={locationState.location}
           needsCityFallback={locationState.needsCityFallback}
           onRequestLocation={locationState.requestBrowserLocation}
+          onSearchLocation={locationState.searchLocation}
           onSelectFallbackCity={locationState.selectFallbackCity}
+          searchingLocation={locationState.citySearchStatus === 'searching'}
         />
 
         <div className="flex flex-wrap gap-3">
