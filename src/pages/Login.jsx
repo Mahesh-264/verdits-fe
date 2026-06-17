@@ -4,6 +4,7 @@ import { setAuth, setLoading } from '../redux/authSlice';
 import api from '../api/axios';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { setAccessToken, setRefreshToken } from '../utils/authStorage';
+import socket from '../utils/socket.jsx';
 
 export default function Login() {
     const [searchParams] = useSearchParams();
@@ -42,6 +43,14 @@ export default function Login() {
             setAccessToken(data.accessToken);
             setRefreshToken(data.refreshToken);
             dispatch(setAuth(data.user));
+            
+            // 🔌 Connect socket immediately after login
+            socket.auth.token = data.accessToken;
+            if (!socket.connected) {
+                socket.connect();
+                console.log('🔌 Socket connected on login');
+            }
+            
             handleRedirect(data.user);
         } catch (err) {
             setErrorMessage(err.response?.data?.message || 'Login failed. Please try again.');

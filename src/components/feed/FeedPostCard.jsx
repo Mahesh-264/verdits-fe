@@ -1,6 +1,7 @@
 import React from 'react';
 import { BriefcaseBusiness, CalendarDays, Clock3, IndianRupee, MapPin, Users } from 'lucide-react';
 import api from '../../api/axios.jsx';
+import { emitPostLiked, emitPostCommented } from '../../utils/notificationEmitter.js';
 import ReactionBar from './ReactionBar.jsx';
 
 const badgeStyles = {
@@ -42,6 +43,12 @@ export default function FeedPostCard({ post, onApply, onJoin }) {
         ? `/auth/jam-sessions/${post.id}/like`
         : `/posts/${post.id}/like`;
     const { data } = await api.post(endpoint);
+    
+    // 🔔 Emit real-time notification for like
+    if (data?.liked && post.createdBy && post.createdBy !== data.liked) {
+      emitPostLiked(post.id, post.createdBy);
+    }
+    
     return data;
   };
 
@@ -52,6 +59,12 @@ export default function FeedPostCard({ post, onApply, onJoin }) {
         ? `/auth/jam-sessions/${post.id}/comments`
         : `/posts/${post.id}/comments`;
     const { data } = await api.post(endpoint, { text });
+    
+    // 🔔 Emit real-time notification for comment
+    if (post.createdBy) {
+      emitPostCommented(post.id, post.createdBy, text);
+    }
+    
     return data;
   };
 

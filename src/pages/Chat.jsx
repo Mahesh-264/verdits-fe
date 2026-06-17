@@ -9,17 +9,12 @@ import {
 } from '../redux/chatSlice';
 import { logout } from '../redux/authSlice';
 import api from '../api/axios';
-import { io } from "socket.io-client";
-import { getAccessToken } from '../utils/authStorage';
+import socket from '../utils/socket.jsx';
 import {
     FaEllipsisV, FaPaperPlane, FaTimes, FaPhone, FaVideo, FaCommentDots,
     FaPaperclip, FaSignOutAlt, FaSearch, FaCheckDouble,
     FaTrash, FaMicrophone, FaCheckCircle, FaCircle, FaStop, FaExternalLinkAlt
 } from 'react-icons/fa';
-
-// 🌟 THE SILVER BULLET: Global socket instance outside the component!
-// This makes the connection invincible against React's re-renders and unmounts.
-let globalSocket = null;
 
 const hasAcceptedAppointment = (appointments, lawyerId, clientId) =>
     appointments.some((appointment) =>
@@ -131,27 +126,22 @@ export default function Chat() {
     // 🟢 1. THE FLAWLESS SOCKET CONNECTION (React 18 Strict Mode Safe)
     useEffect(() => {
         const userId = user?._id || user?.id;
-        const token = getAccessToken() || user?.token || "";
 
-        if (!userId || !token) return;
+        if (!userId) return;
 
-        // Only create the socket if it doesn't exist yet
-        if (!globalSocket) {
-            console.log(`🔌 [Socket] Creating NEW GLOBAL connection for user: ${userId}`);
-            globalSocket = io("/", { auth: { token } });
-        } else if (globalSocket.disconnected) {
-            console.log(`🔌 [Socket] Reconnecting existing GLOBAL socket...`);
-            globalSocket.auth = { token };
-            globalSocket.connect();
+        // Use the global socket instance that's already connected at app startup
+        if (!socket.connected) {
+            console.log(`🔌 [Chat] Connecting global socket...`);
+            socket.connect();
         }
 
         // Sync local ref to the global socket so handleSend can use it
-        socket.current = globalSocket;
+        socket.current = socket;
 
         // Define exactly what to do when events happen
-        const onConnect = () => console.log("✅ [Socket] Connected! ID:", globalSocket.id);
+        const onConnect = () => console.log("✅ [Chat] Socket Connected! ID:", socket.id);
         const onNewMessage = (msg) => {
-            console.log("📨 [Socket EVENT] Live message received:", msg);
+            console.log("📨 [Chat EVENT] Live message received:", msg);
 
             const currentMyId = userIdRef.current;
             dispatch(receiveMessage({ msg, myId: currentMyId }));
@@ -164,36 +154,35 @@ export default function Chat() {
             }
         };
         const onMessageDeleted = (id) => dispatch(removeMessageLocally(id));
-        const onDisconnect = () => console.log("🛑 [Socket] Disconnected from server.");
+        const onDisconnect = () => console.log("🛑 [Chat] Socket Disconnected from server.");
 
         // Attach listeners to the global socket
-        globalSocket.on("connect", onConnect);
-        globalSocket.on("newMessage", onNewMessage);
-        globalSocket.on("messageDeleted", onMessageDeleted);
-        globalSocket.on("disconnect", onDisconnect);
+        socket.on("connect", onConnect);
+        socket.on("newMessage", onNewMessage);
+        socket.on("messageDeleted", onMessageDeleted);
+        socket.on("disconnect", onDisconnect);
 
         // If the socket connected incredibly fast before the listener was attached
-        if (globalSocket.connected) {
-            console.log("✅ [Socket] Already connected! ID:", globalSocket.id);
+        if (socket.connected) {
+            console.log("✅ [Chat] Socket Already connected! ID:", socket.id);
         }
 
         // 🚨 CLEANUP: Do NOT disconnect the socket! Just remove the listeners.
         // This stops React from murdering the connection when you switch pages!
         return () => {
-            console.log("🧹 [Socket] Component unmounting. Removing listeners (Socket stays alive).");
-            globalSocket.off("connect", onConnect);
-            globalSocket.off("newMessage", onNewMessage);
-            globalSocket.off("messageDeleted", onMessageDeleted);
-            globalSocket.off("disconnect", onDisconnect);
+            console.log("🧹 [Chat] Component unmounting. Removing listeners (Socket stays alive).");
+            socket.off("connect", onConnect);
+            socket.off("newMessage", onNewMessage);
+            socket.off("messageDeleted", onMessageDeleted);
+            socket.off("disconnect", onDisconnect);
         };
     }, [dispatch, user?._id, user?.id]); // Stable dependency array
 
     // Destroy socket fully ONLY if user logs out
     useEffect(() => {
-        if (!user && globalSocket) {
-            console.log("🚪 [Socket] User logged out. Destroying socket.");
-            globalSocket.disconnect();
-            globalSocket = null;
+        if (!user && socket.connected) {
+            console.log("🚪 [Chat] User logged out. Disconnecting socket.");
+            socket.disconnect();
         }
     }, [user]);
 

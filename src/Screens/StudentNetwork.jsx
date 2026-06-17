@@ -3,6 +3,7 @@ import { BadgePlus, Sparkles, UserPlus, Users } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import api from '../api/axios.jsx';
 import { updateUser } from '../redux/authSlice.jsx';
+import { emitConnectionRequested, emitLawyerFollowed } from '../utils/notificationEmitter.js';
 import StudentLayout from './StudentLayout.jsx';
 
 const getDisplayName = (user) => {
@@ -63,6 +64,9 @@ export default function StudentNetwork() {
       setActionLoadingId(studentId);
       const { data } = await api.post(`/auth/connect-student/${studentId}`);
       dispatch(updateUser(data.user));
+      
+      // 🔔 Emit real-time notification for connection request
+      emitConnectionRequested(studentId);
     } catch (error) {
       alert(error.response?.data?.message || 'Failed to send connection request');
     } finally {
@@ -87,6 +91,9 @@ export default function StudentNetwork() {
       setActionLoadingId(lawyerId);
       const { data } = await api.post(`/auth/follow-lawyer/${lawyerId}`);
       dispatch(updateUser(data.user));
+      
+      // 🔔 Emit real-time notification for follow
+      emitLawyerFollowed(lawyerId);
     } catch (error) {
       alert(error.response?.data?.message || 'Failed to update follow status');
     } finally {

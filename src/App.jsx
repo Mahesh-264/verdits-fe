@@ -4,6 +4,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setAuth, logout } from './redux/authSlice';
 import { getAccessToken } from './utils/authStorage';
 import api from './api/axios.jsx';
+import socket from './utils/socket.jsx';
+import NotificationBell from './components/notifications/NotificationBell.jsx';
 
 // Auth Pages
 import Login from './pages/Login.jsx';
@@ -49,12 +51,17 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   if (!isAuthenticated) return <Navigate to="/login" />;
   if (allowedRoles && !allowedRoles.includes(user.role)) return <DashboardHub />;
 
-  return children;
+  return (
+    <>
+      <NotificationBell />
+      {children}
+    </>
+  );
 };
 
 export default function App() {
   const dispatch = useDispatch();
-  const { user, isAuthenticated } = useSelector((state) => state.auth);
+  const { isAuthenticated } = useSelector((state) => state.auth);
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -64,13 +71,30 @@ export default function App() {
       try {
         const { data } = await api.get('/auth/me');
         dispatch(setAuth(data));
-      } catch (error) {
+        
+        // 🔌 Connect socket immediately after successful authentication
+        if (!socket.connected) {
+          socket.auth.token = token; // Update token
+          socket.connect();
+          console.log('🔌 Socket connected on app init');
+        }
+      } catch {
         dispatch(logout());
       }
     };
 
     if (!isAuthenticated) {
       initializeAuth();
+    } else {
+      // 🔌 Also connect socket if already authenticated (page refresh)
+      if (!socket.connected) {
+        const token = getAccessToken();
+        if (token) {
+          socket.auth.token = token;
+          socket.connect();
+          console.log('🔌 Socket reconnected after page refresh');
+        }
+      }
     }
   }, [dispatch, isAuthenticated]);
 
