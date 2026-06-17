@@ -1,6 +1,5 @@
 import ffmpeg from 'ffmpeg-static';
 import { exec } from 'child_process';
-import path from 'path';
 import fs from 'fs';
 
 // ... keep the rest of the code exactly the same ...
@@ -46,7 +45,7 @@ const convertVideo = (index) => {
     // Command: Resize to 1920px width, auto height, remove audio (lighter), optimize for web
     const command = `"${ffmpeg}" -i "${video.input}" -vf scale=1920:-2 -an -preset fast -y "${video.output}"`;
 
-    exec(command, (error, stdout, stderr) => {
+    exec(command, (error) => {
         if (error) {
             console.error(`❌ Error: ${error.message}`);
         } else {

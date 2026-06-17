@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { motion, useScroll, useTransform, useSpring, useMotionValue } from 'framer-motion';
+import { motion, useTransform, useSpring, useMotionValue } from 'framer-motion';
 import personImg from "../public/midjourney-Photoroom.png"
 // --- YOUR LOCAL IMAGES HERE ---
 // Replace this URL with: import personImg from './assets/your-image.png';

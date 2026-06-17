@@ -9,6 +9,12 @@ import img2 from '../public/Too many people are being told they have a vitamin D
 import img3 from '../public/download (6)-Photoroom.png';
 import Mainimg from '../public/David Lineton _ Cosmetic Still Life Photography-Photoroom.png';
 
+const TITLES = [
+    "Hair loss",
+    "Weight loss",
+    "Sexual health"
+];
+
 /* --- 1. UTILITY: TILT CARD (Unchanged) --- */
 const TiltCard = ({ children, className, intensity = 20 }) => {
     const x = useMotionValue(0);
@@ -52,15 +58,9 @@ const TiltCard = ({ children, className, intensity = 20 }) => {
 const HeroCategories = () => {
     const [index, setIndex] = useState(0);
 
-    const titles = [
-        "Hair loss",
-        "Weight loss",
-        "Sexual health"
-    ];
-
     useEffect(() => {
         const timer = setInterval(() => {
-            setIndex((prevIndex) => (prevIndex + 1) % titles.length);
+            setIndex((prevIndex) => (prevIndex + 1) % TITLES.length);
         }, 3000);
         return () => clearInterval(timer);
     }, []);
@@ -81,7 +81,7 @@ const HeroCategories = () => {
                                 transition={{ duration: 0.5, ease: "easeInOut" }}
                                 className="block"
                             >
-                                {titles[index]}
+                                {TITLES[index]}
                             </motion.span>
                         </AnimatePresence>
                         <span className="font-normal text-[#966F4F] text-2xl sm:text-4xl lg:text-5xl block mt-2">

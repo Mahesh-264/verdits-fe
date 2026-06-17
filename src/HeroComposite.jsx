@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useMemo } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { motion, useSpring, useTransform, useMotionValue, useScroll } from 'framer-motion';
 // Path to your image
 import mainPersonImg from "./assets/10 Stylish Brown Suit Combinations for Men-Photoroom.png";
