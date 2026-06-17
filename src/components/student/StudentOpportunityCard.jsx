@@ -45,6 +45,16 @@ export default function StudentOpportunityCard({
   const isInternship = post.type === 'internship';
   const isCompleted = isInternship ? post.applied || post.status === 'closed' : post.joined;
 
+  const handleInternshipLike = async () => {
+    const { data } = await api.post(`/auth/lawyer/internships/${post.id}/like`);
+    return data;
+  };
+
+  const handleInternshipComment = async (_post, text) => {
+    const { data } = await api.post(`/auth/lawyer/internships/${post.id}/comments`, { text });
+    return data;
+  };
+
   const handleJamLike = async () => {
     const { data } = await api.post(`/auth/jam-sessions/${post.id}/like`);
     return data;
@@ -184,9 +194,13 @@ export default function StudentOpportunityCard({
           </div>
         )}
 
-        {!isInternship ? (
-          <ReactionBar item={post} itemLabel="jam session" compact onLike={handleJamLike} onComment={handleJamComment} />
-        ) : null}
+        <ReactionBar
+          item={post}
+          itemLabel={isInternship ? 'internship' : 'jam session'}
+          compact
+          onLike={isInternship ? handleInternshipLike : handleJamLike}
+          onComment={isInternship ? handleInternshipComment : handleJamComment}
+        />
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1 text-sm text-[#6d7a92]">

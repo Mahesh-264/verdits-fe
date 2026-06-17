@@ -24,7 +24,6 @@ export default function FeedPostCard({ post, onApply, onJoin }) {
   const isJam = post.type === 'jam';
   const hasPrimaryAction = isInternship || isJam;
   const isDisabled = isInternship ? post.applied || post.status === 'closed' : post.joined;
-  const canPersistReaction = post.sourceModel !== 'LegacyInternship';
 
   const actionLabel = isInternship
     ? post.applied
@@ -37,17 +36,21 @@ export default function FeedPostCard({ post, onApply, onJoin }) {
       : 'Join';
 
   const handleLike = async () => {
-    const endpoint = post.sourceModel === 'LegacyJamSession'
-      ? `/auth/jam-sessions/${post.id}/like`
-      : `/posts/${post.id}/like`;
+    const endpoint = post.sourceModel === 'LegacyInternship'
+      ? `/auth/lawyer/internships/${post.id}/like`
+      : post.sourceModel === 'LegacyJamSession'
+        ? `/auth/jam-sessions/${post.id}/like`
+        : `/posts/${post.id}/like`;
     const { data } = await api.post(endpoint);
     return data;
   };
 
   const handleComment = async (_post, text) => {
-    const endpoint = post.sourceModel === 'LegacyJamSession'
-      ? `/auth/jam-sessions/${post.id}/comments`
-      : `/posts/${post.id}/comments`;
+    const endpoint = post.sourceModel === 'LegacyInternship'
+      ? `/auth/lawyer/internships/${post.id}/comments`
+      : post.sourceModel === 'LegacyJamSession'
+        ? `/auth/jam-sessions/${post.id}/comments`
+        : `/posts/${post.id}/comments`;
     const { data } = await api.post(endpoint, { text });
     return data;
   };
@@ -125,8 +128,8 @@ export default function FeedPostCard({ post, onApply, onJoin }) {
               item={post}
               itemLabel={isJam ? 'jam session' : isInternship ? 'internship' : 'post'}
               compact
-              onLike={canPersistReaction ? handleLike : undefined}
-              onComment={canPersistReaction ? handleComment : undefined}
+              onLike={handleLike}
+              onComment={handleComment}
             />
 
             <div className="flex flex-wrap items-center gap-5 text-sm text-[#6d7a92]">

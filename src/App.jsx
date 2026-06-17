@@ -1,5 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'; // 🟢 Added Navigate
-import { useSelector } from 'react-redux';
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { setAuth, logout } from './redux/authSlice';
+import { getAccessToken } from './utils/authStorage';
+import api from './api/axios.jsx';
 
 // Auth Pages
 import Login from './pages/Login.jsx';
@@ -49,6 +53,27 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 };
 
 export default function App() {
+  const dispatch = useDispatch();
+  const { user, isAuthenticated } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+    const initializeAuth = async () => {
+      const token = getAccessToken();
+      if (!token) return;
+
+      try {
+        const { data } = await api.get('/auth/me');
+        dispatch(setAuth(data));
+      } catch (error) {
+        dispatch(logout());
+      }
+    };
+
+    if (!isAuthenticated) {
+      initializeAuth();
+    }
+  }, [dispatch, isAuthenticated]);
+
   return (
     <BrowserRouter>
       <Routes>
