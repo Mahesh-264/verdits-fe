@@ -24,8 +24,89 @@ const formatNotificationTime = (value) => {
   return `${Math.max(1, Math.floor(diff / day))}d ago`;
 };
 
+<<<<<<< HEAD
 export default function NotificationBell({ className = '', buttonClassName = '', panelClassName = '' }) {
   const { isAuthenticated } = useSelector((state) => state.auth);
+=======
+const resolveNotificationLink = (notification, user) => {
+  const metadata = notification?.metadata || {};
+  const actorId = notification?.actor?._id || notification?.actor?.id || notification?.actor;
+  const userRole = user?.role;
+
+  if (notification?.type === 'new_message') {
+    const partnerId = metadata.senderId || actorId;
+    return partnerId ? `/chat?partnerId=${partnerId}` : '/chat';
+  }
+
+  if (notification?.type === 'student_connection_request' || notification?.type === 'student_connection_accepted') {
+    return '/student-network?tab=students';
+  }
+
+  if (notification?.type === 'follow_accepted') {
+    return userRole === 'student' ? '/student-network?tab=lawyers' : '/lawyer-dash?section=student-interactions&tab=posts';
+  }
+
+  if (notification?.type === 'appointment_request') {
+    return `/lawyer-dash?section=appointments${metadata.appointmentId ? `&appointmentId=${metadata.appointmentId}` : ''}`;
+  }
+
+  if (notification?.type === 'appointment_accepted' || notification?.type === 'appointment_rejected') {
+    return metadata.lawyerId ? `/lawyer-profile/${metadata.lawyerId}` : (notification?.link || '/user-home');
+  }
+
+  if (notification?.type === 'internship_application') {
+    return `/lawyer-dash?section=student-interactions&tab=internships${metadata.internshipId ? `&itemId=${metadata.internshipId}` : ''}`;
+  }
+
+  if (notification?.type === 'internship_application_update') {
+    return `/student-explore?tab=internships${metadata.internshipId ? `&itemId=${metadata.internshipId}` : ''}`;
+  }
+
+  if (notification?.type === 'jam_session_joined') {
+    return `/lawyer-dash?section=student-interactions&tab=jamSessions${metadata.sessionId ? `&itemId=${metadata.sessionId}` : ''}`;
+  }
+
+  if (notification?.type === 'new_post') {
+    if (metadata.internshipId) {
+      return `/student-explore?tab=internships&itemId=${metadata.internshipId}`;
+    }
+
+    if (metadata.sessionId) {
+      return `/student-explore?tab=jamSessions&itemId=${metadata.sessionId}`;
+    }
+
+    if (metadata.postId) {
+      return userRole === 'lawyer'
+        ? `/lawyer-dash?section=student-interactions&tab=posts&postId=${metadata.postId}`
+        : `/student-home?postId=${metadata.postId}`;
+    }
+  }
+
+  if (notification?.type === 'post_liked' || notification?.type === 'post_commented') {
+    if (metadata.internshipId) {
+      return `/lawyer-dash?section=student-interactions&tab=internships&itemId=${metadata.internshipId}`;
+    }
+
+    if (metadata.sessionId) {
+      return `/lawyer-dash?section=student-interactions&tab=jamSessions&itemId=${metadata.sessionId}`;
+    }
+
+    if (metadata.postId) {
+      return userRole === 'student'
+        ? `/student-home?postId=${metadata.postId}`
+        : `/lawyer-dash?section=student-interactions&tab=posts&postId=${metadata.postId}`;
+    }
+  }
+
+  if (notification?.link === '/student-dash') return '/student-home';
+  if (notification?.link?.startsWith('/profile/')) return '/student-home';
+
+  return notification?.link || '/dashboard';
+};
+
+export default function NotificationBell() {
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
+>>>>>>> 954d56e (files uploads & notification)
   const navigate = useNavigate();
   const panelRef = useRef(null);
   const [open, setOpen] = useState(false);
@@ -120,16 +201,18 @@ export default function NotificationBell({ className = '', buttonClassName = '',
       setUnreadCount((current) => Math.max(0, current - (notification.readAt ? 0 : 1)));
       setOpen(false);
 
-      if (notification.link) {
-        navigate(notification.link);
-      }
+      navigate(resolveNotificationLink(notification, user));
     } catch (error) {
       console.error('Error opening notification:', error);
     }
   };
 
   return (
+<<<<<<< HEAD
     <div ref={panelRef} className={`relative z-[120] ${className}`}>
+=======
+    <div ref={panelRef} className="fixed right-4 top-40 z-[120]">
+>>>>>>> 954d56e (files uploads & notification)
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}

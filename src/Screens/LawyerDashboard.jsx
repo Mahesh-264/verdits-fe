@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   FaBriefcase,
   FaCalendarPlus,
@@ -85,6 +85,7 @@ const initialNoticeForm = {
 export default function LawyerDashboard() {
   const { user } = useSelector((state) => state.auth);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [appointments, setAppointments] = useState([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [showProfileInfo, setShowProfileInfo] = useState(false);
@@ -189,12 +190,41 @@ export default function LawyerDashboard() {
   }, [user?._id]);
 
   useEffect(() => {
+    if (searchParams.get('section') === 'student-interactions') {
+      setShowStudentInteractionModal(true);
+    }
+
+    if (searchParams.get('section') === 'appointments') {
+      setShowAppointmentsModal(true);
+    }
+
+    const requestedTab = searchParams.get('tab');
+    if (['internships', 'jamSessions', 'posts'].includes(requestedTab)) {
+      setStudentInteractionTab(requestedTab);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     if (!user) return;
 
     loadAppointments();
     loadStudentInteractionPosts();
     loadOwnPosts();
   }, [loadAppointments, loadOwnPosts, loadStudentInteractionPosts, user]);
+
+  useEffect(() => {
+    const itemId = searchParams.get('itemId');
+    const drawerType = searchParams.get('drawer');
+
+    if (!showStudentInteractionModal || drawerType !== 'applicants' || !itemId || publishedInternships.length === 0) {
+      return;
+    }
+
+    const targetInternship = publishedInternships.find((internship) => String(internship.id) === String(itemId));
+    if (targetInternship) {
+      handleOpenApplicantsDrawer(targetInternship);
+    }
+  }, [publishedInternships, searchParams, showStudentInteractionModal]);
 
   const updateStatus = async (id, newStatus) => {
     try {
@@ -1144,23 +1174,61 @@ export default function LawyerDashboard() {
                           ) : null}
 
                           {drawer.type === 'applicants' ? (
-                            <div className="mt-4 flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => handleApplicantDecision(item.id, 'accepted')}
-                                disabled={updatingApplicantId === item.id || item.status === 'accepted'}
-                                className="flex-1 rounded-lg bg-[#005c4b] px-4 py-2 text-sm font-bold text-[#e9edef] hover:bg-[#007b64] disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                {updatingApplicantId === item.id ? 'Saving...' : 'Accept'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleApplicantDecision(item.id, 'rejected')}
-                                disabled={updatingApplicantId === item.id || item.status === 'rejected'}
-                                className="flex-1 rounded-lg border border-red-900/60 bg-red-900/40 px-4 py-2 text-sm font-bold text-red-100 hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                {updatingApplicantId === item.id ? 'Saving...' : 'Reject'}
-                              </button>
+                            <div className="mt-4 space-y-4">
+                              <div className="grid grid-cols-1 gap-2 text-xs text-zinc-300">
+                                <ApplicantDetail label="Phone" value={item.phone} />
+                                <ApplicantDetail label="Degree" value={item.degree} />
+                                <ApplicantDetail label="Year" value={item.yearOfStudy} />
+                                <ApplicantDetail label="Applied" value={formatDate(item.submittedAt)} />
+                              </div>
+
+                              {item.skills?.length ? (
+                                <div>
+                                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Skills</p>
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    {item.skills.map((skill) => (
+                                      <span key={skill} className="rounded-full bg-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-200">
+                                        {skill}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : null}
+
+                              <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 p-3">
+                                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Resume and links</p>
+                                <div className="mt-3 space-y-2">
+                                  {item.resumeLink ? <ApplicantLink href={item.resumeLink} label="Open resume link" /> : null}
+                                  {item.resumeUrl ? <ApplicantLink href={item.resumeUrl} label="Open uploaded resume" /> : null}
+                                  {item.linkedIn ? <ApplicantLink href={item.linkedIn} label="Open LinkedIn" /> : null}
+                                  {item.portfolio ? <ApplicantLink href={item.portfolio} label="Open portfolio" /> : null}
+                                  {item.resumeFileName ? (
+                                    <p className="text-xs text-zinc-400">Attached file name: {item.resumeFileName}</p>
+                                  ) : null}
+                                  {!item.resumeLink && !item.resumeUrl && !item.linkedIn && !item.portfolio && !item.resumeFileName ? (
+                                    <p className="text-xs text-zinc-500">No resume or external links shared.</p>
+                                  ) : null}
+                                </div>
+                              </div>
+
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplicantDecision(item.id, 'accepted')}
+                                  disabled={updatingApplicantId === item.id || item.status === 'accepted'}
+                                  className="flex-1 rounded-lg bg-[#005c4b] px-4 py-2 text-sm font-bold text-[#e9edef] hover:bg-[#007b64] disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {updatingApplicantId === item.id ? 'Saving...' : 'Accept'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplicantDecision(item.id, 'rejected')}
+                                  disabled={updatingApplicantId === item.id || item.status === 'rejected'}
+                                  className="flex-1 rounded-lg border border-red-900/60 bg-red-900/40 px-4 py-2 text-sm font-bold text-red-100 hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {updatingApplicantId === item.id ? 'Saving...' : 'Reject'}
+                                </button>
+                              </div>
                             </div>
                           ) : (
                             <p className="mt-4 text-xs text-zinc-500">
@@ -1338,6 +1406,37 @@ function StatusPill({ status }) {
       <FaCircle className="text-[8px]" /> {status}
     </span>
   );
+}
+
+function ApplicantDetail({ label, value }) {
+  return (
+    <div className="flex items-start justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-950/50 px-3 py-2">
+      <span className="text-zinc-500">{label}</span>
+      <span className="max-w-[190px] text-right font-semibold text-zinc-200">{value || 'Not shared'}</span>
+    </div>
+  );
+}
+
+function ApplicantLink({ href, label }) {
+  const safeHref = String(href || '').startsWith('http') ? href : `https://${href}`;
+
+  return (
+    <a
+      href={safeHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-bold text-blue-300 transition hover:border-blue-500/50 hover:text-blue-200"
+    >
+      {label}
+    </a>
+  );
+}
+
+function formatDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString();
 }
 
 function capitalize(value) {

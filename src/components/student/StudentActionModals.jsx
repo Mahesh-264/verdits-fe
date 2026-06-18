@@ -161,8 +161,13 @@ export function InternshipApplicationModal({
                       className="hidden"
                       onChange={(event) => {
                         const file = event.target.files?.[0];
-                        setForm((current) => ({ ...current, resumeFileName: file?.name || '' }));
+                        setForm((current) => ({
+                          ...current,
+                          resumeFile: file || null,
+                          resumeFileName: file?.name || '',
+                        }));
                       }}
+                      accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     />
                   </label>
                 </Field>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useSearchParams } from 'react-router-dom';
 import { ChevronDown, Search, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 import api from '../api/axios.jsx';
 import StudentLayout from './StudentLayout.jsx';
@@ -9,6 +10,7 @@ import {
   createInitialApplicationForm,
   createInitialInternshipFilters,
   DISCOVERY_TABS,
+  buildInternshipApplicationFormData,
   extractNumericValue,
   internshipSortOptions,
   matchesCollectionSearch,
@@ -34,7 +36,8 @@ const normalizeLawyerCard = (lawyer) => ({
 export default function StudentExplore() {
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
-  const [activeTab, setActiveTab] = useState('internships');
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'internships');
   const [searchTerm, setSearchTerm] = useState('');
   const [internshipFilters, setInternshipFilters] = useState(createInitialInternshipFilters());
   const [discovery, setDiscovery] = useState({ internships: [], jamSessions: [], lawyers: [] });
@@ -45,6 +48,13 @@ export default function StudentExplore() {
   const [submittingApplication, setSubmittingApplication] = useState(false);
   const [joiningSession, setJoiningSession] = useState(false);
   const [actionError, setActionError] = useState('');
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (DISCOVERY_TABS.some((item) => item.id === tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const loadDiscovery = async () => {
@@ -166,7 +176,11 @@ export default function StudentExplore() {
     try {
       setSubmittingApplication(true);
       setActionError('');
-      const { data } = await api.post(`/auth/student/internships/${applicationTarget.id}/apply`, values);
+      const { data } = await api.post(
+        `/auth/student/internships/${applicationTarget.id}/apply`,
+        buildInternshipApplicationFormData(values),
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
       dispatch(updateUser(data.user));
       setDiscovery((current) => ({
         ...current,

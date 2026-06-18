@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { BadgePlus, Sparkles, UserPlus, Users } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useSearchParams } from 'react-router-dom';
 import api from '../api/axios.jsx';
 import { updateUser } from '../redux/authSlice.jsx';
-import { emitConnectionRequested, emitLawyerFollowed } from '../utils/notificationEmitter.js';
 import StudentLayout from './StudentLayout.jsx';
 
 const getDisplayName = (user) => {
@@ -15,11 +15,19 @@ const getDisplayName = (user) => {
 export default function StudentNetwork() {
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
-  const [activeTab, setActiveTab] = useState('students');
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'lawyers' ? 'lawyers' : 'students');
   const [students, setStudents] = useState([]);
   const [lawyers, setLawyers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState('');
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'students' || tab === 'lawyers') {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const loadNetwork = async () => {
@@ -64,9 +72,6 @@ export default function StudentNetwork() {
       setActionLoadingId(studentId);
       const { data } = await api.post(`/auth/connect-student/${studentId}`);
       dispatch(updateUser(data.user));
-      
-      // 🔔 Emit real-time notification for connection request
-      emitConnectionRequested(studentId);
     } catch (error) {
       alert(error.response?.data?.message || 'Failed to send connection request');
     } finally {
@@ -91,9 +96,6 @@ export default function StudentNetwork() {
       setActionLoadingId(lawyerId);
       const { data } = await api.post(`/auth/follow-lawyer/${lawyerId}`);
       dispatch(updateUser(data.user));
-      
-      // 🔔 Emit real-time notification for follow
-      emitLawyerFollowed(lawyerId);
     } catch (error) {
       alert(error.response?.data?.message || 'Failed to update follow status');
     } finally {
@@ -118,11 +120,11 @@ export default function StudentNetwork() {
         </div>
 
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {statCards.map(({ label, value, Icon, color }) => (
+          {statCards.map(({ label, value, Icon: StatIcon, color }) => (
             <div key={label} className="rounded-[28px] border border-[#dbe2ef] bg-white p-8 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
               <div className="flex items-center gap-5">
                 <div className={`h-16 w-16 rounded-full flex items-center justify-center ${color}`}>
-                  <Icon size={28} />
+                  {React.createElement(StatIcon, { size: 28 })}
                 </div>
                 <div>
                   <p className="text-4xl font-bold">{value}</p>

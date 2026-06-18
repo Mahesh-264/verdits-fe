@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     fetchConversations, fetchHistory, setActivePartner,
     receiveMessage, fetchAllLawyers, markMessagesAsRead,
@@ -9,7 +9,11 @@ import {
 } from '../redux/chatSlice';
 import { logout } from '../redux/authSlice';
 import api from '../api/axios';
+<<<<<<< HEAD
 import chatSocket from '../utils/socket.jsx';
+=======
+import globalSocket from '../utils/socket.jsx';
+>>>>>>> 954d56e (files uploads & notification)
 import {
     FaEllipsisV, FaPaperPlane, FaTimes, FaPhone, FaVideo, FaCommentDots,
     FaPaperclip, FaSignOutAlt, FaSearch, FaCheckDouble,
@@ -36,10 +40,13 @@ export default function Chat() {
     const dispatch = useDispatch();
     const location = useLocation();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
 
     const { user } = useSelector(state => state.auth);
     const { conversations, availableLawyers, messages, activePartner, selectedMessages } = useSelector(state => state.chat);
-    const [lockedPartnerId, setLockedPartnerId] = useState(location.state?.selectedPartner?._id || location.state?.selectedPartner?.id || null);
+    const [lockedPartnerId, setLockedPartnerId] = useState(
+        location.state?.selectedPartner?._id || location.state?.selectedPartner?.id || searchParams.get('partnerId') || null
+    );
 
     const [canChat, setCanChat] = useState(true);
     const [isCheckingChatAccess, setIsCheckingChatAccess] = useState(false);
@@ -111,6 +118,13 @@ export default function Chat() {
     }, [location.pathname, location.state, dispatch, navigate]);
 
     useEffect(() => {
+        const partnerId = searchParams.get('partnerId');
+        if (partnerId) {
+            setLockedPartnerId(partnerId);
+        }
+    }, [searchParams]);
+
+    useEffect(() => {
         if (!lockedPartnerId) return;
 
         const normalizedLockedPartnerId = String(lockedPartnerId);
@@ -130,6 +144,7 @@ export default function Chat() {
         if (!userId) return;
 
         // Use the global socket instance that's already connected at app startup
+<<<<<<< HEAD
         if (!chatSocket.connected) {
             console.log(`🔌 [Chat] Connecting global socket...`);
             chatSocket.connect();
@@ -140,6 +155,18 @@ export default function Chat() {
 
         // Define exactly what to do when events happen
         const onConnect = () => console.log("✅ [Chat] Socket Connected! ID:", chatSocket.id);
+=======
+        if (!globalSocket.connected) {
+            console.log(`🔌 [Chat] Connecting global socket...`);
+            globalSocket.connect();
+        }
+
+        // Sync local ref to the global socket so handleSend can use it
+        socketRef.current = globalSocket;
+
+        // Define exactly what to do when events happen
+        const onConnect = () => console.log("✅ [Chat] Socket Connected! ID:", globalSocket.id);
+>>>>>>> 954d56e (files uploads & notification)
         const onNewMessage = (msg) => {
             console.log("📨 [Chat EVENT] Live message received:", msg);
 
@@ -157,6 +184,7 @@ export default function Chat() {
         const onDisconnect = () => console.log("🛑 [Chat] Socket Disconnected from server.");
 
         // Attach listeners to the global socket
+<<<<<<< HEAD
         chatSocket.on("connect", onConnect);
         chatSocket.on("newMessage", onNewMessage);
         chatSocket.on("messageDeleted", onMessageDeleted);
@@ -165,24 +193,47 @@ export default function Chat() {
         // If the socket connected incredibly fast before the listener was attached
         if (chatSocket.connected) {
             console.log("✅ [Chat] Socket Already connected! ID:", chatSocket.id);
+=======
+        globalSocket.on("connect", onConnect);
+        globalSocket.on("newMessage", onNewMessage);
+        globalSocket.on("messageDeleted", onMessageDeleted);
+        globalSocket.on("disconnect", onDisconnect);
+
+        // If the socket connected incredibly fast before the listener was attached
+        if (globalSocket.connected) {
+            console.log("✅ [Chat] Socket Already connected! ID:", globalSocket.id);
+>>>>>>> 954d56e (files uploads & notification)
         }
 
         // 🚨 CLEANUP: Do NOT disconnect the socket! Just remove the listeners.
         // This stops React from murdering the connection when you switch pages!
         return () => {
             console.log("🧹 [Chat] Component unmounting. Removing listeners (Socket stays alive).");
+<<<<<<< HEAD
             chatSocket.off("connect", onConnect);
             chatSocket.off("newMessage", onNewMessage);
             chatSocket.off("messageDeleted", onMessageDeleted);
             chatSocket.off("disconnect", onDisconnect);
+=======
+            globalSocket.off("connect", onConnect);
+            globalSocket.off("newMessage", onNewMessage);
+            globalSocket.off("messageDeleted", onMessageDeleted);
+            globalSocket.off("disconnect", onDisconnect);
+>>>>>>> 954d56e (files uploads & notification)
         };
     }, [dispatch, user?._id, user?.id]); // Stable dependency array
 
     // Destroy socket fully ONLY if user logs out
     useEffect(() => {
+<<<<<<< HEAD
         if (!user && chatSocket.connected) {
             console.log("🚪 [Chat] User logged out. Disconnecting socket.");
             chatSocket.disconnect();
+=======
+        if (!user && globalSocket.connected) {
+            console.log("🚪 [Chat] User logged out. Disconnecting socket.");
+            globalSocket.disconnect();
+>>>>>>> 954d56e (files uploads & notification)
         }
     }, [user]);
 
@@ -263,10 +314,14 @@ export default function Chat() {
             setIsRecording(true);
             setRecordingTime(0);
             timerRef.current = setInterval(() => setRecordingTime(p => p + 1), 1000);
+<<<<<<< HEAD
         } catch (err) {
             console.error("Microphone permission failed:", err);
             alert("Mic required");
         }
+=======
+        } catch { alert("Mic required"); }
+>>>>>>> 954d56e (files uploads & notification)
     };
 
     const stopRecording = () => {

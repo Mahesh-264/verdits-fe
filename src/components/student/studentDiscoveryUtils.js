@@ -15,10 +15,31 @@ export const createInitialApplicationForm = (user) => ({
   skills: Array.isArray(user?.studentProfile?.skills) ? [...user.studentProfile.skills] : [],
   resumeLink: '',
   resumeFileName: '',
+  resumeFile: null,
   coverMessage: user?.studentProfile?.bio || '',
   linkedIn: '',
   portfolio: '',
 });
+
+export const buildInternshipApplicationFormData = (values) => {
+  const formData = new FormData();
+
+  Object.entries(values).forEach(([key, value]) => {
+    if (key === 'skills') {
+      value.forEach((skill) => formData.append('skills', skill));
+      return;
+    }
+
+    if (key === 'resumeFile') {
+      if (value) formData.append('resumeFile', value);
+      return;
+    }
+
+    formData.append(key, value || '');
+  });
+
+  return formData;
+};
 
 export const internshipSortOptions = [
   { id: 'latest', label: 'Latest' },

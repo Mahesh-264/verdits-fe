@@ -6,7 +6,7 @@ import StudentLayout from './StudentLayout.jsx';
 import FeedPostCard from '../components/feed/FeedPostCard.jsx';
 import PostComposerModal from '../components/feed/PostComposerModal.jsx';
 import { InternshipApplicationModal, JamJoinModal } from '../components/student/StudentActionModals.jsx';
-import { createInitialApplicationForm } from '../components/student/studentDiscoveryUtils.js';
+import { buildInternshipApplicationFormData, createInitialApplicationForm } from '../components/student/studentDiscoveryUtils.js';
 import { updateUser } from '../redux/authSlice.jsx';
 
 export default function StudentHome() {
@@ -118,7 +118,11 @@ export default function StudentHome() {
     try {
       setSubmittingApplication(true);
       setActionError('');
-      const { data } = await api.post(`/auth/student/internships/${applicationTarget.id}/apply`, values);
+      const { data } = await api.post(
+        `/auth/student/internships/${applicationTarget.id}/apply`,
+        buildInternshipApplicationFormData(values),
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
       dispatch(updateUser(data.user));
       updateFeedItem(applicationTarget.id, (post) => ({
         ...post,
