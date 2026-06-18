@@ -5,6 +5,7 @@ import api from '../api/axios';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { setAccessToken, setRefreshToken } from '../utils/authStorage';
 import socket from '../utils/socket.jsx';
+import BrandLogo from '../components/BrandLogo.jsx';
 
 export default function Login() {
     const [searchParams] = useSearchParams();
@@ -64,12 +65,15 @@ export default function Login() {
 
 
     return (
-        <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4 font-sans text-white">
-            <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 p-8 rounded-3xl shadow-2xl">
+        <div className="min-h-screen bg-[#f3f8fb] flex items-center justify-center p-4 font-sans text-[#062552]">
+            <div className="w-full max-w-md bg-white border border-[#d7e9ef] p-8 rounded-3xl shadow-2xl shadow-[#062552]/10">
+                <div className="flex justify-center mb-6">
+                    <BrandLogo className="h-16 max-w-[230px]" />
+                </div>
                 <h2 className="text-3xl font-bold text-center mb-2 capitalize">
                     {role} Login
                 </h2>
-                <p className="text-zinc-400 text-center mb-8">Access your {role} dashboard</p>
+                <p className="text-[#5f7488] text-center mb-8">Access your {role} dashboard</p>
 
                 <form onSubmit={handleEmailLogin} className="space-y-4">
                     <input
@@ -77,7 +81,7 @@ export default function Login() {
                         placeholder="Email Address"
                         required
                         value={email}
-                        className="w-full bg-zinc-800 p-4 rounded-xl outline-none border border-transparent focus:border-blue-500 transition"
+                        className="w-full bg-[#f7fbfc] p-4 rounded-xl outline-none border border-[#d7e9ef] focus:border-[#15a276] transition"
                         onChange={e => {
                             setEmail(e.target.value);
                             if (errorMessage) {
@@ -91,7 +95,7 @@ export default function Login() {
                         placeholder="Password"
                         required
                         value={password}
-                        className="w-full bg-zinc-800 p-4 rounded-xl outline-none border border-transparent focus:border-blue-500 transition"
+                        className="w-full bg-[#f7fbfc] p-4 rounded-xl outline-none border border-[#d7e9ef] focus:border-[#15a276] transition"
                         onChange={e => {
                             setPassword(e.target.value);
                             if (errorMessage) {
@@ -116,20 +120,20 @@ export default function Login() {
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className={`w-full py-4 rounded-xl font-bold shadow-lg transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-70 ${role === 'lawyer' ? 'bg-amber-600 hover:bg-amber-700' : role === 'student' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                        className="w-full py-4 rounded-xl font-bold shadow-lg transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-70 bg-[#062552] text-white hover:bg-[#0b3b70]"
                     >
                         {isSubmitting ? 'Signing In...' : 'Sign In'}
                     </button>
                 </form>
 
-                <p className="mt-8 text-center text-zinc-500 text-sm">
+                <p className="mt-8 text-center text-[#5f7488] text-sm">
                     Don't have an account?
-                    <Link to={`/register?role=${role}`} className="text-blue-500 font-semibold hover:text-blue-400 hover:underline ml-1">
+                    <Link to={`/register?role=${role}`} className="text-[#15a276] font-semibold hover:text-[#118b66] hover:underline ml-1">
                         Register
                     </Link>
                 </p>
                 <div className="mt-4 text-center">
-                    <Link to="/" className="text-zinc-600 hover:text-zinc-400 text-sm transition">
+                    <Link to="/" className="text-[#5f7488] hover:text-[#062552] text-sm transition">
                         &larr; Back to Role Selection
                     </Link>
                 </div>

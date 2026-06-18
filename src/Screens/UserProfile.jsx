@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import api from '../api/axios';
 import { logout, updateUser } from '../redux/authSlice';
+import BrandLogo from '../components/BrandLogo';
 
 // Shared profile editor for users and lawyers, including location refresh for discovery accuracy.
 const UserProfile = () => {
@@ -173,7 +174,7 @@ const UserProfile = () => {
               name={name}
               value={value}
               onChange={handleChange}
-              className="w-full border-b border-blue-500 pb-1 text-lg font-semibold text-gray-800 outline-none"
+              className="w-full border-b border-[#15a276] pb-1 text-lg font-semibold text-gray-800 outline-none"
             />
           ) : (
             <p className="text-lg font-semibold text-gray-800">{value || 'Not set'}</p>
@@ -185,11 +186,11 @@ const UserProfile = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 pb-10">
-      <div className="sticky top-0 z-10 flex items-center justify-between bg-black p-4 text-white shadow-md">
+    <div className="min-h-screen bg-[#f3f8fb] pb-10">
+      <div className="sticky top-0 z-10 flex items-center justify-between bg-[#062552] p-4 text-white shadow-md">
         <div className="flex items-center gap-4">
           <ArrowLeft onClick={() => navigate(-1)} className="cursor-pointer hover:text-gray-300" />
-          <span className="text-xl font-bold tracking-wide">Nyaya Setu</span>
+          <BrandLogo className="h-10 max-w-[160px]" light />
         </div>
         {isEditing ? (
           <button onClick={() => setIsEditing(false)} className="text-gray-300 hover:text-white">
@@ -202,7 +203,7 @@ const UserProfile = () => {
 
       <div className="mx-auto max-w-3xl px-4">
         <div className="relative mb-6 rounded-b-[2.5rem] bg-white px-6 pb-8 pt-5 text-center shadow-sm">
-          <div className="mx-auto h-24 w-24 rounded-full border-2 border-blue-500 p-1">
+          <div className="mx-auto h-24 w-24 rounded-full border-2 border-[#15a276] p-1">
             <img
               src={user?.profileImage || `https://ui-avatars.com/api/?name=${formData.firstName}+${formData.lastName}&background=0D8ABC&color=fff`}
               alt="Profile"
@@ -243,7 +244,7 @@ const UserProfile = () => {
                   type="button"
                   onClick={handleUseCurrentLocation}
                   disabled={loadingLocation}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0d1024] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#171b34] disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#062552] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0b3b70] disabled:opacity-60"
                 >
                   <Navigation size={16} />
                   {loadingLocation ? 'Updating location...' : 'Use current location'}
@@ -267,7 +268,7 @@ const UserProfile = () => {
                   value={formData.about}
                   onChange={handleChange}
                   rows={4}
-                  className="w-full resize-none rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-800 outline-none focus:border-blue-500"
+                  className="w-full resize-none rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-800 outline-none focus:border-[#15a276]"
                 />
               ) : (
                 <p className="text-sm leading-7 text-gray-700">{formData.about || 'No bio added yet.'}</p>
@@ -307,7 +308,7 @@ const UserProfile = () => {
               type="button"
               onClick={handleUseCurrentLocation}
               disabled={loadingLocation}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0d1024] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#171b34] disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#062552] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0b3b70] disabled:opacity-60"
             >
               <Navigation size={16} />
               {loadingLocation ? 'Updating location...' : 'Use current location'}
@@ -320,7 +321,7 @@ const UserProfile = () => {
             <button
               onClick={handleSave}
               disabled={loading}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-green-600 py-4 font-bold text-white shadow-lg transition active:scale-95 disabled:opacity-60"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#15a276] py-4 font-bold text-white shadow-lg transition active:scale-95 disabled:opacity-60"
             >
               <Save size={20} />
               {loading ? 'Saving...' : 'Save Changes'}
@@ -328,7 +329,7 @@ const UserProfile = () => {
           ) : (
             <button
               onClick={() => setIsEditing(true)}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-black py-4 font-bold text-white shadow-lg transition active:scale-95"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#062552] py-4 font-bold text-white shadow-lg transition active:scale-95"
             >
               <Edit2 size={20} />
               Edit Profile

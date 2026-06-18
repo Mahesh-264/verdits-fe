@@ -1,7 +1,13 @@
 import { io } from "socket.io-client";
 import { getAccessToken } from './authStorage';
 
-const socket = io("http://localhost:5000", {
+const getSocketUrl = () => {
+    if (import.meta.env.VITE_SOCKET_URL) return import.meta.env.VITE_SOCKET_URL;
+    if (typeof window !== 'undefined') return window.location.origin;
+    return undefined;
+};
+
+const socket = io(getSocketUrl(), {
     auth: {
         token: getAccessToken()
     },
@@ -17,7 +23,7 @@ socket.on("connect_error", (error) => {
     console.error("Socket connection error:", error);
     // Try to reconnect with fresh token
     const freshToken = getAccessToken();
-    if (freshToken) {
+    if (freshToken && socket.auth.token !== freshToken) {
         socket.auth.token = freshToken;
         socket.connect();
     }

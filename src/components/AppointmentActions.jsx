@@ -6,7 +6,7 @@ const ConsultationButton = React.memo(({ icon: Icon, label, price, onClick }) =>
         onClick={onClick}
         className={`flex flex-col items-center justify-center p-3 rounded-xl transition border ${
             label === 'Chat'
-                ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-200'
+                ? 'bg-[#062552] hover:bg-[#0b3b70] text-white shadow-lg shadow-[#062552]/20'
                 : label === 'Video'
                     ? 'bg-green-50 hover:bg-green-100 text-green-700 border-green-100'
                     : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-100'
@@ -30,7 +30,7 @@ const PendingStatus = React.memo(({ status, isSending }) => {
                 Consultation Access
             </h4>
             {isPending ? (
-                <button disabled className="w-full bg-amber-500 text-white font-bold py-3 rounded-xl opacity-70 cursor-not-allowed">
+                <button disabled className="w-full bg-[#15a276] text-white font-bold py-3 rounded-xl opacity-70 cursor-not-allowed">
                     {isSending ? 'Sending Request...' : 'Request Pending Approval...'}
                 </button>
             ) : isRejected ? (
@@ -106,7 +106,7 @@ const AppointmentActions = React.memo(({
                     {requestStatus !== 'Rejected' && requestStatus !== 'Pending' && !isSendingRequest && (
                         <button
                             onClick={onSendRequest}
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition mt-4"
+                            className="w-full bg-[#15a276] hover:bg-[#118b66] text-white font-bold py-3 rounded-xl shadow-lg transition mt-4"
                         >
                             Send Appointment Request
                         </button>

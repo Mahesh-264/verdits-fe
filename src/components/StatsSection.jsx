@@ -12,11 +12,11 @@ StatCard.displayName = 'StatCard';
 const StatsSection = React.memo(({ profile }) => {
     return (
         <div className="w-full max-w-md flex justify-between px-8 py-6 bg-white mt-2 shadow-sm">
-            <StatCard value={profile.casesHandled || '50+'} label="Cases" color="text-blue-600" />
+            <StatCard value={profile.casesHandled || '50+'} label="Cases" color="text-[#15a276]" />
             <div className="w-px bg-gray-200"></div>
-            <StatCard value={`${profile.successRate || 92}%`} label="Success Rate" color="text-green-600" />
+            <StatCard value={`${profile.successRate || 92}%`} label="Success Rate" color="text-[#15a276]" />
             <div className="w-px bg-gray-200"></div>
-            <StatCard value="4.8" label="Rating" color="text-purple-600" />
+            <StatCard value="4.8" label="Rating" color="text-[#062552]" />
         </div>
     );
 });

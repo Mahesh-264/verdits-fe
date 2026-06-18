@@ -4,6 +4,7 @@ import { ArrowLeft, MapPin, Star } from 'lucide-react';
 import api from '../api/axios';
 import LocationSearchCard from '../components/location/LocationSearchCard.jsx';
 import useSearchLocation from '../hooks/useSearchLocation.js';
+import BrandLogo from '../components/BrandLogo';
 import {
   formatDistanceLabel,
   getCategoryDiscoveryConfig,
@@ -64,10 +65,10 @@ const LawyerList = () => {
   const categoryConfig = getCategoryDiscoveryConfig(category);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="sticky top-0 z-10 flex items-center gap-4 bg-black p-4 text-white shadow-md">
+    <div className="min-h-screen bg-[#f3f8fb]">
+      <div className="sticky top-0 z-10 flex items-center gap-4 bg-[#062552] p-4 text-white shadow-md">
         <ArrowLeft onClick={() => navigate(-1)} className="cursor-pointer" />
-        <span className="text-xl font-bold tracking-wide">Nyaya Setu</span>
+        <BrandLogo className="h-10 max-w-[160px]" light />
       </div>
 
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4">
@@ -99,8 +100,8 @@ const LawyerList = () => {
               onClick={() => setSelectedRadius(filter.id)}
               className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                 selectedRadius === filter.id
-                  ? 'bg-[#0d1024] text-white'
-                  : 'bg-white text-[#44516d] border border-[#dbe2ef] hover:border-[#2456f5]'
+                  ? 'bg-[#062552] text-white'
+                  : 'bg-white text-[#44516d] border border-[#dbe2ef] hover:border-[#15a276]'
               }`}
             >
               {filter.label}
@@ -132,11 +133,11 @@ const LawyerList = () => {
                 className="cursor-pointer rounded-3xl border border-[#dbe2ef] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
               >
                 <div className="flex flex-col gap-4 md:flex-row md:items-center">
-                  <div className="h-16 w-16 overflow-hidden rounded-full bg-[#e9eefc]">
+                    <div className="h-16 w-16 overflow-hidden rounded-full bg-[#e8f7f2]">
                     {lawyer.profileImage ? (
                       <img src={lawyer.profileImage} alt={lawyer.name} className="h-full w-full object-cover" />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center text-xl font-bold text-[#2456f5]">
+                      <div className="flex h-full w-full items-center justify-center text-xl font-bold text-[#15a276]">
                         {lawyer.name?.charAt(0) || 'L'}
                       </div>
                     )}
@@ -146,7 +147,7 @@ const LawyerList = () => {
                     <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                       <div>
                         <h2 className="text-lg font-semibold text-[#0b1f44]">{lawyer.name}</h2>
-                        <p className="text-sm font-medium text-[#2456f5]">
+                        <p className="text-sm font-medium text-[#15a276]">
                           {lawyer.specialization || 'General Practice'}
                         </p>
                       </div>

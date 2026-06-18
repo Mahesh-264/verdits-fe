@@ -21,7 +21,7 @@ const TagInput = ({ value, onChange }) => {
         {value.map((item) => (
           <span
             key={item}
-            className="inline-flex items-center gap-2 rounded-full bg-[#eaf1ff] px-3 py-2 text-sm font-medium text-[#2456f5]"
+            className="inline-flex items-center gap-2 rounded-full bg-[#e8f7f2] px-3 py-2 text-sm font-medium text-[#15a276]"
           >
             {item}
             <button type="button" onClick={() => onChange(value.filter((tag) => tag !== item))}>
@@ -47,7 +47,7 @@ const TagInput = ({ value, onChange }) => {
         <button
           type="button"
           onClick={commitTag}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#0d1024] text-white"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#062552] text-white"
         >
           <Plus size={16} />
         </button>
@@ -65,7 +65,7 @@ const Field = ({ label, required = false, children }) => (
   </label>
 );
 
-const baseInputClassName = 'w-full rounded-2xl border border-[#dbe2ef] bg-[#fbfcff] px-4 py-3 text-[#0b1f44] outline-none transition focus:border-[#2456f5]';
+const baseInputClassName = 'w-full rounded-2xl border border-[#dbe2ef] bg-[#fbfcff] px-4 py-3 text-[#0b1f44] outline-none transition focus:border-[#15a276]';
 
 export function InternshipApplicationModal({
   open,
@@ -86,7 +86,7 @@ export function InternshipApplicationModal({
         <div className="sticky top-0 z-10 border-b border-[#e3e8f3] bg-white/95 px-6 py-5 backdrop-blur">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#2456f5]">Internship Application</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#15a276]">Internship Application</p>
               <h2 className="mt-2 text-[26px] font-semibold text-[#0b1f44]">{internship.title}</h2>
               <p className="mt-2 text-sm text-[#5e6c87]">{internship.lawyerName}</p>
             </div>
@@ -198,7 +198,7 @@ export function InternshipApplicationModal({
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-2xl bg-[#0d1024] px-6 py-3 font-semibold text-white transition hover:bg-[#171b34] disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-2xl bg-[#062552] px-6 py-3 font-semibold text-white transition hover:bg-[#0b3b70] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? 'Submitting...' : 'Submit Application'}
             </button>

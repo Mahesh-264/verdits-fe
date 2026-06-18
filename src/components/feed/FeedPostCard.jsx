@@ -170,7 +170,7 @@ export default function FeedPostCard({ post, onApply, onJoin }) {
                 isDisabled
                   ? 'cursor-not-allowed bg-[#e9fff1] text-[#14804a]'
                   : isInternship
-                    ? 'bg-[#0d1024] text-white hover:bg-[#171b34]'
+                    ? 'bg-[#062552] text-white hover:bg-[#0b3b70]'
                     : 'bg-[#114a38] text-white hover:bg-[#176049]'
               }`}
             >

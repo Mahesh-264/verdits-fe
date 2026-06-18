@@ -34,7 +34,7 @@ export default function LocationSearchCard({
           </p>
 
           {location ? (
-            <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#eef5ff] px-3 py-1 text-sm font-medium text-[#2456f5]">
+            <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#eef5ff] px-3 py-1 text-sm font-medium text-[#15a276]">
               <Navigation size={14} />
               Searching near {location.label}
             </p>
@@ -49,7 +49,7 @@ export default function LocationSearchCard({
           type="button"
           onClick={onRequestLocation}
           disabled={loading}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0d1024] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#171b34] disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#062552] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0b3b70] disabled:opacity-60"
         >
           <RefreshCcw size={16} />
           {loading ? 'Checking location...' : 'Use my location'}
@@ -75,7 +75,7 @@ export default function LocationSearchCard({
           <button
             type="submit"
             disabled={searchingLocation}
-            className="inline-flex items-center justify-center rounded-2xl bg-[#2456f5] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1d46c8] disabled:opacity-60"
+            className="inline-flex items-center justify-center rounded-2xl bg-[#15a276] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#118b66] disabled:opacity-60"
           >
             {searchingLocation ? 'Searching...' : 'Search'}
           </button>
@@ -91,7 +91,7 @@ export default function LocationSearchCard({
             id="fallback-city"
             defaultValue=""
             onChange={(event) => onSelectFallbackCity(event.target.value)}
-            className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-3 text-sm text-[#0b1f44] outline-none focus:border-[#2456f5]"
+            className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-3 text-sm text-[#0b1f44] outline-none focus:border-[#15a276]"
           >
             <option value="" disabled>
               Select your city

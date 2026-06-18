@@ -52,7 +52,7 @@ export default function StudentJamSessions() {
 
           <button
             type="button"
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0d1024] px-6 py-4 text-[18px] font-semibold text-white hover:bg-[#171b34] transition"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#062552] px-6 py-4 text-[18px] font-semibold text-white hover:bg-[#0b3b70] transition"
           >
             <Plus size={20} />
             Start New Session
@@ -61,7 +61,7 @@ export default function StudentJamSessions() {
 
         <section className="rounded-[28px] border border-[#dbe2ef] bg-gradient-to-r from-[#eef5ff] to-[#f9f0ff] p-8 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
           <div className="flex items-center gap-3">
-            <TrendingUp className="text-[#2456f5]" size={24} />
+            <TrendingUp className="text-[#15a276]" size={24} />
             <h2 className="text-[22px] font-semibold">Trending Topics</h2>
           </div>
 
@@ -139,11 +139,11 @@ export default function StudentJamSessions() {
               </div>
 
               <div className="border-t border-[#e3e8f3] px-6 py-5 md:px-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <button type="button" className="inline-flex items-center gap-2 text-[18px] font-semibold text-[#0d1024] hover:text-[#2456f5] transition">
+                <button type="button" className="inline-flex items-center gap-2 text-[18px] font-semibold text-[#062552] hover:text-[#15a276] transition">
                   <Users size={18} />
                   Join Session
                 </button>
-                <button type="button" className="inline-flex items-center gap-2 text-[18px] font-semibold text-[#0d1024] hover:text-[#2456f5] transition">
+                <button type="button" className="inline-flex items-center gap-2 text-[18px] font-semibold text-[#062552] hover:text-[#15a276] transition">
                   <MessageSquare size={18} />
                   View Comments
                 </button>

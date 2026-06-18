@@ -202,7 +202,7 @@ export default function StudentHome() {
             className="flex w-full items-center justify-between rounded-[24px] bg-[#f6f8fc] px-5 py-5 text-left transition hover:bg-[#eef3fb]"
           >
             <span className="text-[18px] font-medium text-[#44516d]">What&apos;s on your mind? ✍️</span>
-            <span className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#2456f5]">Create Post</span>
+            <span className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#15a276]">Create Post</span>
           </button>
         </section>
 

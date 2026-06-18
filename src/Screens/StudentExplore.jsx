@@ -237,8 +237,8 @@ export default function StudentExplore() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`rounded-full px-5 py-3 text-sm font-semibold transition ${
                     activeTab === tab.id
-                      ? 'bg-[#0d1024] text-white'
-                      : 'bg-[#f4f6fb] text-[#44516d] hover:bg-[#eaf1ff]'
+                      ? 'bg-[#062552] text-white'
+                      : 'bg-[#f4f6fb] text-[#44516d] hover:bg-[#e8f7f2]'
                   }`}
                 >
                   {tab.label}

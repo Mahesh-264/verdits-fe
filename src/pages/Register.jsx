@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/axios.jsx';
 import { FaGavel, FaMapMarkerAlt, FaSpinner, FaUser, FaUserGraduate } from 'react-icons/fa';
+import BrandLogo from '../components/BrandLogo.jsx';
 
 const LOCATION_HINT_DEFAULT = 'Enter a 6-digit pincode to auto-fill city, district, and state, use current location to fill those fields automatically, or enter city, district, and state manually to generate coordinates automatically.';
 
@@ -384,14 +385,17 @@ export default function Register() {
     };
 
     const getIcon = () => {
-        if (role === 'lawyer') return <FaGavel className="text-amber-500 text-3xl" />;
+        if (role === 'lawyer') return <FaGavel className="text-[#062552] text-3xl" />;
         if (role === 'student') return <FaUserGraduate className="text-emerald-500 text-3xl" />;
-        return <FaUser className="text-blue-500 text-3xl" />;
+        return <FaUser className="text-[#15a276] text-3xl" />;
     };
 
     return (
-        <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4 font-sans text-white py-12">
-            <div className="w-full max-w-3xl bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl">
+        <div className="min-h-screen bg-[#f3f8fb] flex items-center justify-center p-4 font-sans text-[#062552] py-12">
+            <div className="w-full max-w-3xl bg-white border border-[#d7e9ef] rounded-2xl p-8 shadow-2xl shadow-[#062552]/10">
+                <div className="flex justify-center mb-6">
+                    <BrandLogo className="h-16 max-w-[240px]" />
+                </div>
                 <div className="flex items-center justify-center gap-3 mb-8">
                     {getIcon()}
                     <h2 className="text-3xl font-bold capitalize">{role} Registration</h2>
@@ -402,21 +406,21 @@ export default function Register() {
                         type="text"
                         placeholder="First Name"
                         required
-                        className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-blue-500 outline-none w-full"
+                        className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none w-full"
                         onChange={(event) => setFormData({ ...formData, firstName: event.target.value })}
                     />
                     <input
                         type="text"
                         placeholder="Last Name"
                         required
-                        className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-blue-500 outline-none w-full"
+                        className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none w-full"
                         onChange={(event) => setFormData({ ...formData, lastName: event.target.value })}
                     />
                     <input
                         type="email"
                         placeholder="Personal Email ID"
                         required
-                        className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-blue-500 outline-none w-full md:col-span-2"
+                        className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none w-full md:col-span-2"
                         onChange={(event) => setFormData({ ...formData, email: event.target.value })}
                     />
 
@@ -425,11 +429,11 @@ export default function Register() {
                             type="text"
                             placeholder="Mobile Number"
                             required
-                            className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-blue-500 outline-none flex-1"
+                            className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none flex-1"
                             onChange={(event) => setFormData({ ...formData, phone: event.target.value })}
                         />
                         {role === 'student' && (
-                            <button type="button" className="px-6 py-3 bg-zinc-700 text-zinc-400 rounded-xl font-bold whitespace-nowrap cursor-not-allowed">
+                            <button type="button" className="px-6 py-3 bg-[#e8f7f2] text-[#15a276] rounded-xl font-bold whitespace-nowrap cursor-not-allowed">
                                 Verify Mobile
                             </button>
                         )}
@@ -439,7 +443,7 @@ export default function Register() {
                         type="password"
                         placeholder="Password"
                         required
-                        className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-blue-500 outline-none w-full md:col-span-2"
+                        className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none w-full md:col-span-2"
                         onChange={(event) => setFormData({ ...formData, password: event.target.value })}
                     />
 
@@ -449,41 +453,41 @@ export default function Register() {
                                 type="text"
                                 placeholder="Bar Council Number"
                                 required
-                                className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-amber-500 outline-none"
+                                className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none"
                                 onChange={(event) => setFormData({ ...formData, barId: event.target.value })}
                             />
                             <input
                                 type="text"
                                 placeholder="Specialization (e.g. Criminal, Civil)"
                                 required
-                                className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-amber-500 outline-none"
+                                className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none"
                                 onChange={(event) => setFormData({ ...formData, specialization: event.target.value })}
                             />
                             <input
                                 type="text"
                                 placeholder="Languages Known (comma separated)"
                                 required
-                                className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-amber-500 outline-none"
+                                className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none"
                                 onChange={(event) => setFormData({ ...formData, languages: event.target.value })}
                             />
                             <input
                                 type="number"
                                 placeholder="Experience (Years)"
                                 required
-                                className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-amber-500 outline-none"
+                                className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none"
                                 onChange={(event) => setFormData({ ...formData, experienceYears: event.target.value })}
                             />
 
-                            <div className="md:col-span-2 space-y-4 pt-4 border-t border-zinc-800">
-                                <div className="flex items-center text-zinc-400">
+                            <div className="md:col-span-2 space-y-4 pt-4 border-t border-[#d7e9ef]">
+                                <div className="flex items-center text-[#5f7488]">
                                     <FaMapMarkerAlt className="mr-2" />
                                     <span className="font-semibold text-sm uppercase">Location Details</span>
-                                    {loadingAddr && <FaSpinner className="animate-spin ml-3 text-amber-500" />}
+                                    {loadingAddr && <FaSpinner className="animate-spin ml-3 text-[#15a276]" />}
                                 </div>
                                 <button
                                     type="button"
                                     onClick={detectCurrentLocation}
-                                    className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-300 transition hover:bg-amber-500/20"
+                                    className="rounded-xl border border-[#15a276]/40 bg-[#15a276]/10 px-4 py-2 text-sm font-semibold text-[#118b66] transition hover:bg-[#15a276]/20"
                                 >
                                     Use Current Location
                                 </button>
@@ -494,31 +498,31 @@ export default function Register() {
                                         placeholder="Pincode"
                                         value={formData.address.pincode}
                                         onChange={(event) => updateAddressField('pincode', event.target.value)}
-                                        className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-amber-500 outline-none"
+                                        className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none"
                                     />
                                     <input
                                         type="text"
                                         placeholder="City"
                                         value={formData.address.city}
                                         onChange={(event) => updateAddressField('city', event.target.value)}
-                                        className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-amber-500 outline-none"
+                                        className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none"
                                     />
                                     <input
                                         type="text"
                                         placeholder="State"
                                         value={formData.address.state}
                                         onChange={(event) => updateAddressField('state', event.target.value)}
-                                        className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-amber-500 outline-none"
+                                        className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none"
                                     />
                                     <input
                                         type="text"
                                         placeholder="District"
                                         value={formData.address.district}
                                         onChange={(event) => updateAddressField('district', event.target.value)}
-                                        className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-amber-500 outline-none"
+                                        className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none"
                                     />
                                 </div>
-                                <p className="text-xs text-zinc-500">
+                                <p className="text-xs text-[#5f7488]">
                                     {locationHint || LOCATION_HINT_DEFAULT}
                                 </p>
                             </div>
@@ -531,14 +535,14 @@ export default function Register() {
                                 type="text"
                                 placeholder="College Name"
                                 required
-                                className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-emerald-500 outline-none"
+                                className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none"
                                 onChange={(event) => setFormData({ ...formData, collegeName: event.target.value })}
                             />
                             <input
                                 type="email"
                                 placeholder="College Email Address"
                                 required
-                                className="bg-zinc-800 p-3 rounded-xl border border-zinc-700 focus:border-emerald-500 outline-none"
+                                className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none"
                                 onChange={(event) => setFormData({ ...formData, collegeEmail: event.target.value })}
                             />
                         </>
@@ -546,23 +550,17 @@ export default function Register() {
 
                     <button
                         type="submit"
-                        className={`md:col-span-2 w-full font-bold py-4 rounded-xl mt-6 transition-all shadow-lg text-white ${
-                            role === 'lawyer'
-                                ? 'bg-amber-600 hover:bg-amber-700'
-                                : role === 'student'
-                                    ? 'bg-emerald-600 hover:bg-emerald-700'
-                                    : 'bg-blue-600 hover:bg-blue-700'
-                        }`}
+                        className="md:col-span-2 w-full font-bold py-4 rounded-xl mt-6 transition-all shadow-lg text-white bg-[#062552] hover:bg-[#0b3b70]"
                     >
                         Create Account
                     </button>
                 </form>
 
-                <p className="text-center text-zinc-500 mt-6">
-                    Already have an account? <Link to={`/login?role=${role}`} className="text-white hover:underline font-medium">Login</Link>
+                <p className="text-center text-[#5f7488] mt-6">
+                    Already have an account? <Link to={`/login?role=${role}`} className="text-[#15a276] hover:underline font-medium">Login</Link>
                 </p>
                 <div className="mt-4 text-center">
-                    <Link to="/" className="text-zinc-600 hover:text-zinc-400 text-sm transition">
+                    <Link to="/" className="text-[#5f7488] hover:text-[#062552] text-sm transition">
                         &larr; Back to Role Selection
                     </Link>
                 </div>

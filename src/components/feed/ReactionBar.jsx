@@ -69,7 +69,7 @@ export default function ReactionBar({
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}${window.location.pathname}`;
-    const shareText = item?.title || item?.content || item?.summary || `Lawin ${itemLabel}`;
+    const shareText = item?.title || item?.content || item?.summary || `VERDITS ${itemLabel}`;
 
     try {
       if (navigator.share) {
@@ -104,12 +104,12 @@ export default function ReactionBar({
               value={commentText}
               onChange={(event) => setCommentText(event.target.value)}
               placeholder={`Add a comment on this ${itemLabel}`}
-              className="min-w-0 flex-1 rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 text-sm outline-none focus:border-[#2456f5]"
+              className="min-w-0 flex-1 rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 text-sm outline-none focus:border-[#15a276]"
             />
             <button
               type="submit"
               disabled={working || !commentText.trim()}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0d1024] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#171b34] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#062552] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0b3b70] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Send size={16} />
               Post

@@ -14,8 +14,8 @@ import { formatDistanceLabel } from '../../utils/lawyerDiscovery.js';
 
 const typeStyles = {
   internship: {
-    badge: 'bg-[#e8f1ff] text-[#2456f5]',
-    button: 'bg-[#0d1024] text-white hover:bg-[#171b34]',
+    badge: 'bg-[#e8f1ff] text-[#15a276]',
+    button: 'bg-[#062552] text-white hover:bg-[#0b3b70]',
     joined: 'bg-[#e9fff1] text-[#14804a]',
   },
   jam: {
@@ -210,7 +210,7 @@ export default function StudentOpportunityCard({
                 : `${post.participantCount || 0} student${post.participantCount === 1 ? '' : 's'} joined`}
             </p>
             {Number.isFinite(Number(post.distanceKm)) ? (
-              <p className="font-medium text-[#2456f5]">{formatDistanceLabel(post.distanceKm)}</p>
+              <p className="font-medium text-[#15a276]">{formatDistanceLabel(post.distanceKm)}</p>
             ) : null}
           </div>
 

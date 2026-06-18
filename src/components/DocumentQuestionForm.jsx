@@ -54,7 +54,7 @@ const DocumentQuestionForm = React.memo(({
                 {/* Progress Bar */}
                 <div className="h-1 bg-gray-200">
                     <div
-                        className="h-full bg-blue-600 transition-all duration-300"
+                        className="h-full bg-[#15a276] transition-all duration-300"
                         style={{ width: `${progressPercentage}%` }}
                     />
                 </div>
@@ -72,7 +72,7 @@ const DocumentQuestionForm = React.memo(({
                                 value={answers[currentQuestion.id] || ''}
                                 onChange={(e) => onAnswerChange(e.target.value)}
                                 placeholder="Enter your answer here..."
-                                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[150px] resize-none"
+                                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#15a276] min-h-[150px] resize-none"
                             />
                         ) : (
                             <input
@@ -80,7 +80,7 @@ const DocumentQuestionForm = React.memo(({
                                 value={answers[currentQuestion.id] || ''}
                                 onChange={(e) => onAnswerChange(e.target.value)}
                                 placeholder="Enter your answer here..."
-                                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#15a276]"
                             />
                         )}
 
@@ -99,7 +99,7 @@ const DocumentQuestionForm = React.memo(({
                         <button
                             onClick={onNext}
                             disabled={isGenerating}
-                            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-3 rounded-lg transition flex items-center justify-center gap-2"
+                            className="flex-1 bg-[#15a276] hover:bg-[#118b66] disabled:opacity-50 text-white font-bold py-3 rounded-lg transition flex items-center justify-center gap-2"
                         >
                             {isGenerating ? (
                                 <>

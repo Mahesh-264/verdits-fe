@@ -24,7 +24,7 @@ const formatNotificationTime = (value) => {
   return `${Math.max(1, Math.floor(diff / day))}d ago`;
 };
 
-export default function NotificationBell() {
+export default function NotificationBell({ className = '', buttonClassName = '', panelClassName = '' }) {
   const { isAuthenticated } = useSelector((state) => state.auth);
   const navigate = useNavigate();
   const panelRef = useRef(null);
@@ -129,11 +129,11 @@ export default function NotificationBell() {
   };
 
   return (
-    <div ref={panelRef} className="fixed right-4 top-4 z-[120]">
+    <div ref={panelRef} className={`relative z-[120] ${className}`}>
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="relative flex h-11 w-11 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-900 shadow-lg transition hover:bg-zinc-50"
+        className={`relative flex h-11 w-11 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-900 shadow-lg transition hover:bg-zinc-50 ${buttonClassName}`}
         aria-label="Notifications"
       >
         <Bell size={20} />
@@ -145,7 +145,7 @@ export default function NotificationBell() {
       </button>
 
       {open ? (
-        <div className="mt-3 w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-zinc-200 bg-white text-zinc-950 shadow-2xl">
+        <div className={`absolute right-0 top-full mt-3 w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-zinc-200 bg-white text-zinc-950 shadow-2xl ${panelClassName}`}>
           <div className="flex items-center justify-between gap-3 border-b border-zinc-100 px-4 py-3">
             <div>
               <h2 className="text-sm font-bold">Notifications</h2>
@@ -189,7 +189,7 @@ export default function NotificationBell() {
                           <p className="mt-2 text-xs font-medium text-zinc-400">From {actorName}</p>
                         ) : null}
                       </div>
-                      {unread ? <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-blue-600" /> : null}
+                      {unread ? <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#15a276]" /> : null}
                     </div>
                     <p className="mt-2 text-xs text-zinc-400">{formatNotificationTime(notification.createdAt)}</p>
                   </button>

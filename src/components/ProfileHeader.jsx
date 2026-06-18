@@ -17,13 +17,13 @@ const ProfileHeader = React.memo(({ lawyer, profile }) => {
                 </div>
                 <div className="flex-1">
                     <h1 className="text-2xl font-bold text-gray-900 leading-tight">{lawyer.name}</h1>
-                    <p className="text-blue-600 font-medium">{profile.specialization || 'General'} Law</p>
+                    <p className="text-[#15a276] font-medium">{profile.specialization || 'General'} Law</p>
 
                     <div className="flex items-center gap-3 mt-2 text-sm text-gray-600 flex-wrap">
                         <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
                             <Clock size={14} /> {profile.experienceYears || 0} Yrs Exp
                         </span>
-                        <span className="flex items-center text-amber-500 font-bold gap-1 bg-amber-50 px-2 py-1 rounded">
+                        <span className="flex items-center text-[#15a276] font-bold gap-1 bg-[#e8f7f2] px-2 py-1 rounded">
                             <Star size={14} fill="currentColor" /> 4.8
                         </span>
                     </div>

@@ -47,7 +47,7 @@ const DocumentDisplay = React.memo(({
                 <div className="sticky top-14 bg-gray-50 border-b border-gray-200 p-4 flex gap-3 z-10">
                     <button
                         onClick={handleDownload}
-                        className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg transition"
+                        className="flex-1 flex items-center justify-center gap-2 bg-[#15a276] hover:bg-[#118b66] text-white font-bold py-2 rounded-lg transition"
                         aria-label="Download document"
                     >
                         <Download size={18} />
@@ -74,7 +74,7 @@ const DocumentDisplay = React.memo(({
                 <div className="p-4 border-t border-gray-200 sticky bottom-0 bg-white z-10">
                     <button
                         onClick={onCreateAnother}
-                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg transition"
+                        className="w-full bg-[#062552] hover:bg-[#0b3b70] text-white font-bold py-3 rounded-lg transition"
                     >
                         Create Another Document
                     </button>

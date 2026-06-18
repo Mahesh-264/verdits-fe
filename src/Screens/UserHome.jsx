@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, MessageSquare, Lightbulb, MoreHorizontal, Send, User } from 'lucide-react';
+import { BookOpen, MessageSquare, Lightbulb, MoreHorizontal, Send } from 'lucide-react';
 import api from '../api/axios';
+import AppHeader from '../components/AppHeader.jsx';
 
 const UserHome = () => {
     const navigate = useNavigate();
@@ -86,15 +87,8 @@ const UserHome = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center pb-52">
-            {/* Header */}
-            <div className="w-full bg-black text-white p-4 flex justify-between items-center shadow-md">
-                <div className="flex items-center gap-2">
-                    <img src="/logo.png" alt="Logo" className="h-8" /> {/* Add your logo */}
-                    <span className="text-xl font-bold tracking-wide">Nyaya Setu</span>
-                </div>
-                <User className="h-6 w-6" onClick={() => navigate('/profile')} />
-            </div>
+        <div className="min-h-screen bg-[#f3f8fb] flex flex-col items-center pb-52">
+            <AppHeader variant="user" profileTo="/profile" />
 
             {/* Grid Menu */}
             <div className="w-full max-w-md p-6 grid grid-cols-2 gap-6 mt-10">
@@ -102,9 +96,9 @@ const UserHome = () => {
                 {/* Book a Lawyer */}
                 <div
                     onClick={() => navigate('/book-lawyer')}
-                    className="bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md transition text-center"
+                    className="bg-white p-6 rounded-2xl shadow-sm border border-[#d7e9ef] flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md hover:border-[#062552]/30 transition text-center"
                 >
-                    <div className="h-14 w-14 bg-blue-500 rounded-full flex items-center justify-center text-white shrink-0 shadow-inner">
+                    <div className="h-14 w-14 bg-[#062552] rounded-full flex items-center justify-center text-white shrink-0 shadow-inner">
                         <BookOpen size={28} />
                     </div>
                     <div>
@@ -116,9 +110,9 @@ const UserHome = () => {
                 {/* Consult a Lawyer */}
                 <div 
                     onClick={() => navigate('/instant-consult')}
-                    className="bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md transition text-center border border-transparent hover:border-green-200"
+                    className="bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md transition text-center border border-[#d7e9ef] hover:border-[#15a276]/40"
                 >
-                    <div className="h-14 w-14 bg-green-500 rounded-full flex items-center justify-center text-white shrink-0 shadow-inner">
+                    <div className="h-14 w-14 bg-[#15a276] rounded-full flex items-center justify-center text-white shrink-0 shadow-inner">
                         <MessageSquare size={28} />
                     </div>
                     <div>
@@ -130,9 +124,9 @@ const UserHome = () => {
                 {/* Know Your Document */}
                 <div
                     onClick={handleDocumentCardClick}
-                    className="bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md transition text-center border border-transparent hover:border-yellow-200"
+                    className="bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md transition text-center border border-[#d7e9ef] hover:border-[#15a276]/40"
                 >
-                    <div className="h-14 w-14 bg-yellow-500 rounded-full flex items-center justify-center text-white">
+                    <div className="h-14 w-14 bg-[#19b98d] rounded-full flex items-center justify-center text-white">
                         <Lightbulb size={28} />
                     </div>
                     <span className="font-medium text-gray-800 text-center">Know Your Document</span>
@@ -142,8 +136,8 @@ const UserHome = () => {
                 </div>
 
                 {/* Other */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md transition">
-                    <div className="h-14 w-14 bg-purple-500 rounded-full flex items-center justify-center text-white">
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#d7e9ef] flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md hover:border-[#062552]/30 transition">
+                    <div className="h-14 w-14 bg-[#0b3b70] rounded-full flex items-center justify-center text-white">
                         <MoreHorizontal size={28} />
                     </div>
                     <span className="font-medium text-gray-800">Other</span>
@@ -163,7 +157,7 @@ const UserHome = () => {
                             >
                                 <div className={`max-w-[88%] ${isUser ? 'items-end' : 'items-start'} flex flex-col gap-2`}>
                                     <div
-                                        className={`rounded-2xl px-4 py-3 text-sm shadow-sm ${isUser ? 'bg-black text-white rounded-br-md' : 'bg-gray-100 text-gray-800 rounded-bl-md'}`}
+                                        className={`rounded-2xl px-4 py-3 text-sm shadow-sm ${isUser ? 'bg-[#062552] text-white rounded-br-md' : 'bg-[#eef7f4] text-gray-800 rounded-bl-md'}`}
                                     >
                                         {message.text}
                                     </div>
@@ -177,7 +171,7 @@ const UserHome = () => {
                                                     <button
                                                         type="button"
                                                         onClick={() => navigate(`/lawyer-profile/${lawyer._id}`)}
-                                                        className="mt-3 rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
+                                                        className="mt-3 rounded-xl bg-[#062552] px-4 py-2 text-sm font-medium text-white hover:bg-[#0b3b70] transition"
                                                     >
                                                         Book Appointment
                                                     </button>
@@ -229,7 +223,7 @@ const UserHome = () => {
                             <button
                                 type="button"
                                 onClick={handleScanDocument}
-                                className="w-full rounded-2xl bg-yellow-500 px-4 py-4 text-left font-semibold text-white hover:bg-yellow-600 transition"
+                                className="w-full rounded-2xl bg-[#15a276] px-4 py-4 text-left font-semibold text-white hover:bg-[#118b66] transition"
                             >
                                 Scan your document
                             </button>
@@ -255,7 +249,7 @@ const UserHome = () => {
             )}
 
             {/* Chat Bot Input Area */}
-            <div className="w-full max-w-md fixed bottom-0 bg-black p-4 rounded-t-3xl">
+            <div className="w-full max-w-md fixed bottom-0 bg-[#062552] p-4 rounded-t-3xl">
                 <h3 className="text-white text-sm mb-2 font-semibold">AI Legal Chat Bot</h3>
                 <div className="flex items-center gap-2">
                     <input
@@ -270,7 +264,7 @@ const UserHome = () => {
                         type="button"
                         onClick={handleSendMessage}
                         disabled={isLoading || !input.trim()}
-                        className="h-12 w-12 rounded-xl bg-white text-black flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="h-12 w-12 rounded-xl bg-[#15a276] text-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Send size={18} />
                     </button>

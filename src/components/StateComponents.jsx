@@ -2,7 +2,7 @@ import React from 'react';
 
 export const LoadingState = React.memo(() => (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#15a276]"></div>
     </div>
 ));
 
@@ -13,7 +13,7 @@ export const ErrorState = React.memo(({ onBack }) => (
         <h2 className="text-xl font-bold text-gray-800">Lawyer not found</h2>
         <button
             onClick={onBack}
-            className="mt-4 text-blue-600 font-semibold hover:text-blue-700 transition"
+            className="mt-4 text-[#15a276] font-semibold hover:text-[#118b66] transition"
         >
             Go Back
         </button>

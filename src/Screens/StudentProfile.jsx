@@ -58,7 +58,7 @@ export default function StudentProfile() {
   const studentName = useMemo(() => getDisplayName(user), [user]);
   const collegeName = user?.studentProfile?.collegeName || 'National Law School of India University, Bangalore';
   const cityLabel = user?.address?.city || user?.address?.district || 'Location not added';
-  const studentBio = user?.studentProfile?.bio || 'Build your student profile, update your academic details, and keep your Lawin presence current.';
+  const studentBio = user?.studentProfile?.bio || 'Build your student profile, update your academic details, and keep your VERDITS presence current.';
   const specializations = user?.studentProfile?.specializations?.length ? user.studentProfile.specializations : defaultSpecializations;
   const skills = user?.studentProfile?.skills?.length ? user.studentProfile.skills : defaultSkills;
   const internships = user?.studentProfile?.internships?.length ? user.studentProfile.internships : defaultInternships;
@@ -166,7 +166,7 @@ export default function StudentProfile() {
     <StudentLayout>
       <div className="space-y-8">
         <section className="rounded-[28px] border border-[#dbe2ef] bg-white overflow-hidden shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
-          <div className="h-40 bg-gradient-to-r from-[#2456f5] to-[#243bbd]" />
+          <div className="h-40 bg-gradient-to-r from-[#15a276] to-[#15a276]" />
           <div className="p-6 md:p-8">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div className="flex items-start gap-6">
@@ -194,7 +194,7 @@ export default function StudentProfile() {
               <button
                 type="button"
                 onClick={openEditor}
-                className="rounded-2xl bg-[#0d1024] px-6 py-4 text-[18px] font-semibold text-white hover:bg-[#171b34] transition"
+                className="rounded-2xl bg-[#062552] px-6 py-4 text-[18px] font-semibold text-white hover:bg-[#0b3b70] transition"
               >
                 Edit Profile
               </button>
@@ -212,7 +212,7 @@ export default function StudentProfile() {
               <h2 className="text-[22px] font-semibold">Specialization</h2>
               <div className="flex flex-wrap gap-3 mt-8">
                 {specializations.map((item) => (
-                  <span key={item} className="rounded-full bg-[#d9e7ff] px-4 py-2 text-[#2456f5] font-medium">
+                  <span key={item} className="rounded-full bg-[#e8f7f2] px-4 py-2 text-[#15a276] font-medium">
                     {item}
                   </span>
                 ))}
@@ -275,7 +275,7 @@ export default function StudentProfile() {
               <div className="mt-8 space-y-10">
                 {internships.map((item) => (
                   <div key={item.role} className="flex items-start gap-5">
-                    <div className="h-16 w-16 rounded-2xl bg-[#d9e7ff] text-[#2456f5] flex items-center justify-center shrink-0">
+                    <div className="h-16 w-16 rounded-2xl bg-[#e8f7f2] text-[#15a276] flex items-center justify-center shrink-0">
                       <BriefcaseBusiness size={28} />
                     </div>
                     <div>
@@ -323,7 +323,7 @@ export default function StudentProfile() {
                       value={formData.firstName}
                       onChange={handleChange}
                       placeholder="Enter first name"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#2456f5]"
+                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
                       required
                     />
                   </Field>
@@ -333,7 +333,7 @@ export default function StudentProfile() {
                       value={formData.lastName}
                       onChange={handleChange}
                       placeholder="Enter last name"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#2456f5]"
+                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
                       required
                     />
                   </Field>
@@ -344,7 +344,7 @@ export default function StudentProfile() {
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="Enter email"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#2456f5]"
+                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
                     />
                   </Field>
                   <Field label="Profile Bio" fullWidth>
@@ -354,7 +354,7 @@ export default function StudentProfile() {
                       onChange={handleChange}
                       placeholder="Write a short profile summary"
                       rows="4"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#2456f5]"
+                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
                     />
                   </Field>
                 </div>
@@ -371,7 +371,7 @@ export default function StudentProfile() {
                       value={formData.collegeName}
                       onChange={handleChange}
                       placeholder="Enter college name"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#2456f5]"
+                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
                     />
                   </Field>
                   <Field label="College Email">
@@ -381,7 +381,7 @@ export default function StudentProfile() {
                       value={formData.collegeEmail}
                       onChange={handleChange}
                       placeholder="Enter college email"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#2456f5]"
+                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
                     />
                   </Field>
                   <Field label="Current Year">
@@ -390,7 +390,7 @@ export default function StudentProfile() {
                       value={formData.currentYear}
                       onChange={handleChange}
                       placeholder="Example: 3rd Year B.A. LL.B"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#2456f5]"
+                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
                     />
                   </Field>
                   <Field label="City">
@@ -399,7 +399,7 @@ export default function StudentProfile() {
                       value={formData.city}
                       onChange={handleChange}
                       placeholder="Enter city"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#2456f5]"
+                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
                     />
                   </Field>
                   <Field label="District">
@@ -408,7 +408,7 @@ export default function StudentProfile() {
                       value={formData.district}
                       onChange={handleChange}
                       placeholder="Enter district"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#2456f5]"
+                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
                     />
                   </Field>
                 </div>
@@ -425,7 +425,7 @@ export default function StudentProfile() {
                       value={formData.specializations}
                       onChange={handleChange}
                       placeholder="Example: Criminal Law, Constitutional Law"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#2456f5]"
+                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
                     />
                   </Field>
                   <Field label="Skills" fullWidth>
@@ -434,7 +434,7 @@ export default function StudentProfile() {
                       value={formData.skills}
                       onChange={handleChange}
                       placeholder="Example: Legal Research, Drafting, Moot Court"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#2456f5]"
+                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
                     />
                   </Field>
                 </div>
@@ -475,7 +475,7 @@ export default function StudentProfile() {
                             value={item.role}
                             onChange={(event) => handleInternshipChange(index, 'role', event.target.value)}
                             placeholder="Example: Legal Intern"
-                            className="w-full rounded-2xl border border-[#dbe2ef] px-4 py-3 outline-none focus:border-[#2456f5]"
+                            className="w-full rounded-2xl border border-[#dbe2ef] px-4 py-3 outline-none focus:border-[#15a276]"
                           />
                         </Field>
                         <Field label="Organization">
@@ -483,7 +483,7 @@ export default function StudentProfile() {
                             value={item.org}
                             onChange={(event) => handleInternshipChange(index, 'org', event.target.value)}
                             placeholder="Example: District Court, Delhi"
-                            className="w-full rounded-2xl border border-[#dbe2ef] px-4 py-3 outline-none focus:border-[#2456f5]"
+                            className="w-full rounded-2xl border border-[#dbe2ef] px-4 py-3 outline-none focus:border-[#15a276]"
                           />
                         </Field>
                         <Field label="Period" fullWidth>
@@ -491,7 +491,7 @@ export default function StudentProfile() {
                             value={item.period}
                             onChange={(event) => handleInternshipChange(index, 'period', event.target.value)}
                             placeholder="Example: Jun 2025 - Aug 2025"
-                            className="w-full rounded-2xl border border-[#dbe2ef] px-4 py-3 outline-none focus:border-[#2456f5]"
+                            className="w-full rounded-2xl border border-[#dbe2ef] px-4 py-3 outline-none focus:border-[#15a276]"
                           />
                         </Field>
                         <Field label="Description" fullWidth>
@@ -500,7 +500,7 @@ export default function StudentProfile() {
                             onChange={(event) => handleInternshipChange(index, 'description', event.target.value)}
                             placeholder="Describe what you worked on"
                             rows="3"
-                            className="w-full rounded-2xl border border-[#dbe2ef] px-4 py-3 outline-none focus:border-[#2456f5]"
+                            className="w-full rounded-2xl border border-[#dbe2ef] px-4 py-3 outline-none focus:border-[#15a276]"
                           />
                         </Field>
                       </div>
@@ -523,7 +523,7 @@ export default function StudentProfile() {
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="rounded-2xl bg-[#0d1024] px-8 py-4 font-semibold text-white hover:bg-[#171b34] transition disabled:opacity-60"
+                  className="rounded-2xl bg-[#062552] px-8 py-4 font-semibold text-white hover:bg-[#0b3b70] transition disabled:opacity-60"
                 >
                   {isSaving ? 'Saving...' : 'Save Changes'}
                 </button>

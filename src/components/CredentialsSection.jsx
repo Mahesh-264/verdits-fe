@@ -2,7 +2,7 @@ import React from 'react';
 
 const CredentialItem = React.memo(({ children }) => (
     <li className="flex items-start gap-3 text-sm text-gray-700">
-        <div className="h-2 w-2 bg-blue-500 rounded-full mt-1.5 shrink-0"></div>
+        <div className="h-2 w-2 bg-[#15a276] rounded-full mt-1.5 shrink-0"></div>
         <span>{children}</span>
     </li>
 ));
@@ -21,7 +21,7 @@ const CredentialsSection = React.memo(({ profile }) => {
                     LL.B / LL.M in {profile.specialization || 'Law'}
                 </CredentialItem>
                 <CredentialItem>
-                    Verified Practitioner at Nyaya Setu
+                    Verified Practitioner at VERDITS
                 </CredentialItem>
             </ul>
         </div>

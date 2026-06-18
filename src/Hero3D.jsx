@@ -125,7 +125,7 @@ const ModernHero3D = () => {
                                 <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse" />
                                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Testosterone</span>
                             </div>
-                            <span className="text-green-600 font-bold bg-green-100 px-2 py-0.5 rounded text-xs">+12%</span>
+                            <span className="text-[#15a276] font-bold bg-green-100 px-2 py-0.5 rounded text-xs">+12%</span>
                         </div>
                         {/* Fake Graph Lines */}
                         <div className="flex items-end gap-1 h-16 w-full opacity-80">
@@ -134,7 +134,7 @@ const ModernHero3D = () => {
                                     key={i}
                                     animate={{ height: [h + '%', (h - 20) + '%', h + '%'] }}
                                     transition={{ duration: 3, repeat: Infinity, delay: i * 0.1 }}
-                                    className="flex-1 bg-gradient-to-t from-green-500 to-green-300 rounded-t-sm"
+                                    className="flex-1 bg-gradient-to-t from-[#15a276] to-[#8de2c6] rounded-t-sm"
                                 />
                             ))}
                         </div>

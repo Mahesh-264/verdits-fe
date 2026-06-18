@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../api/axios.jsx';
 import { FALLBACK_CITY_OPTIONS } from '../utils/lawyerDiscovery.js';
 
-const STORAGE_KEY = 'nyaya-setu-search-location';
+const STORAGE_KEY = 'verdits-search-location';
 
 const readStoredLocation = () => {
   if (typeof window === 'undefined') return null;

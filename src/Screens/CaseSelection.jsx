@@ -1,23 +1,24 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Scale, Home, Heart, MoreHorizontal } from 'lucide-react';
+import BrandLogo from '../components/BrandLogo';
 
 const CaseSelection = () => {
     const navigate = useNavigate();
 
     const categories = [
-        { id: 'criminal', name: 'Criminal Case', desc: 'Criminal law matters', icon: <Scale size={24} />, color: 'bg-red-500' },
-        { id: 'civil', name: 'Civil Case', desc: 'Civil disputes & claims', icon: <Home size={24} />, color: 'bg-blue-500' },
-        { id: 'marital', name: 'Marital Case', desc: 'Family & marriage law', icon: <Heart size={24} />, color: 'bg-pink-500' },
-        { id: 'other', name: 'Other', desc: 'Other legal matters', icon: <MoreHorizontal size={24} />, color: 'bg-gray-500' },
+        { id: 'criminal', name: 'Criminal Case', desc: 'Criminal law matters', icon: <Scale size={24} />, color: 'bg-[#062552]' },
+        { id: 'civil', name: 'Civil Case', desc: 'Civil disputes & claims', icon: <Home size={24} />, color: 'bg-[#15a276]' },
+        { id: 'marital', name: 'Marital Case', desc: 'Family & marriage law', icon: <Heart size={24} />, color: 'bg-[#0b3b70]' },
+        { id: 'other', name: 'Other', desc: 'Other legal matters', icon: <MoreHorizontal size={24} />, color: 'bg-[#19b98d]' },
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center">
+        <div className="min-h-screen bg-[#f3f8fb] flex flex-col items-center">
             {/* Header */}
-            <div className="w-full bg-black text-white p-4 flex items-center gap-4 shadow-md">
+            <div className="w-full bg-[#062552] text-white p-4 flex items-center gap-4 shadow-md">
                 <ArrowLeft onClick={() => navigate(-1)} className="cursor-pointer" />
-                <span className="text-xl font-bold tracking-wide">Nyaya Setu</span>
+                <BrandLogo className="h-10 max-w-[160px]" light />
             </div>
 
             <div className="w-full max-w-md p-6 mt-4">
@@ -28,7 +29,7 @@ const CaseSelection = () => {
                         <div
                             key={cat.id}
                             onClick={() => navigate(`/lawyers/${cat.id}`)}
-                            className="bg-white p-4 rounded-xl shadow-sm flex items-center gap-4 cursor-pointer hover:shadow-md transition"
+                            className="bg-white p-4 rounded-xl shadow-sm border border-[#d7e9ef] flex items-center gap-4 cursor-pointer hover:shadow-md hover:border-[#15a276]/40 transition"
                         >
                             <div className={`h-12 w-12 ${cat.color} rounded-full flex items-center justify-center text-white shrink-0`}>
                                 {cat.icon}

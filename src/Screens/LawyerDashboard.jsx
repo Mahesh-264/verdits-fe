@@ -15,6 +15,7 @@ import {
 } from 'react-icons/fa';
 import { Users } from 'lucide-react';
 import api from '../api/axios';
+import AppHeader from '../components/AppHeader.jsx';
 import FeedPostCard from '../components/feed/FeedPostCard.jsx';
 import PostComposerModal from '../components/feed/PostComposerModal.jsx';
 import ReactionBar from '../components/feed/ReactionBar.jsx';
@@ -40,7 +41,7 @@ const applicantFilters = ['All', 'Pending', 'Accepted', 'Rejected'];
 const participantFilters = ['All', 'Joined'];
 
 const statCards = [
-  { key: 'totalInternshipsPosted', label: 'Total internships posted', accent: 'text-amber-400' },
+  { key: 'totalInternshipsPosted', label: 'Total internships posted', accent: 'text-[#19b98d]' },
   { key: 'activeInternships', label: 'Active internships', accent: 'text-emerald-400' },
   { key: 'totalApplicants', label: 'Total applicants', accent: 'text-cyan-400' },
   { key: 'totalJamSessions', label: 'Total jam sessions', accent: 'text-purple-400' },
@@ -563,7 +564,7 @@ export default function LawyerDashboard() {
     {
       title: 'New Appointments',
       badge: pendingCount > 0 ? pendingCount : null,
-      icon: <FaCalendarPlus className="text-4xl text-amber-500" />,
+      icon: <FaCalendarPlus className="text-4xl text-[#15a276]" />,
       desc: 'Review and manage incoming consultation requests.',
       onClick: () => setShowAppointmentsModal(true),
     },
@@ -574,14 +575,14 @@ export default function LawyerDashboard() {
     },
     {
       title: 'Notice Generator',
-      icon: <FaFileSignature className="text-4xl text-blue-500" />,
+      icon: <FaFileSignature className="text-4xl text-[#15a276]" />,
       desc: 'Quickly draft and send legal notices to parties.',
       onClick: () => setShowNoticeGenerator(true),
     },
     {
       title: 'My Clients',
       badge: clientCount > 0 ? clientCount : null,
-      icon: <FaBriefcase className="text-4xl text-purple-500" />,
+      icon: <FaBriefcase className="text-4xl text-[#062552]" />,
       desc: 'See all clients whose requests you have accepted.',
       onClick: () => setShowClientsModal(true),
     },
@@ -605,60 +606,47 @@ export default function LawyerDashboard() {
   const activeDrawerFilters = drawer.type === 'participants' ? participantFilters : applicantFilters;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-6 md:p-8 relative">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-zinc-950 text-white relative">
+      <AppHeader variant="lawyer" onProfileClick={() => setShowProfileInfo((current) => !current)} />
+
+      {showProfileInfo && (
+        <div className="fixed right-4 top-20 w-72 bg-zinc-900 border border-zinc-800 p-5 rounded-xl shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 md:right-6">
+          <div className="text-right">
+            <h3 className="text-lg font-bold text-white leading-tight">
+              {user?.name || (user?.firstName ? `${user.firstName} ${user.lastName}` : 'Lawyer')}
+            </h3>
+            <p className="text-[12px] text-[#15a276] font-bold tracking-wide uppercase">
+              {user?.lawyerProfile?.specialization || 'Legal Services'}
+            </p>
+            <div className="text-[12px] text-zinc-400 mt-3 space-y-2 block border-t border-zinc-800 pt-3">
+              <p className="flex justify-between items-center">
+                <span>Bar Council ID:</span>
+                <span className="text-zinc-200 font-medium bg-zinc-950 px-2 py-1 rounded">
+                  {user?.lawyerProfile?.barId || 'Not Provided'}
+                </span>
+              </p>
+              <p className="flex justify-between items-center">
+                <span>Age:</span>
+                <span className="text-zinc-200 font-medium bg-zinc-950 px-2 py-1 rounded">
+                  {user?.age || 'N/A'}
+                </span>
+              </p>
+              <p className="flex justify-between items-center">
+                <span>Location:</span>
+                <span className="text-zinc-200 font-medium bg-zinc-950 px-2 py-1 rounded">
+                  {user?.address?.city || user?.address?.district || 'Not Set'}
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-6xl mx-auto p-6 md:p-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 relative z-20">
           <div>
             <h1 className="text-4xl font-bold mb-2">Lawyer Dashboard</h1>
             <p className="text-zinc-400">Manage your appointments, hearings, and daily practice efficiently.</p>
-          </div>
-
-          <div className="relative">
-            <div
-              onClick={() => setShowProfileInfo(!showProfileInfo)}
-              className="h-14 w-14 rounded-full bg-zinc-900 border-2 border-amber-500/50 flex items-center justify-center overflow-hidden cursor-pointer shadow-lg hover:border-amber-500 transition relative z-30"
-            >
-              {user?.profileImage ? (
-                <img src={user.profileImage} alt="Profile" className="h-full w-full object-cover" />
-              ) : (
-                <span className="text-xl font-bold text-amber-500">
-                  {user?.name?.charAt(0) || user?.firstName?.charAt(0) || 'L'}
-                </span>
-              )}
-            </div>
-
-            {showProfileInfo && (
-              <div className="absolute right-0 top-16 w-72 bg-zinc-900 border border-zinc-800 p-5 rounded-xl shadow-2xl z-50 animate-in fade-in slide-in-from-top-2">
-                <div className="text-right">
-                  <h3 className="text-lg font-bold text-white leading-tight">
-                    {user?.name || (user?.firstName ? `${user.firstName} ${user.lastName}` : 'Lawyer')}
-                  </h3>
-                  <p className="text-[12px] text-amber-500 font-bold tracking-wide uppercase">
-                    {user?.lawyerProfile?.specialization || 'Legal Services'}
-                  </p>
-                  <div className="text-[12px] text-zinc-400 mt-3 space-y-2 block border-t border-zinc-800 pt-3">
-                    <p className="flex justify-between items-center">
-                      <span>Bar Council ID:</span>
-                      <span className="text-zinc-200 font-medium bg-zinc-950 px-2 py-1 rounded">
-                        {user?.lawyerProfile?.barId || 'Not Provided'}
-                      </span>
-                    </p>
-                    <p className="flex justify-between items-center">
-                      <span>Age:</span>
-                      <span className="text-zinc-200 font-medium bg-zinc-950 px-2 py-1 rounded">
-                        {user?.age || 'N/A'}
-                      </span>
-                    </p>
-                    <p className="flex justify-between items-center">
-                      <span>Location:</span>
-                      <span className="text-zinc-200 font-medium bg-zinc-950 px-2 py-1 rounded">
-                        {user?.address?.city || user?.address?.district || 'Not Set'}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -667,10 +655,10 @@ export default function LawyerDashboard() {
             <div
               key={idx}
               onClick={card.onClick}
-              className="relative bg-zinc-900 border border-zinc-800 p-6 rounded-2xl hover:border-amber-500/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer"
+              className="relative bg-zinc-900 border border-zinc-800 p-6 rounded-2xl hover:border-[#15a276]/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer"
             >
               {card.badge > 0 && (
-                <div className="absolute top-4 right-4 bg-amber-500 text-zinc-950 text-xs font-bold h-6 w-6 flex items-center justify-center rounded-full shadow-lg animate-pulse">
+                <div className="absolute top-4 right-4 bg-[#15a276] text-zinc-950 text-xs font-bold h-6 w-6 flex items-center justify-center rounded-full shadow-lg animate-pulse">
                   {card.badge}
                 </div>
               )}
@@ -704,7 +692,7 @@ export default function LawyerDashboard() {
       </div>
 
       {showAppointmentsModal && (
-        <ModalShell title="Incoming Appointments" icon={<FaCalendarPlus className="text-amber-500" />} onClose={() => setShowAppointmentsModal(false)}>
+        <ModalShell title="Incoming Appointments" icon={<FaCalendarPlus className="text-[#15a276]" />} onClose={() => setShowAppointmentsModal(false)}>
           {loadingAppointments ? (
             <EmptyBlock icon={<FaCalendarPlus size={24} />} message="Loading appointment requests..." />
           ) : pendingAppointments.length === 0 ? (
@@ -712,7 +700,7 @@ export default function LawyerDashboard() {
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {pendingAppointments.slice().reverse().map((appt) => (
-                <div key={appt.id} className="bg-zinc-950 border border-zinc-800 hover:border-amber-500/30 rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all">
+                <div key={appt.id} className="bg-zinc-950 border border-zinc-800 hover:border-[#15a276]/30 rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all">
                   <div>
                     <h3 className="font-bold text-lg text-white">{appt.userName}</h3>
                     <p className="text-xs text-zinc-500 mb-2">Requested on: {new Date(appt.timestamp).toLocaleString()}</p>
@@ -738,7 +726,7 @@ export default function LawyerDashboard() {
       )}
 
       {showClientsModal && (
-        <ModalShell title="My Clients" icon={<FaBriefcase className="text-purple-500" />} onClose={() => setShowClientsModal(false)}>
+        <ModalShell title="My Clients" icon={<FaBriefcase className="text-[#062552]" />} onClose={() => setShowClientsModal(false)}>
           {loadingAppointments ? (
             <EmptyBlock icon={<FaBriefcase size={24} />} message="Loading accepted clients..." />
           ) : acceptedClients.length === 0 ? (
@@ -746,7 +734,7 @@ export default function LawyerDashboard() {
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {acceptedClients.slice().reverse().map((client) => (
-                <div key={client.id} className="bg-zinc-950 border border-zinc-800 hover:border-purple-500/30 rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all">
+                <div key={client.id} className="bg-zinc-950 border border-zinc-800 hover:border-[#15a276]/30 rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all">
                   <div>
                     <h3 className="font-bold text-lg text-white">{client.userName}</h3>
                     <p className="text-xs text-zinc-500 mb-2">Accepted on: {new Date(client.timestamp).toLocaleString()}</p>
@@ -758,7 +746,7 @@ export default function LawyerDashboard() {
                     <p className="text-xs text-zinc-400 font-medium">Client communication unlocked</p>
                     <button
                       onClick={() => handleOpenChat(client)}
-                      className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 rounded-lg font-bold transition-transform active:scale-95"
+                      className="px-5 py-2 bg-[#15a276] hover:bg-[#19b98d] text-zinc-950 rounded-lg font-bold transition-transform active:scale-95"
                     >
                       Go to Chat
                     </button>
@@ -801,7 +789,7 @@ export default function LawyerDashboard() {
                   }}
                   className={`w-full text-left rounded-xl px-4 py-4 font-semibold transition ${
                     studentInteractionTab === 'internships'
-                      ? 'bg-amber-500 text-zinc-950'
+                      ? 'bg-[#15a276] text-zinc-950'
                       : 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
                   }`}
                 >
@@ -870,7 +858,7 @@ export default function LawyerDashboard() {
                                 </div>
                                 <p className="text-sm text-zinc-400 mt-1">{internship.location || 'Location not specified'}</p>
                               </div>
-                              <span className="text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-1 rounded-full">
+                              <span className="text-xs font-bold bg-[#15a276]/10 text-[#19b98d] border border-[#15a276]/20 px-3 py-1 rounded-full">
                                 {new Date(internship.createdAt).toLocaleDateString()}
                               </span>
                             </div>
@@ -898,7 +886,7 @@ export default function LawyerDashboard() {
                               <button
                                 type="button"
                                 onClick={() => handleOpenApplicantsDrawer(internship)}
-                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 font-semibold text-white hover:border-amber-500/40"
+                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 font-semibold text-white hover:border-[#15a276]/40"
                               >
                                 <Users size={16} />
                                 View Applicants
@@ -1022,7 +1010,7 @@ export default function LawyerDashboard() {
                           setShowInternshipForm((current) => !current);
                           setShowJamSessionForm(false);
                         }}
-                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold px-5 py-3 transition"
+                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#15a276] hover:bg-[#19b98d] text-zinc-950 font-bold px-5 py-3 transition"
                       >
                         <FaPlus />
                         New Internship
@@ -1030,11 +1018,11 @@ export default function LawyerDashboard() {
 
                       {showInternshipForm && (
                         <form onSubmit={handlePublishInternship} className="mt-5 space-y-4">
-                          <input name="title" value={internshipForm.title} onChange={handleInternshipInput} placeholder="Internship title" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-amber-500" required />
-                          <textarea name="description" value={internshipForm.description} onChange={handleInternshipInput} placeholder="Description" rows="4" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-amber-500" required />
-                          <input name="location" value={internshipForm.location} onChange={handleInternshipInput} placeholder="Location" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-amber-500" />
-                          <input name="duration" value={internshipForm.duration} onChange={handleInternshipInput} placeholder="Duration" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-amber-500" />
-                          <input name="stipend" value={internshipForm.stipend} onChange={handleInternshipInput} placeholder="Stipend" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-amber-500" />
+                          <input name="title" value={internshipForm.title} onChange={handleInternshipInput} placeholder="Internship title" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-[#15a276]" required />
+                          <textarea name="description" value={internshipForm.description} onChange={handleInternshipInput} placeholder="Description" rows="4" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-[#15a276]" required />
+                          <input name="location" value={internshipForm.location} onChange={handleInternshipInput} placeholder="Location" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-[#15a276]" />
+                          <input name="duration" value={internshipForm.duration} onChange={handleInternshipInput} placeholder="Duration" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-[#15a276]" />
+                          <input name="stipend" value={internshipForm.stipend} onChange={handleInternshipInput} placeholder="Stipend" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-[#15a276]" />
                           <button type="submit" className="w-full rounded-xl bg-white text-zinc-950 font-bold px-5 py-3 hover:bg-zinc-200 transition">
                             Publish Internship
                           </button>
@@ -1145,7 +1133,7 @@ export default function LawyerDashboard() {
                                   ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
                                   : item.status === 'rejected'
                                     ? 'bg-red-500/10 text-red-300 border-red-500/20'
-                                    : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                                    : 'bg-[#15a276]/10 text-[#8de2c6] border-[#15a276]/20'
                             }`}>
                               {drawer.type === 'participants' ? 'Joined' : capitalize(item.status || 'pending')}
                             </span>
@@ -1193,7 +1181,7 @@ export default function LawyerDashboard() {
       {showNoticeGenerator ? (
         <ModalShell
           title="AI Notice Generator"
-          icon={<FaFileSignature className="text-blue-500" />}
+          icon={<FaFileSignature className="text-[#15a276]" />}
           onClose={() => setShowNoticeGenerator(false)}
           maxWidthClass="max-w-6xl"
         >
@@ -1205,7 +1193,7 @@ export default function LawyerDashboard() {
                   name="documentType"
                   value={noticeForm.documentType}
                   onChange={handleNoticeInput}
-                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-blue-500"
+                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-[#15a276]"
                 >
                   {noticeDocumentTypes.map((type) => (
                     <option key={type} value={type}>{type}</option>
@@ -1221,7 +1209,7 @@ export default function LawyerDashboard() {
                   onChange={handleNoticeInput}
                   rows="13"
                   placeholder="Add party names, addresses, facts, dates, amounts, obligations, notices already sent, relief required, deadline, and jurisdiction."
-                  className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-blue-500"
+                  className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-[#15a276]"
                 />
               </div>
 
@@ -1232,7 +1220,7 @@ export default function LawyerDashboard() {
               <button
                 type="submit"
                 disabled={noticeLoading}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-500 px-5 py-3 font-bold text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#15a276] px-5 py-3 font-bold text-white transition hover:bg-[#118b66] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <FaMagic />
                 {noticeLoading ? 'Generating...' : 'Generate Document'}
@@ -1247,7 +1235,7 @@ export default function LawyerDashboard() {
                     type="button"
                     onClick={handleCopyNotice}
                     disabled={!noticeDraft.trim()}
-                    className="rounded-lg border border-zinc-700 px-3 py-2 text-xs font-bold text-zinc-200 transition hover:border-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-lg border border-zinc-700 px-3 py-2 text-xs font-bold text-zinc-200 transition hover:border-[#15a276] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Copy
                   </button>
@@ -1257,7 +1245,7 @@ export default function LawyerDashboard() {
                   onChange={(event) => setNoticeDraft(event.target.value)}
                   rows="18"
                   placeholder="Your generated notice will appear here."
-                  className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-4 font-mono text-sm leading-7 text-zinc-100 outline-none focus:border-blue-500"
+                  className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-4 font-mono text-sm leading-7 text-zinc-100 outline-none focus:border-[#15a276]"
                 />
               </div>
 
@@ -1268,7 +1256,7 @@ export default function LawyerDashboard() {
                     value={noticeEditPrompt}
                     onChange={(event) => setNoticeEditPrompt(event.target.value)}
                     placeholder="Example: make it stronger, add 15-day compliance deadline, simplify paragraph 3"
-                    className="min-w-0 flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-blue-500"
+                    className="min-w-0 flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-[#15a276]"
                   />
                   <button
                     type="submit"
@@ -1341,7 +1329,7 @@ function StatusPill({ status }) {
     <span
       className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full border ${
         status === 'Pending'
-          ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+          ? 'bg-[#15a276]/10 text-[#15a276] border-[#15a276]/20'
           : status === 'Accepted'
             ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
             : 'bg-red-500/10 text-red-500 border-red-500/20'

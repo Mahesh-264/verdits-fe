@@ -44,7 +44,7 @@ const DocumentTypeSelector = React.memo(({
                             placeholder="Search documents..."
                             value={searchQuery}
                             onChange={(e) => onSearchChange(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#15a276]"
                             autoFocus
                         />
                     </div>

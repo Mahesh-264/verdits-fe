@@ -102,7 +102,7 @@ export default function StudentNetwork() {
   };
 
   const statCards = [
-    { label: 'Connections', value: String(connectedStudents.length), Icon: Users, color: 'bg-[#d9e7ff] text-[#2456f5]' },
+    { label: 'Connections', value: String(connectedStudents.length), Icon: Users, color: 'bg-[#e8f7f2] text-[#15a276]' },
     { label: 'Lawyers Following', value: String(followingLawyers.length), Icon: BadgePlus, color: 'bg-[#f0e3ff] text-[#8c2bff]' },
     { label: 'Pending Invitations', value: String(pendingInvitations.length), Icon: Sparkles, color: 'bg-[#dcfce7] text-[#16a34a]' },
   ];
@@ -169,7 +169,7 @@ export default function StudentNetwork() {
                   {student.profileImage ? (
                     <img src={student.profileImage} alt={getDisplayName(student)} className="h-28 w-28 mx-auto rounded-full object-cover" />
                   ) : (
-                    <div className="h-28 w-28 mx-auto rounded-full bg-gradient-to-br from-[#8ec5fc] to-[#2456f5] text-white text-3xl font-bold flex items-center justify-center">
+                    <div className="h-28 w-28 mx-auto rounded-full bg-gradient-to-br from-[#8de2c6] to-[#15a276] text-white text-3xl font-bold flex items-center justify-center">
                       {getDisplayName(student).charAt(0).toUpperCase()}
                     </div>
                   )}
@@ -178,12 +178,12 @@ export default function StudentNetwork() {
                     {student.studentProfile?.collegeName || 'Registered student'}
                   </p>
                   <div className="flex flex-wrap justify-center gap-2 mt-5">
-                    <span className="rounded-full bg-[#d9e7ff] px-3 py-1 text-sm font-medium text-[#2456f5]">
+                    <span className="rounded-full bg-[#e8f7f2] px-3 py-1 text-sm font-medium text-[#15a276]">
                       Law Student
                     </span>
                   </div>
                   <p className="text-[#7f8ba2] text-[15px] mt-5">
-                    {student.studentProfile?.collegeEmail || 'Registered on Lawin'}
+                    {student.studentProfile?.collegeEmail || 'Registered on VERDITS'}
                   </p>
                   {hasIncomingRequest(student._id || student.id) ? (
                     <button
@@ -196,7 +196,7 @@ export default function StudentNetwork() {
                       {actionLoadingId === (student._id || student.id) ? 'Accepting...' : 'Accept Request'}
                     </button>
                   ) : isConnected(student._id || student.id) ? (
-                    <button type="button" disabled className="mt-6 w-full rounded-2xl bg-[#d9e7ff] py-4 text-[18px] font-semibold text-[#2456f5]">
+                    <button type="button" disabled className="mt-6 w-full rounded-2xl bg-[#e8f7f2] py-4 text-[18px] font-semibold text-[#15a276]">
                       Connected
                     </button>
                   ) : hasOutgoingRequest(student._id || student.id) ? (
@@ -208,7 +208,7 @@ export default function StudentNetwork() {
                       type="button"
                       onClick={() => handleConnectStudent(student._id || student.id)}
                       disabled={actionLoadingId === (student._id || student.id)}
-                      className="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0d1024] py-4 text-[18px] font-semibold text-white hover:bg-[#171b34] transition disabled:opacity-60"
+                      className="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-[#062552] py-4 text-[18px] font-semibold text-white hover:bg-[#0b3b70] transition disabled:opacity-60"
                     >
                       <UserPlus size={18} />
                       {actionLoadingId === (student._id || student.id) ? 'Sending...' : 'Connect'}
@@ -244,7 +244,7 @@ export default function StudentNetwork() {
                         {lawyer.lawyerProfile?.specialization || 'Verified lawyer'}
                       </p>
                       <p className="text-[#7f8ba2] text-[15px] mt-2">
-                        {lawyer.address?.city || lawyer.address?.district || 'Available on Lawin'}
+                        {lawyer.address?.city || lawyer.address?.district || 'Available on VERDITS'}
                       </p>
                     </div>
                   </div>
@@ -255,8 +255,8 @@ export default function StudentNetwork() {
                     disabled={actionLoadingId === (lawyer._id || lawyer.id)}
                     className={`mt-6 rounded-2xl px-6 py-4 text-[18px] font-semibold transition disabled:opacity-60 ${
                       isFollowingLawyer(lawyer._id || lawyer.id)
-                        ? 'bg-[#d9e7ff] text-[#2456f5]'
-                        : 'bg-[#0d1024] text-white hover:bg-[#171b34]'
+                        ? 'bg-[#e8f7f2] text-[#15a276]'
+                        : 'bg-[#062552] text-white hover:bg-[#0b3b70]'
                     }`}
                   >
                     {actionLoadingId === (lawyer._id || lawyer.id)

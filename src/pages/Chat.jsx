@@ -4,12 +4,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
     fetchConversations, fetchHistory, setActivePartner,
     receiveMessage, fetchAllLawyers, markMessagesAsRead,
-    deleteMessage, deleteBatchMessages, toggleMessageSelection,
+    deleteBatchMessages, toggleMessageSelection,
     clearSelection, removeMessageLocally, sendMediaMessage
 } from '../redux/chatSlice';
 import { logout } from '../redux/authSlice';
 import api from '../api/axios';
-import socket from '../utils/socket.jsx';
+import chatSocket from '../utils/socket.jsx';
 import {
     FaEllipsisV, FaPaperPlane, FaTimes, FaPhone, FaVideo, FaCommentDots,
     FaPaperclip, FaSignOutAlt, FaSearch, FaCheckDouble,
@@ -85,7 +85,7 @@ export default function Chat() {
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
 
-    const socket = useRef(null);
+    const socketRef = useRef(null);
     const scrollRef = useRef();
     const fileInputRef = useRef();
     const mediaRecorderRef = useRef(null);
@@ -130,16 +130,16 @@ export default function Chat() {
         if (!userId) return;
 
         // Use the global socket instance that's already connected at app startup
-        if (!socket.connected) {
+        if (!chatSocket.connected) {
             console.log(`🔌 [Chat] Connecting global socket...`);
-            socket.connect();
+            chatSocket.connect();
         }
 
         // Sync local ref to the global socket so handleSend can use it
-        socket.current = socket;
+        socketRef.current = chatSocket;
 
         // Define exactly what to do when events happen
-        const onConnect = () => console.log("✅ [Chat] Socket Connected! ID:", socket.id);
+        const onConnect = () => console.log("✅ [Chat] Socket Connected! ID:", chatSocket.id);
         const onNewMessage = (msg) => {
             console.log("📨 [Chat EVENT] Live message received:", msg);
 
@@ -157,32 +157,32 @@ export default function Chat() {
         const onDisconnect = () => console.log("🛑 [Chat] Socket Disconnected from server.");
 
         // Attach listeners to the global socket
-        socket.on("connect", onConnect);
-        socket.on("newMessage", onNewMessage);
-        socket.on("messageDeleted", onMessageDeleted);
-        socket.on("disconnect", onDisconnect);
+        chatSocket.on("connect", onConnect);
+        chatSocket.on("newMessage", onNewMessage);
+        chatSocket.on("messageDeleted", onMessageDeleted);
+        chatSocket.on("disconnect", onDisconnect);
 
         // If the socket connected incredibly fast before the listener was attached
-        if (socket.connected) {
-            console.log("✅ [Chat] Socket Already connected! ID:", socket.id);
+        if (chatSocket.connected) {
+            console.log("✅ [Chat] Socket Already connected! ID:", chatSocket.id);
         }
 
         // 🚨 CLEANUP: Do NOT disconnect the socket! Just remove the listeners.
         // This stops React from murdering the connection when you switch pages!
         return () => {
             console.log("🧹 [Chat] Component unmounting. Removing listeners (Socket stays alive).");
-            socket.off("connect", onConnect);
-            socket.off("newMessage", onNewMessage);
-            socket.off("messageDeleted", onMessageDeleted);
-            socket.off("disconnect", onDisconnect);
+            chatSocket.off("connect", onConnect);
+            chatSocket.off("newMessage", onNewMessage);
+            chatSocket.off("messageDeleted", onMessageDeleted);
+            chatSocket.off("disconnect", onDisconnect);
         };
     }, [dispatch, user?._id, user?.id]); // Stable dependency array
 
     // Destroy socket fully ONLY if user logs out
     useEffect(() => {
-        if (!user && socket.connected) {
+        if (!user && chatSocket.connected) {
             console.log("🚪 [Chat] User logged out. Disconnecting socket.");
-            socket.disconnect();
+            chatSocket.disconnect();
         }
     }, [user]);
 
@@ -263,7 +263,10 @@ export default function Chat() {
             setIsRecording(true);
             setRecordingTime(0);
             timerRef.current = setInterval(() => setRecordingTime(p => p + 1), 1000);
-        } catch (err) { alert("Mic required"); }
+        } catch (err) {
+            console.error("Microphone permission failed:", err);
+            alert("Mic required");
+        }
     };
 
     const stopRecording = () => {
@@ -291,13 +294,14 @@ export default function Chat() {
         if (e) e.preventDefault();
         if (!text.trim() || !activePartner) return;
 
-        if (!socket.current || !socket.current.connected) {
+        if (!socketRef.current || !socketRef.current.connected) {
             console.error("🚨 Socket is offline! Forcing reconnect before sending...");
-            if (globalSocket) globalSocket.connect();
+            chatSocket.connect();
+            socketRef.current = chatSocket;
         }
 
         console.log(`🚀 [Component] Emitting 'sendMessage' -> Text: "${text}"`);
-        socket.current.emit("sendMessage", { receiverId: activePartner._id, content: text, messageType: "text" });
+        socketRef.current.emit("sendMessage", { receiverId: activePartner._id, content: text, messageType: "text" });
         setText("");
     };
 

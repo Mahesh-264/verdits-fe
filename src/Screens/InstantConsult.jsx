@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux';
 import api from '../api/axios';
 import LocationSearchCard from '../components/location/LocationSearchCard.jsx';
 import useSearchLocation from '../hooks/useSearchLocation.js';
+import BrandLogo from '../components/BrandLogo';
 import {
   formatDistanceLabel,
   getRadiusValue,
@@ -80,10 +81,11 @@ const InstantConsult = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="sticky top-0 z-10 flex items-center gap-4 bg-black p-4 text-white shadow-md">
+    <div className="min-h-screen bg-[#f3f8fb]">
+      <div className="sticky top-0 z-10 flex items-center gap-4 bg-[#062552] p-4 text-white shadow-md">
         <ArrowLeft onClick={() => navigate(-1)} className="cursor-pointer hover:text-gray-300 transition" />
-        <span className="text-xl font-bold tracking-wide">Instant Consultation</span>
+        <BrandLogo className="h-10 max-w-[160px]" light />
+        <span className="text-lg font-bold tracking-wide">Instant Consultation</span>
       </div>
 
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4">
@@ -126,7 +128,7 @@ const InstantConsult = () => {
               onClick={() => setSelectedRadius(filter.id)}
               className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                 selectedRadius === filter.id
-                  ? 'bg-emerald-600 text-white'
+                  ? 'bg-[#15a276] text-white'
                   : 'bg-white text-[#44516d] border border-[#dbe2ef] hover:border-emerald-500'
               }`}
             >
@@ -196,7 +198,7 @@ const InstantConsult = () => {
                 <button
                   type="button"
                   onClick={() => handleInstantConsult(lawyer)}
-                  className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                  className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#15a276] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#118b66]"
                 >
                   <MessageCircle size={18} />
                   Direct Consult Now

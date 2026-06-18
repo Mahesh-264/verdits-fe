@@ -5,7 +5,6 @@ import { setAuth, logout } from './redux/authSlice';
 import { getAccessToken } from './utils/authStorage';
 import api from './api/axios.jsx';
 import socket from './utils/socket.jsx';
-import NotificationBell from './components/notifications/NotificationBell.jsx';
 
 // Auth Pages
 import Login from './pages/Login.jsx';
@@ -51,12 +50,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   if (!isAuthenticated) return <Navigate to="/login" />;
   if (allowedRoles && !allowedRoles.includes(user.role)) return <DashboardHub />;
 
-  return (
-    <>
-      <NotificationBell />
-      {children}
-    </>
-  );
+  return children;
 };
 
 export default function App() {

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ImagePlus, Plus, X } from 'lucide-react';
 
 const baseInputClassName =
-  'w-full rounded-2xl border border-[#dbe2ef] bg-[#fbfcff] px-4 py-3 text-[#0b1f44] outline-none transition focus:border-[#2456f5]';
+  'w-full rounded-2xl border border-[#dbe2ef] bg-[#fbfcff] px-4 py-3 text-[#0b1f44] outline-none transition focus:border-[#15a276]';
 
 const TagInput = ({ value, onChange }) => {
   const [draft, setDraft] = useState('');
@@ -22,7 +22,7 @@ const TagInput = ({ value, onChange }) => {
     <div className="rounded-3xl border border-[#dbe2ef] bg-[#fbfcff] px-4 py-4">
      <div className="flex flex-wrap gap-2">
   {value.map((item) => (
-    <span key={item} className="inline-flex items-center gap-2 rounded-full bg-[#eaf1ff] px-3 py-2 text-sm font-medium text-[#2456f5]">
+    <span key={item} className="inline-flex items-center gap-2 rounded-full bg-[#e8f7f2] px-3 py-2 text-sm font-medium text-[#15a276]">
       {item}
       <button type="button" onClick={() => onChange(value.filter((tag) => tag !== item))}>
         <X size={14} />
@@ -54,7 +54,7 @@ const TagInput = ({ value, onChange }) => {
         <button
           type="button"
           onClick={commitTag}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#0d1024] text-white"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#062552] text-white"
         >
           <Plus size={16} />
         </button>
@@ -89,7 +89,7 @@ export default function PostComposerModal({
       <div className="w-full max-w-2xl rounded-[32px] bg-white p-6 shadow-[0_24px_60px_rgba(8,17,36,0.26)]">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#2456f5]">Create Post</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#15a276]">Create Post</p>
             <h2 className="mt-2 text-[26px] font-semibold text-[#0b1f44]">{title}</h2>
             <p className="mt-2 text-sm text-[#5e6c87]">{description}</p>
           </div>
@@ -180,7 +180,7 @@ export default function PostComposerModal({
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-2xl bg-[#0d1024] px-6 py-3 font-semibold text-white transition hover:bg-[#171b34] disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-2xl bg-[#062552] px-6 py-3 font-semibold text-white transition hover:bg-[#0b3b70] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? 'Posting...' : 'Post Now'}
             </button>
