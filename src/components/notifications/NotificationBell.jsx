@@ -24,10 +24,6 @@ const formatNotificationTime = (value) => {
   return `${Math.max(1, Math.floor(diff / day))}d ago`;
 };
 
-<<<<<<< HEAD
-export default function NotificationBell({ className = '', buttonClassName = '', panelClassName = '' }) {
-  const { isAuthenticated } = useSelector((state) => state.auth);
-=======
 const resolveNotificationLink = (notification, user) => {
   const metadata = notification?.metadata || {};
   const actorId = notification?.actor?._id || notification?.actor?.id || notification?.actor;
@@ -104,9 +100,8 @@ const resolveNotificationLink = (notification, user) => {
   return notification?.link || '/dashboard';
 };
 
-export default function NotificationBell() {
+export default function NotificationBell({ className = '', buttonClassName = '', panelClassName = '' }) {
   const { isAuthenticated, user } = useSelector((state) => state.auth);
->>>>>>> 954d56e (files uploads & notification)
   const navigate = useNavigate();
   const panelRef = useRef(null);
   const [open, setOpen] = useState(false);
@@ -208,11 +203,7 @@ export default function NotificationBell() {
   };
 
   return (
-<<<<<<< HEAD
     <div ref={panelRef} className={`relative z-[120] ${className}`}>
-=======
-    <div ref={panelRef} className="fixed right-4 top-40 z-[120]">
->>>>>>> 954d56e (files uploads & notification)
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
