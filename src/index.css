@@ -3,3 +3,105 @@
 body {
   overflow-x: hidden;
 }
+
+.lawyer-theme {
+  background: #f3f8fb;
+  color: #062552;
+}
+
+.lawyer-theme [class*="bg-zinc-950"],
+.lawyer-theme [class*="bg-zinc-900"],
+.lawyer-theme [class*="bg-zinc-800"] {
+  background-color: #ffffff;
+}
+
+.lawyer-theme [class*="border-zinc-800"],
+.lawyer-theme [class*="border-zinc-700"] {
+  border-color: #dbe2ef;
+}
+
+.lawyer-theme [class*="text-zinc-500"] {
+  color: #6d7a92;
+}
+
+.lawyer-theme [class*="text-zinc-400"],
+.lawyer-theme [class*="text-zinc-300"],
+.lawyer-theme [class*="text-zinc-200"],
+.lawyer-theme [class*="text-zinc-100"] {
+  color: #44516d;
+}
+
+.lawyer-theme [class*="text-zinc-950"],
+.lawyer-theme h1,
+.lawyer-theme h2,
+.lawyer-theme h3,
+.lawyer-theme h4 {
+  color: #062552;
+}
+
+.lawyer-theme [class*="bg-cyan-400"] {
+  background-color: #15a276;
+}
+
+.lawyer-theme [class*="text-cyan-400"],
+.lawyer-theme [class*="text-cyan-300"],
+.lawyer-theme [class*="text-purple-400"],
+.lawyer-theme [class*="text-pink-400"] {
+  color: #15a276;
+}
+
+.lawyer-theme [class*="border-cyan-500"] {
+  border-color: rgba(21, 162, 118, 0.35);
+}
+
+.lawyer-theme input,
+.lawyer-theme textarea,
+.lawyer-theme select {
+  background-color: #fbfcff;
+  border-color: #dbe2ef;
+  color: #062552;
+}
+
+.lawyer-theme input::placeholder,
+.lawyer-theme textarea::placeholder {
+  color: #8a95ab;
+}
+
+.lawyer-theme .shadow-2xl {
+  box-shadow: 0 20px 60px rgba(16, 33, 68, 0.12);
+}
+
+.lawyer-theme button[class*="bg-zinc-900"],
+.lawyer-theme button[class*="bg-zinc-800"],
+.lawyer-theme a[class*="bg-zinc-900"] {
+  background-color: #f6f8fc;
+  color: #062552;
+}
+
+.lawyer-theme button[class*="bg-zinc-900"]:hover,
+.lawyer-theme button[class*="bg-zinc-800"]:hover,
+.lawyer-theme a[class*="bg-zinc-900"]:hover {
+  background-color: #eef3fb;
+}
+
+.lawyer-theme button[class*="bg-white"] {
+  background-color: #062552;
+  color: #ffffff;
+}
+
+.lawyer-theme button[class*="bg-white"]:hover {
+  background-color: #0b3b70;
+}
+
+.lawyer-theme header button[class*="bg-white"] {
+  background-color: #ffffff;
+  color: #062552;
+}
+
+.lawyer-theme header button[class*="bg-white"]:hover {
+  background-color: #f3f8fb;
+}
+
+.lawyer-theme .fixed.inset-0 {
+  color: #062552;
+}

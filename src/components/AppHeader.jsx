@@ -18,10 +18,10 @@ const variantStyles = {
     avatar: 'border-[#15a276]/20 bg-[#15a276] text-white',
   },
   lawyer: {
-    shell: 'bg-zinc-950 text-white border-zinc-800',
-    logoLight: true,
-    notificationButton: 'border-zinc-800 bg-zinc-900 text-white hover:bg-zinc-800',
-    avatar: 'border-[#15a276]/50 bg-zinc-900 text-[#15a276]',
+    shell: 'bg-white text-[#062552] border-[#dbe2ef]',
+    logoLight: false,
+    notificationButton: 'border-[#dbe2ef] bg-white text-[#062552] hover:bg-[#f3f8fb]',
+    avatar: 'border-[#15a276]/20 bg-[#15a276] text-white',
   },
 };
 

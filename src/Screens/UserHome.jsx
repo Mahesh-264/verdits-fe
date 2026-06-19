@@ -87,11 +87,11 @@ const UserHome = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#f3f8fb] flex flex-col items-center pb-52">
+        <div className="min-h-screen bg-[#f3f8fb] pb-52">
             <AppHeader variant="user" profileTo="/profile" />
 
             {/* Grid Menu */}
-            <div className="w-full max-w-md p-6 grid grid-cols-2 gap-6 mt-10">
+            <div className="mx-auto w-full max-w-md p-6 grid grid-cols-2 gap-6 mt-10">
 
                 {/* Book a Lawyer */}
                 <div
@@ -145,7 +145,7 @@ const UserHome = () => {
 
             </div>
 
-            <div className="w-full max-w-md px-4 mt-2">
+            <div className="mx-auto w-full max-w-md px-4 mt-2">
                 <div className="rounded-3xl bg-white shadow-sm border border-gray-100 p-4 space-y-3 max-h-[360px] overflow-y-auto">
                     {messages.map((message, index) => {
                         const isUser = message.sender === 'user';
@@ -249,7 +249,7 @@ const UserHome = () => {
             )}
 
             {/* Chat Bot Input Area */}
-            <div className="w-full max-w-md fixed bottom-0 bg-[#062552] p-4 rounded-t-3xl">
+            <div className="fixed bottom-0 left-1/2 w-full max-w-md -translate-x-1/2 bg-[#062552] p-4 rounded-t-3xl">
                 <h3 className="text-white text-sm mb-2 font-semibold">AI Legal Chat Bot</h3>
                 <div className="flex items-center gap-2">
                     <input
