@@ -90,7 +90,6 @@ export const STATUS_MAP = {
 };
 
 export const CONSULTATION_RATES = {
-    audio: { icon: 'Phone', price: '₹10/min', label: 'Audio' },
-    video: { icon: 'Video', price: '₹20/min', label: 'Video' },
+    call: { icon: 'Phone', price: '₹15/min', label: 'Call' },
     chat: { icon: 'MessageSquare', price: 'Free', label: 'Chat' }
 };

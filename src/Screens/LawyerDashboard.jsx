@@ -107,6 +107,7 @@ export default function LawyerDashboard() {
   const [postLoading, setPostLoading] = useState(false);
   const [postError, setPostError] = useState('');
   const [posting, setPosting] = useState(false);
+  const [resumePreview, setResumePreview] = useState(null);
   const [noticeForm, setNoticeForm] = useState(initialNoticeForm);
   const [noticeDraft, setNoticeDraft] = useState('');
   const [noticeEditPrompt, setNoticeEditPrompt] = useState('');
@@ -802,6 +803,7 @@ export default function LawyerDashboard() {
                 onClick={() => {
                   setShowStudentInteractionModal(false);
                   setDrawer(emptyDrawerState);
+                  setResumePreview(null);
                 }}
                 className="text-zinc-400 hover:text-red-500 bg-zinc-800/50 hover:bg-zinc-800 rounded-full transition p-2"
               >
@@ -1199,7 +1201,18 @@ export default function LawyerDashboard() {
                                 <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Resume and links</p>
                                 <div className="mt-3 space-y-2">
                                   {item.resumeLink ? <ApplicantLink href={item.resumeLink} label="Open resume link" /> : null}
-                                  {item.resumeUrl ? <ApplicantLink href={item.resumeUrl} label="Open uploaded resume" /> : null}
+                                  {item.resumeUrl ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setResumePreview({
+                                        url: item.resumeUrl,
+                                        fileName: item.resumeFileName || `${item.name || 'Applicant'} resume`,
+                                      })}
+                                      className="block w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-left text-xs font-bold text-blue-300 transition hover:border-blue-500/50 hover:text-blue-200"
+                                    >
+                                      View uploaded resume
+                                    </button>
+                                  ) : null}
                                   {item.linkedIn ? <ApplicantLink href={item.linkedIn} label="Open LinkedIn" /> : null}
                                   {item.portfolio ? <ApplicantLink href={item.portfolio} label="Open portfolio" /> : null}
                                   {item.resumeFileName ? (
@@ -1245,6 +1258,13 @@ export default function LawyerDashboard() {
           </div>
         </div>
       )}
+
+      {resumePreview ? (
+        <ResumePreviewModal
+          resume={resumePreview}
+          onClose={() => setResumePreview(null)}
+        />
+      ) : null}
 
       {showNoticeGenerator ? (
         <ModalShell
@@ -1417,8 +1437,119 @@ function ApplicantDetail({ label, value }) {
   );
 }
 
+function ResumePreviewModal({ resume, onClose }) {
+  const resumeUrl = normalizeExternalUrl(resume.url);
+  const fileName = resume.fileName || 'Uploaded resume';
+  const filePath = `${fileName} ${resumeUrl.split('?')[0]}`.toLowerCase();
+  const isImage = /\.(png|jpe?g|webp|gif)\b/.test(filePath);
+  const isPdf = /\.pdf\b/.test(filePath);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(isPdf);
+  const [previewError, setPreviewError] = useState('');
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!isPdf) return undefined;
+
+    const controller = new AbortController();
+    let objectUrl = '';
+
+    const loadPdf = async () => {
+      try {
+        setPreviewLoading(true);
+        setPreviewError('');
+
+        const response = await fetch(resumeUrl, { signal: controller.signal });
+        if (!response.ok) throw new Error('Unable to load this PDF');
+
+        const fileBlob = await response.blob();
+        const pdfBlob = fileBlob.type === 'application/pdf'
+          ? fileBlob
+          : new Blob([fileBlob], { type: 'application/pdf' });
+
+        objectUrl = URL.createObjectURL(pdfBlob);
+        setPdfPreviewUrl(objectUrl);
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          setPreviewError('The PDF could not be displayed. Please try again.');
+        }
+      } finally {
+        if (!controller.signal.aborted) setPreviewLoading(false);
+      }
+    };
+
+    loadPdf();
+
+    return () => {
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [isPdf, resumeUrl]);
+
+  const officePreviewUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(resumeUrl)}`;
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Preview ${fileName}`}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900 shadow-2xl">
+        <div className="flex items-center justify-between gap-4 border-b border-zinc-800 bg-zinc-950 px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#15a276]">Resume preview</p>
+            <h3 className="mt-1 truncate font-semibold text-white">{fileName}</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-full bg-zinc-800 p-2 text-zinc-300 transition hover:bg-zinc-700 hover:text-white"
+            aria-label="Close resume preview"
+          >
+            <FaTimes size={18} />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 bg-zinc-800">
+          {previewLoading ? (
+            <div className="flex h-full items-center justify-center text-sm font-semibold text-zinc-300">
+              Loading PDF preview...
+            </div>
+          ) : previewError ? (
+            <div className="flex h-full items-center justify-center p-6 text-center text-sm font-semibold text-red-300">
+              {previewError}
+            </div>
+          ) : isImage ? (
+            <div className="flex h-full items-center justify-center overflow-auto p-4">
+              <img src={resumeUrl} alt={fileName} className="max-h-full max-w-full object-contain" />
+            </div>
+          ) : (
+            <iframe
+              src={isPdf ? pdfPreviewUrl : officePreviewUrl}
+              title={fileName}
+              className="h-full w-full border-0 bg-white"
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ApplicantLink({ href, label }) {
-  const safeHref = String(href || '').startsWith('http') ? href : `https://${href}`;
+  const safeHref = normalizeExternalUrl(href);
 
   return (
     <a
@@ -1430,6 +1561,10 @@ function ApplicantLink({ href, label }) {
       {label}
     </a>
   );
+}
+
+function normalizeExternalUrl(url) {
+  return String(url || '').startsWith('http') ? url : `https://${url}`;
 }
 
 function formatDate(value) {

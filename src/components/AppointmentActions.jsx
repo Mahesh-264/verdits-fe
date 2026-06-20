@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { Phone, Video, MessageSquare } from 'lucide-react';
+import { Phone, MessageSquare } from 'lucide-react';
 
 const ConsultationButton = React.memo(({ icon: Icon, label, price, onClick }) => (
     <button
@@ -7,9 +7,7 @@ const ConsultationButton = React.memo(({ icon: Icon, label, price, onClick }) =>
         className={`flex flex-col items-center justify-center p-3 rounded-xl transition border ${
             label === 'Chat'
                 ? 'bg-[#062552] hover:bg-[#0b3b70] text-white shadow-lg shadow-[#062552]/20'
-                : label === 'Video'
-                    ? 'bg-green-50 hover:bg-green-100 text-green-700 border-green-100'
-                    : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-100'
+                : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-100'
         }`}
     >
         <Icon size={24} className="mb-1" />
@@ -55,8 +53,7 @@ const PendingStatus = React.memo(({ status, isSending }) => {
 PendingStatus.displayName = 'PendingStatus';
 
 const AcceptedStatus = React.memo(({ onConnect }) => {
-    const handleAudio = useCallback(() => onConnect('audio'), [onConnect]);
-    const handleVideo = useCallback(() => onConnect('video'), [onConnect]);
+    const handleCall = useCallback(() => onConnect('call'), [onConnect]);
     const handleChat = useCallback(() => onConnect('chat'), [onConnect]);
 
     return (
@@ -64,24 +61,18 @@ const AcceptedStatus = React.memo(({ onConnect }) => {
             <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Request Accepted - Connect Now
             </h4>
-            <div className="grid grid-cols-3 gap-3">
-                <ConsultationButton
-                    icon={Phone}
-                    label="Audio"
-                    price="₹10/min"
-                    onClick={handleAudio}
-                />
-                <ConsultationButton
-                    icon={Video}
-                    label="Video"
-                    price="₹20/min"
-                    onClick={handleVideo}
-                />
+            <div className="grid grid-cols-2 gap-3">
                 <ConsultationButton
                     icon={MessageSquare}
                     label="Chat"
                     price="Free"
                     onClick={handleChat}
+                />
+                <ConsultationButton
+                    icon={Phone}
+                    label="Call"
+                    price="₹15/min"
+                    onClick={handleCall}
                 />
             </div>
         </>
