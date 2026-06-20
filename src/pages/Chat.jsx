@@ -219,10 +219,10 @@ export default function Chat() {
     }, [messages]);
 
     const renderAvatar = (partner, sizeClasses = "w-10 h-10", textClasses = "text-xl") => {
-        if (partner?.profileImage) return <img src={partner.profileImage} alt="User" className={`${sizeClasses} rounded-full object-cover border border-zinc-700 shadow-md`} />;
+        if (partner?.profileImage) return <img src={partner.profileImage} alt="User" className={`${sizeClasses} rounded-full object-cover border-2 border-white shadow-md`} />;
         let icon = '👤';
         if (partner?.role === 'lawyer' || partner?.role === 'vendor' || partner?.role === 'doctor') icon = partner?.role === 'doctor' ? '🩺' : '⚖️';
-        return <div className={`${sizeClasses} rounded-full bg-zinc-800 flex items-center justify-center ${textClasses} border border-zinc-700 shadow-md`}>{icon}</div>;
+        return <div className={`${sizeClasses} rounded-full bg-[#15a276] text-white flex items-center justify-center ${textClasses} border-2 border-white shadow-md`}>{icon}</div>;
     };
 
     const renderMessageText = (content) => {
@@ -232,17 +232,17 @@ export default function Chat() {
         return parts.map((part, i) => {
             if (part.match(urlRegex)) {
                 return (
-                    <div key={i} className="my-2 p-3 bg-[#111111] rounded-xl border border-[#2a2a2a] flex flex-col gap-2 shadow-sm">
+                    <div key={i} className="my-2 p-3 bg-[#f3f8fb] rounded-xl border border-[#dbe2ef] flex flex-col gap-2 shadow-sm">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-full bg-[#2a2a2a]">
-                                <FaExternalLinkAlt className="text-white text-[10px]" />
+                            <div className="p-2 rounded-full bg-[#e8f7f2]">
+                                <FaExternalLinkAlt className="text-[#15a276] text-[10px]" />
                             </div>
                             <div className="flex flex-col overflow-hidden">
-                                <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-wide">Web Link</span>
-                                <span className="text-[12px] text-zinc-200 truncate w-44 underline">{part}</span>
+                                <span className="text-[10px] font-bold text-[#5e6c87] uppercase tracking-wide">Web Link</span>
+                                <span className="text-[12px] text-[#243b67] truncate w-44 underline">{part}</span>
                             </div>
                         </div>
-                        <a href={part} target="_blank" rel="noopener noreferrer" className="bg-[#1d1d1d] hover:bg-[#2a2a2a] text-white text-center py-1.5 rounded-lg text-[11px] font-semibold transition-colors mt-1">
+                        <a href={part} target="_blank" rel="noopener noreferrer" className="bg-[#062552] hover:bg-[#0b3b70] text-white text-center py-1.5 rounded-lg text-[11px] font-semibold transition-colors mt-1">
                             Open
                         </a>
                     </div>
@@ -355,42 +355,42 @@ export default function Chat() {
     };
 
     return (
-        <div className="flex h-screen bg-black text-white overflow-hidden font-sans select-none">
+        <div className="flex h-screen bg-[#f3f8fb] text-[#0b1f44] overflow-hidden font-sans select-none">
             {/* SIDEBAR */}
-            <div className={`w-full md:w-[30%] min-w-[320px] max-w-[420px] border-r border-[#222222] flex flex-col bg-black ${isDirectChatMode ? 'hidden' : activePartner ? 'hidden md:flex' : 'flex'}`}>
-                <div className="p-3 bg-[#111111] flex justify-between items-center border-b border-[#222222]">
+            <div className={`w-full md:w-[30%] min-w-[320px] max-w-[420px] border-r border-[#dbe2ef] flex flex-col bg-white ${isDirectChatMode ? 'hidden' : activePartner ? 'hidden md:flex' : 'flex'}`}>
+                <div className="p-3 bg-[#062552] flex justify-between items-center border-b border-[#0b3b70]">
                     <div className="flex items-center gap-3">
                         {renderAvatar(user, "w-10 h-10", "text-lg")}
                         <div className="flex flex-col">
                             <span className="text-[15px] font-semibold text-white">{user?.name || "My Account"}</span>
-                            <span className="text-[11px] text-zinc-400 font-medium uppercase tracking-wider">{user?.role}</span>
+                            <span className="text-[11px] text-[#8de2c6] font-medium uppercase tracking-wider">{user?.role}</span>
                         </div>
                     </div>
-                    <button onClick={() => dispatch(logout())} className="text-zinc-400 hover:text-white p-2 transition-colors"><FaSignOutAlt size={18} /></button>
+                    <button onClick={() => dispatch(logout())} className="text-[#b8c8dc] hover:text-white p-2 transition-colors"><FaSignOutAlt size={18} /></button>
                 </div>
 
-                <div className="p-2 border-b border-[#222222]">
-                    <div className="bg-[#111111] flex items-center px-4 py-2 rounded-lg border border-[#222222]">
-                        <FaSearch className="text-zinc-500 mr-4 text-sm" />
-                        <input placeholder="Search or start new chat" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-transparent text-[14px] w-full outline-none text-white placeholder-zinc-500" />
+                <div className="p-2 border-b border-[#dbe2ef]">
+                    <div className="bg-[#f3f8fb] flex items-center px-4 py-2 rounded-lg border border-[#dbe2ef] focus-within:border-[#15a276]">
+                        <FaSearch className="text-[#7f8ba2] mr-4 text-sm" />
+                        <input placeholder="Search or start new chat" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-transparent text-[14px] w-full outline-none text-[#062552] placeholder-[#8a95ab]" />
                     </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                     {displayList.map((item) => (
-                        <div key={item._id || Math.random()} onClick={() => dispatch(setActivePartner(item))} className={`px-3 py-3 flex items-center gap-3 cursor-pointer transition-colors ${activePartner?._id === item._id ? 'bg-[#171717]' : 'hover:bg-[#111111]'}`}>
+                        <div key={item._id || Math.random()} onClick={() => dispatch(setActivePartner(item))} className={`px-3 py-3 flex items-center gap-3 cursor-pointer transition-colors ${activePartner?._id === item._id ? 'bg-[#e8f7f2]' : 'hover:bg-[#f3f8fb]'}`}>
                             <div className="relative shrink-0">
                                 {renderAvatar(item, "w-12 h-12", "text-2xl")}
-                                {item.unreadCount > 0 && <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-white border-2 border-black rounded-full"></div>}
+                                {item.unreadCount > 0 && <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#15a276] border-2 border-white rounded-full"></div>}
                             </div>
-                            <div className="flex-1 min-w-0 border-b border-[#222222] pb-3 pt-1">
+                            <div className="flex-1 min-w-0 border-b border-[#e4ebf5] pb-3 pt-1">
                                 <div className="flex justify-between items-center mb-0.5">
-                                    <h4 className="text-[16px] font-normal text-[#e9edef] truncate">{item.name || item.phone || "Client"}</h4>
-                                    {item.timestamp && <span className={`text-[12px] ${item.unreadCount > 0 ? 'text-white font-medium' : 'text-zinc-500'}`}>{new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+                                    <h4 className="text-[16px] font-medium text-[#0b1f44] truncate">{item.name || item.phone || "Client"}</h4>
+                                    {item.timestamp && <span className={`text-[12px] ${item.unreadCount > 0 ? 'text-[#15a276] font-semibold' : 'text-[#7f8ba2]'}`}>{new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <p className={`text-[13px] truncate ${item.unreadCount > 0 ? 'text-white font-medium' : 'text-zinc-500'}`}>{item.lastMessage}</p>
-                                    {item.unreadCount > 0 && <span className="bg-white text-black text-[11px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">{item.unreadCount}</span>}
+                                    <p className={`text-[13px] truncate ${item.unreadCount > 0 ? 'text-[#243b67] font-medium' : 'text-[#7f8ba2]'}`}>{item.lastMessage}</p>
+                                    {item.unreadCount > 0 && <span className="bg-[#15a276] text-white text-[11px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">{item.unreadCount}</span>}
                                 </div>
                             </div>
                         </div>
@@ -399,20 +399,20 @@ export default function Chat() {
             </div>
 
             {/* MAIN CHAT AREA */}
-            <div className="flex-1 flex flex-col bg-black relative">
+            <div className="flex-1 flex flex-col bg-[#f3f8fb] relative">
                 {activePartner ? (
                     <>
                         {isSelectionMode && (
-                            <div className="absolute top-0 left-0 w-full h-[60px] bg-[#111111] z-50 flex items-center justify-between px-6 border-b border-[#222222] shadow-md">
+                            <div className="absolute top-0 left-0 w-full h-[60px] bg-[#062552] z-50 flex items-center justify-between px-6 border-b border-[#0b3b70] shadow-md">
                                 <div className="flex items-center gap-6">
-                                    <FaTimes className="cursor-pointer text-xl text-zinc-400 hover:text-white" onClick={() => dispatch(clearSelection())} />
-                                    <span className="text-[#e9edef] font-medium text-[16px]">{selectedMessages.length} selected</span>
+                                    <FaTimes className="cursor-pointer text-xl text-[#b8c8dc] hover:text-white" onClick={() => dispatch(clearSelection())} />
+                                    <span className="text-white font-medium text-[16px]">{selectedMessages.length} selected</span>
                                 </div>
-                                <FaTrash className="cursor-pointer text-lg text-zinc-400 hover:text-white transition-colors" onClick={handleDeleteSelected} />
+                                <FaTrash className="cursor-pointer text-lg text-[#b8c8dc] hover:text-white transition-colors" onClick={handleDeleteSelected} />
                             </div>
                         )}
 
-                        <div className="h-[60px] px-4 bg-[#111111] flex justify-between items-center border-l border-[#222222] z-10 shadow-sm">
+                        <div className="h-[60px] px-4 bg-[#062552] flex justify-between items-center border-l border-[#0b3b70] z-10 shadow-sm text-white">
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={() => {
@@ -423,23 +423,23 @@ export default function Chat() {
                                         }
                                         dispatch(setActivePartner(null));
                                     }}
-                                    className="md:hidden text-2xl text-zinc-400 mr-1 hover:text-white"
+                                    className="md:hidden text-2xl text-[#b8c8dc] mr-1 hover:text-white"
                                 >
                                     ←
                                 </button>
                                 {renderAvatar(activePartner, "w-10 h-10", "text-xl")}
                                 <div className="flex flex-col justify-center">
-                                    <h3 className="text-[16px] text-[#e9edef] font-medium leading-tight">{activePartner.name || activePartner.phone || "Client"}</h3>
-                                    <p className="text-[12px] text-zinc-500 truncate">{activePartner.role === 'user' ? 'Client Account' : (activePartner.lawyerProfile?.specialization || 'Professional Account')}</p>
+                                    <h3 className="text-[16px] text-white font-medium leading-tight">{activePartner.name || activePartner.phone || "Client"}</h3>
+                                    <p className="text-[12px] text-[#b8c8dc] truncate">{activePartner.role === 'user' ? 'Client Account' : (activePartner.lawyerProfile?.specialization || 'Professional Account')}</p>
                                 </div>
                             </div>
-                            <div className="flex gap-3 text-zinc-400 text-lg items-center">
+                            <div className="flex gap-3 text-[#b8c8dc] text-lg items-center">
                                 {showAcceptedContactOptions && (
                                     <>
                                         <button
                                             type="button"
                                             onClick={() => handleContactOptionClick('Voice')}
-                                            className="w-9 h-9 rounded-full border border-[#2a2a2a] bg-black hover:bg-[#1a1a1a] flex items-center justify-center"
+                                            className="w-9 h-9 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 flex items-center justify-center"
                                             title="Voice call"
                                         >
                                             <FaPhone size={14} />
@@ -447,13 +447,13 @@ export default function Chat() {
                                         <button
                                             type="button"
                                             onClick={() => handleContactOptionClick('Video')}
-                                            className="w-9 h-9 rounded-full border border-[#2a2a2a] bg-black hover:bg-[#1a1a1a] flex items-center justify-center"
+                                            className="w-9 h-9 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 flex items-center justify-center"
                                             title="Video call"
                                         >
                                             <FaVideo size={14} />
                                         </button>
                                         <div
-                                            className="w-9 h-9 rounded-full border border-white bg-white text-black flex items-center justify-center"
+                                            className="w-9 h-9 rounded-full border border-[#15a276] bg-[#15a276] text-white flex items-center justify-center"
                                             title="Chat"
                                         >
                                             <FaCommentDots size={14} />
@@ -465,8 +465,8 @@ export default function Chat() {
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-4 md:px-[8%] space-y-1.5 scroll-smooth custom-scrollbar relative"
-                            style={{ backgroundColor: '#000000' }}>
-                            <div className="absolute inset-0 bg-black z-0"></div>
+                            style={{ backgroundColor: '#f3f8fb' }}>
+                            <div className="absolute inset-0 bg-[#f3f8fb] z-0"></div>
                             <div className="relative z-10 space-y-2 pb-4">
                                 {messages.map((m, i) => {
                                     const isMe = String(m.sender?._id || m.sender) === String(user?._id);
@@ -475,17 +475,17 @@ export default function Chat() {
                                     return (
                                         <div key={i} className={`flex items-center gap-3 ${isMe ? 'flex-row-reverse' : 'flex-row'} group`}>
                                             <div onClick={() => dispatch(toggleMessageSelection(m._id))} className={`cursor-pointer transition-all duration-200 ${isSelectionMode || isMe ? 'opacity-100 scale-100' : 'opacity-0 scale-0 w-0'}`}>
-                                                {isSelected ? <FaCheckCircle className="text-white text-lg shadow-sm" /> : <FaCircle className="text-zinc-500 text-lg" />}
+                                                {isSelected ? <FaCheckCircle className="text-[#15a276] text-lg shadow-sm" /> : <FaCircle className="text-[#a8b5c9] text-lg" />}
                                             </div>
                                             <div onDoubleClick={() => dispatch(toggleMessageSelection(m._id))}
-                                                className={`max-w-[85%] md:max-w-[65%] rounded-lg shadow-sm relative pt-1.5 pb-2 px-2.5 border ${isSelected ? 'bg-[#1a1a1a] border-white scale-[0.99]' : 'bg-[#111111] border-[#2a2a2a] text-white'}`}>
+                                                className={`max-w-[85%] md:max-w-[65%] rounded-2xl shadow-sm relative pt-1.5 pb-2 px-3 border ${isSelected ? 'bg-[#d9f3ea] border-[#15a276] scale-[0.99]' : isMe ? 'bg-[#062552] border-[#062552] text-white rounded-br-md' : 'bg-white border-[#dbe2ef] text-[#243b67] rounded-bl-md'}`}>
                                                 {m.mediaUrl && m.messageType === 'image' && <img src={m.mediaUrl} alt="sent" className="rounded-md max-h-64 w-full object-cover mb-1 cursor-pointer" onClick={() => !isSelectionMode && window.open(m.mediaUrl, '_blank')} />}
                                                 {m.mediaUrl && m.messageType === 'video' && <video controls className="rounded-md max-h-64 w-full mb-1"><source src={m.mediaUrl} /></video>}
-                                                {m.mediaUrl && m.messageType === 'audio' && <div className="flex items-center gap-2 p-1 bg-[#1a1a1a] rounded-md"><FaMicrophone className="text-zinc-300" /><audio controls className="h-8 w-full"><source src={m.mediaUrl} /></audio></div>}
+                                                {m.mediaUrl && m.messageType === 'audio' && <div className="flex items-center gap-2 p-1 bg-[#e8f7f2] text-[#062552] rounded-md"><FaMicrophone className="text-[#15a276]" /><audio controls className="h-8 w-full"><source src={m.mediaUrl} /></audio></div>}
                                                 {m.content && <div className="text-[14.2px] leading-relaxed break-words whitespace-pre-wrap">{renderMessageText(m.content)}</div>}
-                                                <div className="text-[10px] text-zinc-500 text-right mt-0.5 flex justify-end items-center gap-1 float-right ml-3 pt-1">
+                                                <div className={`text-[10px] text-right mt-0.5 flex justify-end items-center gap-1 float-right ml-3 pt-1 ${isMe ? 'text-[#b8c8dc]' : 'text-[#7f8ba2]'}`}>
                                                     {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    {isMe && <FaCheckDouble className={`text-[12px] ml-0.5 ${m.read ? 'text-white' : 'text-zinc-500'}`} />}
+                                                    {isMe && <FaCheckDouble className={`text-[12px] ml-0.5 ${m.read ? 'text-[#8de2c6]' : 'text-[#b8c8dc]'}`} />}
                                                 </div>
                                                 <div className="clear-both"></div>
                                             </div>
@@ -496,59 +496,59 @@ export default function Chat() {
                             </div>
                         </div>
 
-                        <div className="min-h-[62px] p-3 bg-[#111111] flex items-center gap-2 border-t border-[#222222]">
+                        <div className="min-h-[62px] p-3 bg-white flex items-center gap-2 border-t border-[#dbe2ef]">
                             {isCheckingChatAccess ? (
-                                <div className="w-full flex items-center justify-center gap-2 p-2.5 rounded-lg border border-[#2a2a2a] bg-black text-zinc-400 font-semibold text-sm">
+                                <div className="w-full flex items-center justify-center gap-2 p-2.5 rounded-lg border border-[#dbe2ef] bg-[#f3f8fb] text-[#5e6c87] font-semibold text-sm">
                                     Checking appointment access...
                                 </div>
                             ) : appointmentStatus === 'rejected' ? (
-                                <div className="w-full flex items-center justify-center gap-2 p-2.5 rounded-lg border border-[#2a2a2a] bg-black text-white font-semibold text-sm">
-                                    <FaTimes className="text-white" /> Appointment request has been rejected by the lawyer.
+                                <div className="w-full flex items-center justify-center gap-2 p-2.5 rounded-lg border border-red-200 bg-red-50 text-red-700 font-semibold text-sm">
+                                    <FaTimes /> Appointment request has been rejected by the lawyer.
                                 </div>
                             ) : appointmentStatus === 'pending' ? (
-                                <div className="w-full flex items-center justify-center gap-2 p-2.5 rounded-lg border border-[#2a2a2a] bg-black text-zinc-300 font-semibold text-sm">
+                                <div className="w-full flex items-center justify-center gap-2 p-2.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 font-semibold text-sm">
                                     Waiting for the lawyer to accept your appointment request.
                                 </div>
                             ) : !canChat ? (
-                                <div className="w-full flex items-center justify-center gap-2 p-2.5 rounded-lg border border-[#2a2a2a] bg-black text-zinc-300 font-semibold text-sm">
-                                    <FaTimes className="text-zinc-300" /> Messaging is locked. An accepted appointment is required.
+                                <div className="w-full flex items-center justify-center gap-2 p-2.5 rounded-lg border border-[#dbe2ef] bg-[#f3f8fb] text-[#5e6c87] font-semibold text-sm">
+                                    <FaTimes /> Messaging is locked. An accepted appointment is required.
                                 </div>
                             ) : isRecording ? (
-                                <div className="flex-1 flex items-center justify-between bg-[#1a1a1a] p-2.5 px-5 rounded-lg border border-[#2a2a2a]">
-                                    <div className="flex items-center gap-3 text-white font-bold"><FaMicrophone className="animate-pulse" />{Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}</div>
-                                    <span className="text-zinc-400 text-[13px] tracking-wide">Recording audio...</span>
-                                    <button onClick={() => { setIsRecording(false); clearInterval(timerRef.current); }} className="text-zinc-300 hover:text-white transition-colors text-[13px] font-semibold">Cancel</button>
+                                <div className="flex-1 flex items-center justify-between bg-[#e8f7f2] p-2.5 px-5 rounded-lg border border-[#15a276]/30">
+                                    <div className="flex items-center gap-3 text-[#062552] font-bold"><FaMicrophone className="animate-pulse text-[#15a276]" />{Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}</div>
+                                    <span className="text-[#5e6c87] text-[13px] tracking-wide">Recording audio...</span>
+                                    <button onClick={() => { setIsRecording(false); clearInterval(timerRef.current); }} className="text-[#5e6c87] hover:text-[#062552] transition-colors text-[13px] font-semibold">Cancel</button>
                                 </div>
                             ) : (
                                 <>
                                     <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*,audio/*" />
-                                    <div className="p-2 cursor-pointer text-zinc-400 hover:text-white transition-colors" onClick={() => !isUploading && fileInputRef.current.click()}>
+                                    <div className="p-2 cursor-pointer text-[#5e6c87] hover:text-[#15a276] transition-colors" onClick={() => !isUploading && fileInputRef.current.click()}>
                                         <FaPaperclip className={`text-xl ${isUploading ? 'animate-spin text-white' : ''}`} />
                                     </div>
                                     <form onSubmit={handleSend} className="flex-1">
                                         <input value={text} onChange={e => setText(e.target.value)} placeholder={isUploading ? "Uploading media..." : "Type a message"} disabled={isUploading}
-                                            className="w-full bg-black border border-[#2a2a2a] py-2.5 px-4 rounded-lg text-[15px] outline-none text-white placeholder-zinc-500" />
+                                            className="w-full bg-[#f3f8fb] border border-[#dbe2ef] focus:border-[#15a276] py-2.5 px-4 rounded-xl text-[15px] outline-none text-[#062552] placeholder-[#8a95ab]" />
                                     </form>
                                 </>
                             )}
                             {!canChat || isCheckingChatAccess ? null : (
                                 <button onClick={text.trim() ? handleSend : isRecording ? stopRecording : startRecording}
-                                    className={`p-3 rounded-full flex items-center justify-center transition-all ${text.trim() ? 'bg-white text-black hover:bg-zinc-200' : isRecording ? 'bg-white text-black animate-pulse' : 'text-zinc-400 hover:text-white'}`}>
+                                    className={`p-3 rounded-full flex items-center justify-center transition-all ${text.trim() ? 'bg-[#15a276] text-white hover:bg-[#118b66]' : isRecording ? 'bg-[#15a276] text-white animate-pulse' : 'text-[#5e6c87] hover:text-[#15a276]'}`}>
                                     {text.trim() ? <FaPaperPlane className="ml-1" size={16} /> : isRecording ? <FaStop size={18} /> : <FaMicrophone size={20} />}
                                 </button>
                             )}
                         </div>
                     </>
                 ) : (
-                    <div className="h-full flex flex-col items-center justify-center bg-black text-center px-4 border-b-[6px] border-white">
+                    <div className="h-full flex flex-col items-center justify-center bg-[#f3f8fb] text-center px-4 border-b-[6px] border-[#15a276]">
                         <div className="w-[300px] mb-8 opacity-80">
-                            <svg viewBox="0 0 100 100" fill="none" className="text-white/10">
+                            <svg viewBox="0 0 100 100" fill="none" className="text-[#15a276]/15">
                                 <path fill="currentColor" d="M50 0C22.4 0 0 22.4 0 50s22.4 50 50 50 50-22.4 50-50S77.6 0 50 0zm20 70H30c-5.5 0-10-4.5-10-10V40c0-5.5 4.5-10 10-10h40c5.5 0 10 4.5 10 10v20c0 5.5-4.5 10-10 10zm-5-35H35v5h30v-5zm0 15H35v5h30v-5z" />
                             </svg>
                         </div>
-                        <h2 className="text-white text-3xl font-light mb-4">LegalChat Web</h2>
-                        <p className="text-zinc-500 text-[14px]">Send and receive messages in a simple one-to-one chat experience.</p>
-                        <div className="mt-10 flex items-center gap-2 text-zinc-400 text-[13px] bg-[#111111] py-1.5 px-4 rounded-full border border-[#222222]">
+                        <h2 className="text-[#062552] text-3xl font-semibold mb-4">LegalChat Web</h2>
+                        <p className="text-[#5e6c87] text-[14px]">Send and receive messages in a simple one-to-one chat experience.</p>
+                        <div className="mt-10 flex items-center gap-2 text-[#5e6c87] text-[13px] bg-white py-1.5 px-4 rounded-full border border-[#dbe2ef] shadow-sm">
                             🔒 End-to-end encrypted
                         </div>
                     </div>
