@@ -32,6 +32,67 @@ const getAppointmentStatus = (appointments, lawyerId, clientId) => {
     return String(matchedAppointment?.status || '').toLowerCase();
 };
 
+const getMessageDate = (value) => {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const isSameDay = (first, second) =>
+    first?.getFullYear() === second?.getFullYear() &&
+    first?.getMonth() === second?.getMonth() &&
+    first?.getDate() === second?.getDate();
+
+const formatConversationTimestamp = (value) => {
+    const date = getMessageDate(value);
+    if (!date) return '';
+
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    if (isSameDay(date, today)) {
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    if (isSameDay(date, yesterday)) {
+        return 'Yesterday';
+    }
+
+    return date.toLocaleDateString([], { day: '2-digit', month: 'short' });
+};
+
+const formatMessageTimestamp = (value) => {
+    const date = getMessageDate(value);
+    if (!date) return '';
+
+    return date.toLocaleString([], {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
+const formatMessageDateLabel = (value) => {
+    const date = getMessageDate(value);
+    if (!date) return '';
+
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    if (isSameDay(date, today)) return 'Today';
+    if (isSameDay(date, yesterday)) return 'Yesterday';
+
+    return date.toLocaleDateString([], {
+        weekday: 'short',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    });
+};
+
 export default function Chat() {
     const dispatch = useDispatch();
     const location = useLocation();
@@ -386,7 +447,7 @@ export default function Chat() {
                             <div className="flex-1 min-w-0 border-b border-[#e4ebf5] pb-3 pt-1">
                                 <div className="flex justify-between items-center mb-0.5">
                                     <h4 className="text-[16px] font-medium text-[#0b1f44] truncate">{item.name || item.phone || "Client"}</h4>
-                                    {item.timestamp && <span className={`text-[12px] ${item.unreadCount > 0 ? 'text-[#15a276] font-semibold' : 'text-[#7f8ba2]'}`}>{new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+                                    {item.timestamp && <span className={`text-[12px] shrink-0 ${item.unreadCount > 0 ? 'text-[#15a276] font-semibold' : 'text-[#7f8ba2]'}`}>{formatConversationTimestamp(item.timestamp)}</span>}
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <p className={`text-[13px] truncate ${item.unreadCount > 0 ? 'text-[#243b67] font-medium' : 'text-[#7f8ba2]'}`}>{item.lastMessage}</p>
@@ -471,25 +532,38 @@ export default function Chat() {
                                 {messages.map((m, i) => {
                                     const isMe = String(m.sender?._id || m.sender) === String(user?._id);
                                     const isSelected = selectedMessages.includes(m._id);
+                                    const currentDateLabel = formatMessageDateLabel(m.timestamp);
+                                    const previousDateLabel = i > 0 ? formatMessageDateLabel(messages[i - 1]?.timestamp) : '';
+                                    const showDateSeparator = currentDateLabel && currentDateLabel !== previousDateLabel;
+                                    const messageTimestamp = formatMessageTimestamp(m.timestamp);
 
                                     return (
-                                        <div key={i} className={`flex items-center gap-3 ${isMe ? 'flex-row-reverse' : 'flex-row'} group`}>
-                                            <div onClick={() => dispatch(toggleMessageSelection(m._id))} className={`cursor-pointer transition-all duration-200 ${isSelectionMode || isMe ? 'opacity-100 scale-100' : 'opacity-0 scale-0 w-0'}`}>
-                                                {isSelected ? <FaCheckCircle className="text-[#15a276] text-lg shadow-sm" /> : <FaCircle className="text-[#a8b5c9] text-lg" />}
-                                            </div>
-                                            <div onDoubleClick={() => dispatch(toggleMessageSelection(m._id))}
-                                                className={`max-w-[85%] md:max-w-[65%] rounded-2xl shadow-sm relative pt-1.5 pb-2 px-3 border ${isSelected ? 'bg-[#d9f3ea] border-[#15a276] scale-[0.99]' : isMe ? 'bg-[#062552] border-[#062552] text-white rounded-br-md' : 'bg-white border-[#dbe2ef] text-[#243b67] rounded-bl-md'}`}>
-                                                {m.mediaUrl && m.messageType === 'image' && <img src={m.mediaUrl} alt="sent" className="rounded-md max-h-64 w-full object-cover mb-1 cursor-pointer" onClick={() => !isSelectionMode && window.open(m.mediaUrl, '_blank')} />}
-                                                {m.mediaUrl && m.messageType === 'video' && <video controls className="rounded-md max-h-64 w-full mb-1"><source src={m.mediaUrl} /></video>}
-                                                {m.mediaUrl && m.messageType === 'audio' && <div className="flex items-center gap-2 p-1 bg-[#e8f7f2] text-[#062552] rounded-md"><FaMicrophone className="text-[#15a276]" /><audio controls className="h-8 w-full"><source src={m.mediaUrl} /></audio></div>}
-                                                {m.content && <div className="text-[14.2px] leading-relaxed break-words whitespace-pre-wrap">{renderMessageText(m.content)}</div>}
-                                                <div className={`text-[10px] text-right mt-0.5 flex justify-end items-center gap-1 float-right ml-3 pt-1 ${isMe ? 'text-[#b8c8dc]' : 'text-[#7f8ba2]'}`}>
-                                                    {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    {isMe && <FaCheckDouble className={`text-[12px] ml-0.5 ${m.read ? 'text-[#8de2c6]' : 'text-[#b8c8dc]'}`} />}
+                                        <React.Fragment key={m._id || i}>
+                                            {showDateSeparator && (
+                                                <div className="flex justify-center py-2">
+                                                    <span className="rounded-full border border-[#dbe2ef] bg-white px-3 py-1 text-[11px] font-semibold text-[#5e6c87] shadow-sm">
+                                                        {currentDateLabel}
+                                                    </span>
                                                 </div>
-                                                <div className="clear-both"></div>
+                                            )}
+                                            <div className={`flex items-center gap-3 ${isMe ? 'flex-row-reverse' : 'flex-row'} group`}>
+                                                <div onClick={() => dispatch(toggleMessageSelection(m._id))} className={`cursor-pointer transition-all duration-200 ${isSelectionMode || isMe ? 'opacity-100 scale-100' : 'opacity-0 scale-0 w-0'}`}>
+                                                    {isSelected ? <FaCheckCircle className="text-[#15a276] text-lg shadow-sm" /> : <FaCircle className="text-[#a8b5c9] text-lg" />}
+                                                </div>
+                                                <div onDoubleClick={() => dispatch(toggleMessageSelection(m._id))}
+                                                    className={`max-w-[85%] md:max-w-[65%] rounded-2xl shadow-sm relative pt-1.5 pb-2 px-3 border ${isSelected ? 'bg-[#d9f3ea] border-[#15a276] scale-[0.99]' : isMe ? 'bg-[#062552] border-[#062552] text-white rounded-br-md' : 'bg-white border-[#dbe2ef] text-[#243b67] rounded-bl-md'}`}>
+                                                    {m.mediaUrl && m.messageType === 'image' && <img src={m.mediaUrl} alt="sent" className="rounded-md max-h-64 w-full object-cover mb-1 cursor-pointer" onClick={() => !isSelectionMode && window.open(m.mediaUrl, '_blank')} />}
+                                                    {m.mediaUrl && m.messageType === 'video' && <video controls className="rounded-md max-h-64 w-full mb-1"><source src={m.mediaUrl} /></video>}
+                                                    {m.mediaUrl && m.messageType === 'audio' && <div className="flex items-center gap-2 p-1 bg-[#e8f7f2] text-[#062552] rounded-md"><FaMicrophone className="text-[#15a276]" /><audio controls className="h-8 w-full"><source src={m.mediaUrl} /></audio></div>}
+                                                    {m.content && <div className="text-[14.2px] leading-relaxed break-words whitespace-pre-wrap">{renderMessageText(m.content)}</div>}
+                                                    <div className={`text-[10px] text-right mt-0.5 flex justify-end items-center gap-1 float-right ml-3 pt-1 ${isMe ? 'text-[#b8c8dc]' : 'text-[#7f8ba2]'}`}>
+                                                        {messageTimestamp}
+                                                        {isMe && <FaCheckDouble className={`text-[12px] ml-0.5 ${m.read ? 'text-[#8de2c6]' : 'text-[#b8c8dc]'}`} />}
+                                                    </div>
+                                                    <div className="clear-both"></div>
+                                                </div>
                                             </div>
-                                        </div>
+                                        </React.Fragment>
                                     );
                                 })}
                                 <div ref={scrollRef} />
