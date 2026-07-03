@@ -9,6 +9,9 @@ import socket from './utils/socket.jsx';
 // Auth Pages
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
+import VerifyOtp from './pages/VerifyOtp.jsx';
+import ForgotPassword from './pages/ForgotPassword.jsx';
+import ResetPassword from './pages/ResetPassword.jsx';
 
 // Existing Pages
 import Chat from './pages/Chat.jsx';
@@ -98,6 +101,9 @@ export default function App() {
         {/* --- Public Routes --- */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/verify-otp" element={<VerifyOtp />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* --- Intelligent Redirector --- */}
         <Route

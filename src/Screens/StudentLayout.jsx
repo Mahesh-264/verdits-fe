@@ -2,10 +2,11 @@ import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Compass, Home, LogOut, Search, User, Users } from 'lucide-react';
-import { logout, updateUser } from '../redux/authSlice';
+import { updateUser } from '../redux/authSlice';
 import api from '../api/axios.jsx';
 import BrandLogo from '../components/BrandLogo.jsx';
 import NotificationBell from '../components/notifications/NotificationBell.jsx';
+import useSessionLogout from '../hooks/useSessionLogout.js';
 
 const navItems = [
   { label: 'Home', path: '/student-home', Icon: Home },
@@ -35,10 +36,7 @@ export default function StudentLayout({ children }) {
     }
   }, [dispatch, user?.role]);
 
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate('/login?role=student');
-  };
+  const handleLogout = useSessionLogout('student');
 
   const displayName = user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
   const profileInitial = (displayName || 'Student').charAt(0).toUpperCase();

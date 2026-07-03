@@ -1,8 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/axios.jsx';
+import {
+    authenticateWithGoogle,
+    registerAccount,
+    sendPhoneOtp,
+    verifyPhoneOtp,
+} from '../api/authApi.js';
 import { FaGavel, FaMapMarkerAlt, FaSpinner, FaUser, FaUserGraduate } from 'react-icons/fa';
 import BrandLogo from '../components/BrandLogo.jsx';
+import GoogleAuthButton from '../components/auth/GoogleAuthButton.jsx';
+import { setAuth } from '../redux/authSlice.jsx';
+import { storeAuthSession } from '../utils/authStorage.js';
+import { getDashboardPath } from '../utils/authRedirect.js';
+import socket from '../utils/socket.jsx';
 
 const LOCATION_HINT_DEFAULT = 'Enter a 6-digit pincode to auto-fill city, district, and state, use current location to fill those fields automatically, or enter city, district, and state manually to generate coordinates automatically.';
 
@@ -55,10 +67,20 @@ const hasValidCoordinates = (address = {}) => {
     return Number.isFinite(normalized.latitude) && Number.isFinite(normalized.longitude);
 };
 
+const readGoogleSignup = () => {
+    try {
+        return JSON.parse(window.sessionStorage.getItem('googleSignup') || 'null');
+    } catch {
+        return null;
+    }
+};
+
 export default function Register() {
     const [searchParams] = useSearchParams();
     const role = searchParams.get('role') || 'user';
     const navigate = useNavigate();
+    const location = useLocation();
+    const dispatch = useDispatch();
     const pincodeLookupTimerRef = useRef(null);
     const geocodeTimerRef = useRef(null);
     const lastResolvedPincodeRef = useRef('');
@@ -68,12 +90,20 @@ export default function Register() {
 
     const [loadingAddr, setLoadingAddr] = useState(false);
     const [locationHint, setLocationHint] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [mobileOtp, setMobileOtp] = useState('');
+    const [mobileOtpSent, setMobileOtpSent] = useState(false);
+    const [mobileVerified, setMobileVerified] = useState(false);
+    const [mobileBusy, setMobileBusy] = useState(false);
+    const [googleSignup, setGoogleSignup] = useState(null);
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
         email: '',
         phone: '',
         password: '',
+        confirmPassword: '',
         barId: '',
         specialization: '',
         experienceYears: '',
@@ -90,6 +120,27 @@ export default function Register() {
             country: 'India',
         },
     });
+
+    const isGoogleCompletion = Boolean(googleSignup?.completionToken);
+
+    useEffect(() => {
+        const saved = location.state?.googleSignup || readGoogleSignup();
+
+        if (!saved?.completionToken || saved.role !== role) {
+            setGoogleSignup(null);
+            return;
+        }
+
+        setGoogleSignup(saved);
+        setFormData((current) => ({
+            ...current,
+            firstName: saved.googleProfile?.firstName || current.firstName,
+            lastName: saved.googleProfile?.lastName || current.lastName,
+            email: saved.googleProfile?.email || current.email,
+            password: '',
+            confirmPassword: '',
+        }));
+    }, [location.state, role]);
 
     const syncResolvedAddress = useCallback((resolvedAddress, hint = '') => {
         const normalizedAddress = normalizeAddressPayload(resolvedAddress);
@@ -339,8 +390,87 @@ export default function Register() {
         role,
     ]);
 
+    const finishAuth = (session) => {
+        storeAuthSession(session, false);
+        dispatch(setAuth(session.user));
+        socket.auth.token = session.accessToken;
+        if (!socket.connected) socket.connect();
+        navigate(getDashboardPath(session.user.role), { replace: true });
+    };
+
+    const handleGoogleSuccess = async ({ credential }) => {
+        setSubmitting(true);
+        setErrorMessage('');
+        try {
+            const result = await authenticateWithGoogle({ credential, role });
+            if (result.requiresProfile) {
+                const nextGoogleSignup = {
+                    completionToken: result.completionToken,
+                    googleProfile: result.googleProfile,
+                    role,
+                    remember: false,
+                };
+                window.sessionStorage.setItem('googleSignup', JSON.stringify(nextGoogleSignup));
+                setGoogleSignup(nextGoogleSignup);
+                setFormData((current) => ({
+                    ...current,
+                    firstName: result.googleProfile?.firstName || current.firstName,
+                    lastName: result.googleProfile?.lastName || current.lastName,
+                    email: result.googleProfile?.email || current.email,
+                    password: '',
+                    confirmPassword: '',
+                }));
+                navigate(`/register?role=${role}`, {
+                    replace: true,
+                    state: { googleSignup: nextGoogleSignup },
+                });
+                return;
+            }
+            finishAuth(result);
+        } catch (error) {
+            setErrorMessage(error.response?.data?.message || 'Google sign-up failed.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleSendMobileOtp = async () => {
+        if (!formData.phone.trim()) {
+            setErrorMessage('Enter your mobile number first.');
+            return;
+        }
+
+        setMobileBusy(true);
+        setErrorMessage('');
+        try {
+            await sendPhoneOtp(formData.phone.trim());
+            setMobileOtpSent(true);
+            setMobileVerified(false);
+        } catch (error) {
+            setErrorMessage(error.response?.data?.message || 'Unable to send mobile verification code.');
+        } finally {
+            setMobileBusy(false);
+        }
+    };
+
+    const handleVerifyMobileOtp = async () => {
+        setMobileBusy(true);
+        setErrorMessage('');
+        try {
+            await verifyPhoneOtp(formData.phone.trim(), mobileOtp);
+            setMobileVerified(true);
+            setMobileOtpSent(false);
+        } catch (error) {
+            setErrorMessage(error.response?.data?.message || 'Invalid mobile verification code.');
+        } finally {
+            setMobileBusy(false);
+        }
+    };
+
     const handleSubmit = async (event) => {
         event.preventDefault();
+        setSubmitting(true);
+        setErrorMessage('');
 
         try {
             const payload = {
@@ -349,7 +479,9 @@ export default function Register() {
                 email: formData.email,
                 phone: formData.phone,
                 password: formData.password,
+                confirmPassword: formData.confirmPassword,
                 role,
+                phoneVerified: mobileVerified,
             };
 
             if (role === 'lawyer') {
@@ -376,11 +508,29 @@ export default function Register() {
                 payload.collegeEmail = formData.collegeEmail;
             }
 
-            await api.post('/auth/register', payload);
-            alert('Registration Successful! Please Login.');
-            navigate(`/login?role=${role}`);
+            if (isGoogleCompletion) {
+                const result = await authenticateWithGoogle({
+                    ...payload,
+                    completionToken: googleSignup.completionToken,
+                });
+                window.sessionStorage.setItem('pendingRegistration', JSON.stringify({
+                    email: result.email,
+                    role: result.role,
+                }));
+                navigate(`/verify-otp?email=${encodeURIComponent(result.email)}&role=${result.role}`);
+                return;
+            }
+
+            const result = await registerAccount(payload);
+            window.sessionStorage.setItem('pendingRegistration', JSON.stringify({
+                email: result.email,
+                role: result.role,
+            }));
+            navigate(`/verify-otp?email=${encodeURIComponent(result.email)}&role=${result.role}`);
         } catch (error) {
-            alert(error.response?.data?.message || error.message || 'Signup Failed');
+            setErrorMessage(error.response?.data?.message || error.message || 'Signup failed');
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -398,14 +548,36 @@ export default function Register() {
                 </div>
                 <div className="flex items-center justify-center gap-3 mb-8">
                     {getIcon()}
-                    <h2 className="text-3xl font-bold capitalize">{role} Registration</h2>
+                    <h2 className="text-3xl font-bold capitalize">
+                        {isGoogleCompletion ? 'Complete Your Registration' : `${role} Registration`}
+                    </h2>
                 </div>
+
+                {isGoogleCompletion ? (
+                    <p className="mb-6 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                        Your Google account has been verified. Please complete the remaining required information to finish creating your account.
+                    </p>
+                ) : (
+                    <>
+                        <GoogleAuthButton
+                            onSuccess={handleGoogleSuccess}
+                            onError={() => setErrorMessage('Google sign-up was cancelled or failed.')}
+                            disabled={submitting}
+                        />
+                        <div className="my-6 flex items-center gap-3 text-xs uppercase text-[#8a95ab]">
+                            <span className="h-px flex-1 bg-[#d7e9ef]" />
+                            <span>or register with email</span>
+                            <span className="h-px flex-1 bg-[#d7e9ef]" />
+                        </div>
+                    </>
+                )}
 
                 <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <input
                         type="text"
                         placeholder="First Name"
                         required
+                        value={formData.firstName}
                         className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none w-full"
                         onChange={(event) => setFormData({ ...formData, firstName: event.target.value })}
                     />
@@ -413,6 +585,7 @@ export default function Register() {
                         type="text"
                         placeholder="Last Name"
                         required
+                        value={formData.lastName}
                         className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none w-full"
                         onChange={(event) => setFormData({ ...formData, lastName: event.target.value })}
                     />
@@ -420,6 +593,8 @@ export default function Register() {
                         type="email"
                         placeholder="Personal Email ID"
                         required
+                        readOnly={isGoogleCompletion}
+                        value={formData.email}
                         className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none w-full md:col-span-2"
                         onChange={(event) => setFormData({ ...formData, email: event.target.value })}
                     />
@@ -429,22 +604,65 @@ export default function Register() {
                             type="text"
                             placeholder="Mobile Number"
                             required
+                            value={formData.phone}
                             className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none flex-1"
-                            onChange={(event) => setFormData({ ...formData, phone: event.target.value })}
+                            onChange={(event) => {
+                                setFormData({ ...formData, phone: event.target.value });
+                                setMobileVerified(false);
+                                setMobileOtpSent(false);
+                            }}
                         />
                         {role === 'student' && (
-                            <button type="button" className="px-6 py-3 bg-[#e8f7f2] text-[#15a276] rounded-xl font-bold whitespace-nowrap cursor-not-allowed">
-                                Verify Mobile
+                            <button
+                                type="button"
+                                onClick={handleSendMobileOtp}
+                                disabled={mobileBusy || mobileVerified}
+                                className="px-6 py-3 bg-[#e8f7f2] text-[#15a276] rounded-xl font-bold whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {mobileVerified ? 'Verified' : mobileBusy ? 'Sending...' : 'Verify Mobile'}
                             </button>
                         )}
                     </div>
+
+                    {role === 'student' && mobileOtpSent && (
+                        <div className="md:col-span-2 flex gap-4">
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={6}
+                                value={mobileOtp}
+                                placeholder="Enter mobile OTP"
+                                onChange={(event) => setMobileOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                                className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none flex-1"
+                            />
+                            <button
+                                type="button"
+                                onClick={handleVerifyMobileOtp}
+                                disabled={mobileBusy || mobileOtp.length !== 6}
+                                className="rounded-xl bg-[#15a276] px-6 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                Verify
+                            </button>
+                        </div>
+                    )}
 
                     <input
                         type="password"
                         placeholder="Password"
                         required
+                        minLength={8}
+                        value={formData.password}
                         className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none w-full md:col-span-2"
                         onChange={(event) => setFormData({ ...formData, password: event.target.value })}
+                    />
+                    <input
+                        type="password"
+                        placeholder="Confirm Password"
+                        required
+                        minLength={8}
+                        value={formData.confirmPassword}
+                        className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none w-full md:col-span-2"
+                        onChange={(event) => setFormData({ ...formData, confirmPassword: event.target.value })}
                     />
 
                     {role === 'lawyer' && (
@@ -548,11 +766,20 @@ export default function Register() {
                         </>
                     )}
 
+                    {errorMessage && (
+                        <p className="md:col-span-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                            {errorMessage}
+                        </p>
+                    )}
+
                     <button
                         type="submit"
+                        disabled={submitting}
                         className="md:col-span-2 w-full font-bold py-4 rounded-xl mt-6 transition-all shadow-lg text-white bg-[#062552] hover:bg-[#0b3b70]"
                     >
-                        Create Account
+                        {submitting
+                            ? 'Sending verification code...'
+                            : 'Create Account'}
                     </button>
                 </form>
 

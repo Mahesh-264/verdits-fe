@@ -1,9 +1,5 @@
 const AUTH_KEYS = ['user', 'accessToken', 'refreshToken'];
-
-const getStorage = () => {
-  if (typeof window === 'undefined') return null;
-  return window.sessionStorage;
-};
+const PERSISTENCE_KEY = 'authPersistence';
 
 const safeRead = (storage, key) => {
   try {
@@ -16,8 +12,7 @@ const safeRead = (storage, key) => {
 
 const safeWrite = (storage, key, value) => {
   try {
-    if (!storage) return;
-    storage.setItem(key, value);
+    storage?.setItem(key, value);
   } catch (error) {
     console.error(`Error writing ${key} to storage`, error);
   }
@@ -31,30 +26,47 @@ const safeRemove = (storage, key) => {
   }
 };
 
-export const migrateLegacyAuthStorage = () => {
+const getStorage = () => {
+  if (typeof window === 'undefined') return null;
+  return safeRead(window.localStorage, PERSISTENCE_KEY) === 'local'
+    ? window.localStorage
+    : window.sessionStorage;
+};
+
+export const setAuthPersistence = (remember) => {
   if (typeof window === 'undefined') return;
 
-  const session = window.sessionStorage;
-  const local = window.localStorage;
+  const target = remember ? window.localStorage : window.sessionStorage;
+  const previous = remember ? window.sessionStorage : window.localStorage;
 
   AUTH_KEYS.forEach((key) => {
-    const sessionValue = safeRead(session, key);
-    const localValue = safeRead(local, key);
+    const value = safeRead(previous, key);
+    if (value && !safeRead(target, key)) safeWrite(target, key, value);
+    safeRemove(previous, key);
+  });
 
-    if (!sessionValue && localValue) {
-      safeWrite(session, key, localValue);
-    }
+  if (remember) {
+    safeWrite(window.localStorage, PERSISTENCE_KEY, 'local');
+  } else {
+    safeRemove(window.localStorage, PERSISTENCE_KEY);
+  }
+};
 
-    if (localValue) {
-      safeRemove(local, key);
-    }
+export const migrateLegacyAuthStorage = () => {
+  if (typeof window === 'undefined') return;
+  if (safeRead(window.localStorage, PERSISTENCE_KEY) === 'local') return;
+
+  AUTH_KEYS.forEach((key) => {
+    const sessionValue = safeRead(window.sessionStorage, key);
+    const localValue = safeRead(window.localStorage, key);
+    if (!sessionValue && localValue) safeWrite(window.sessionStorage, key, localValue);
+    if (localValue) safeRemove(window.localStorage, key);
   });
 };
 
 export const getStoredUser = () => {
   const storage = getStorage();
   const rawUser = safeRead(storage, 'user');
-
   if (!rawUser) return null;
 
   try {
@@ -67,33 +79,34 @@ export const getStoredUser = () => {
 };
 
 export const setStoredUser = (user) => {
-  const storage = getStorage();
-  safeWrite(storage, 'user', JSON.stringify(user));
+  safeWrite(getStorage(), 'user', JSON.stringify(user));
 };
 
 export const getAccessToken = () => safeRead(getStorage(), 'accessToken');
 
 export const setAccessToken = (token) => {
-  const storage = getStorage();
-  if (!token) {
-    safeRemove(storage, 'accessToken');
-    return;
-  }
-  safeWrite(storage, 'accessToken', token);
+  if (!token) safeRemove(getStorage(), 'accessToken');
+  else safeWrite(getStorage(), 'accessToken', token);
 };
 
 export const getRefreshToken = () => safeRead(getStorage(), 'refreshToken');
 
 export const setRefreshToken = (token) => {
-  const storage = getStorage();
-  if (!token) {
-    safeRemove(storage, 'refreshToken');
-    return;
-  }
-  safeWrite(storage, 'refreshToken', token);
+  if (!token) safeRemove(getStorage(), 'refreshToken');
+  else safeWrite(getStorage(), 'refreshToken', token);
+};
+
+export const storeAuthSession = (session, remember = false) => {
+  setAuthPersistence(remember);
+  setAccessToken(session.accessToken);
+  setRefreshToken(session.refreshToken);
 };
 
 export const clearAuthStorage = () => {
-  const storage = getStorage();
-  AUTH_KEYS.forEach((key) => safeRemove(storage, key));
+  if (typeof window === 'undefined') return;
+  AUTH_KEYS.forEach((key) => {
+    safeRemove(window.sessionStorage, key);
+    safeRemove(window.localStorage, key);
+  });
+  safeRemove(window.localStorage, PERSISTENCE_KEY);
 };
