@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { BriefcaseBusiness, GraduationCap, MapPin, X } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
 import api from '../api/axios.jsx';
 import { updateUser } from '../redux/authSlice.jsx';
 import ReactionBar from '../components/feed/ReactionBar.jsx';
@@ -50,26 +51,57 @@ const getInitialFormState = (user) => ({
 
 export default function StudentProfile() {
   const { user } = useSelector((state) => state.auth);
+  const { id: profileId } = useParams();
   const dispatch = useDispatch();
+  const [viewedStudent, setViewedStudent] = useState(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(Boolean(profileId));
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState(() => getInitialFormState(user));
 
-  const studentName = useMemo(() => getDisplayName(user), [user]);
-  const collegeName = user?.studentProfile?.collegeName || 'National Law School of India University, Bangalore';
-  const cityLabel = user?.address?.city || user?.address?.district || 'Location not added';
-  const studentBio = user?.studentProfile?.bio || 'Build your student profile, update your academic details, and keep your VERDITS presence current.';
-  const specializations = user?.studentProfile?.specializations?.length ? user.studentProfile.specializations : defaultSpecializations;
-  const skills = user?.studentProfile?.skills?.length ? user.studentProfile.skills : defaultSkills;
-  const internships = user?.studentProfile?.internships?.length ? user.studentProfile.internships : defaultInternships;
-  const currentYearLabel = user?.studentProfile?.currentYear || 'Not added yet';
+  const isOwnProfile = !profileId || String(profileId) === String(user?._id || user?.id);
+  const profileUser = isOwnProfile ? user : viewedStudent;
+  const studentName = useMemo(() => getDisplayName(profileUser), [profileUser]);
+  const collegeName = profileUser?.studentProfile?.collegeName || 'National Law School of India University, Bangalore';
+  const cityLabel = profileUser?.address?.city || profileUser?.address?.district || 'Location not added';
+  const studentBio = profileUser?.studentProfile?.bio || 'Build your student profile, update your academic details, and keep your VERDITS presence current.';
+  const specializations = profileUser?.studentProfile?.specializations?.length ? profileUser.studentProfile.specializations : defaultSpecializations;
+  const skills = profileUser?.studentProfile?.skills?.length ? profileUser.studentProfile.skills : defaultSkills;
+  const internships = profileUser?.studentProfile?.internships?.length ? profileUser.studentProfile.internships : defaultInternships;
+  const currentYearLabel = profileUser?.studentProfile?.currentYear || 'Not added yet';
   const profileReactionItem = useMemo(() => ({
-    id: user?._id || user?.id || 'student-profile',
+    id: profileUser?._id || profileUser?.id || 'student-profile',
     title: `${studentName}'s student profile`,
-    likesCount: user?.studentProfile?.profileLikesCount || 0,
-    commentsCount: user?.studentProfile?.profileCommentsCount || 0,
+    likesCount: profileUser?.studentProfile?.profileLikesCount || 0,
+    commentsCount: profileUser?.studentProfile?.profileCommentsCount || 0,
     comments: [],
-  }), [studentName, user]);
+  }), [profileUser, studentName]);
+
+  useEffect(() => {
+    const loadViewedStudent = async () => {
+      if (isOwnProfile) {
+        setViewedStudent(null);
+        setIsLoadingProfile(false);
+        return;
+      }
+
+      try {
+        setIsLoadingProfile(true);
+        const { data } = await api.get('/auth/students');
+        const match = (Array.isArray(data) ? data : []).find((student) =>
+          String(student._id || student.id) === String(profileId)
+        );
+        setViewedStudent(match || null);
+      } catch (error) {
+        console.error('Error loading student profile:', error);
+        setViewedStudent(null);
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+
+    loadViewedStudent();
+  }, [isOwnProfile, profileId]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -103,6 +135,7 @@ export default function StudentProfile() {
   };
 
   const openEditor = () => {
+    if (!isOwnProfile) return;
     setFormData(getInitialFormState(user));
     setIsEditing(true);
   };
@@ -162,6 +195,27 @@ export default function StudentProfile() {
     </label>
   );
 
+  if (isLoadingProfile) {
+    return (
+      <StudentLayout>
+        <div className="rounded-[28px] border border-[#dbe2ef] bg-white p-8 text-[#5e6c87] shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
+          Loading student profile...
+        </div>
+      </StudentLayout>
+    );
+  }
+
+  if (!profileUser) {
+    return (
+      <StudentLayout>
+        <div className="rounded-[28px] border border-[#dbe2ef] bg-white p-8 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
+          <h1 className="text-2xl font-semibold">Student profile not found</h1>
+          <p className="mt-2 text-[#5e6c87]">This student may no longer be available in your network list.</p>
+        </div>
+      </StudentLayout>
+    );
+  }
+
   return (
     <StudentLayout>
       <div className="space-y-8">
@@ -191,13 +245,15 @@ export default function StudentProfile() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={openEditor}
-                className="rounded-2xl bg-[#062552] px-6 py-4 text-[18px] font-semibold text-white hover:bg-[#0b3b70] transition"
-              >
-                Edit Profile
-              </button>
+              {isOwnProfile ? (
+                <button
+                  type="button"
+                  onClick={openEditor}
+                  className="rounded-2xl bg-[#062552] px-6 py-4 text-[18px] font-semibold text-white hover:bg-[#fff2bf] transition"
+                >
+                  Edit Profile
+                </button>
+              ) : null}
             </div>
 
             <div className="mt-8 border-t border-[#e9eef7] pt-5">
@@ -235,15 +291,15 @@ export default function StudentProfile() {
               <div className="mt-8 space-y-6 text-[18px] text-[#44516d]">
                 <div>
                   <p className="font-semibold text-[#0b1f44]">College</p>
-                  <p className="mt-2">{user?.studentProfile?.collegeName || 'Not added yet'}</p>
+                  <p className="mt-2">{profileUser?.studentProfile?.collegeName || 'Not added yet'}</p>
                 </div>
                 <div>
                   <p className="font-semibold text-[#0b1f44]">College Email</p>
-                  <p className="mt-2">{user?.studentProfile?.collegeEmail || 'Not added yet'}</p>
+                  <p className="mt-2">{profileUser?.studentProfile?.collegeEmail || 'Not added yet'}</p>
                 </div>
                 <div>
                   <p className="font-semibold text-[#0b1f44]">Email</p>
-                  <p className="mt-2">{user?.email || 'Not added yet'}</p>
+                  <p className="mt-2">{profileUser?.email || 'Not added yet'}</p>
                 </div>
                 <div>
                   <p className="font-semibold text-[#0b1f44]">Location</p>
@@ -523,7 +579,7 @@ export default function StudentProfile() {
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="rounded-2xl bg-[#062552] px-8 py-4 font-semibold text-white hover:bg-[#0b3b70] transition disabled:opacity-60"
+                  className="rounded-2xl bg-[#15a276] px-8 py-4 font-semibold text-white hover:bg-[#fff2bf] transition disabled:opacity-60"
                 >
                   {isSaving ? 'Saving...' : 'Save Changes'}
                 </button>

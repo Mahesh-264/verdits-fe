@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Scale, Home, Heart, MoreHorizontal } from 'lucide-react';
-import BrandLogo from '../components/BrandLogo';
+import { Scale, Home, Heart, MoreHorizontal } from 'lucide-react';
+import AppHeader from '../components/AppHeader.jsx';
 
 const CaseSelection = () => {
     const navigate = useNavigate();
@@ -15,10 +15,8 @@ const CaseSelection = () => {
 
     return (
         <div className="min-h-screen bg-[#f3f8fb] flex flex-col items-center">
-            {/* Header */}
-            <div className="w-full bg-[#062552] text-white p-4 flex items-center gap-4 shadow-md">
-                <ArrowLeft onClick={() => navigate(-1)} className="cursor-pointer" />
-                <BrandLogo className="h-10 max-w-[160px]" light />
+            <div className="w-full">
+                <AppHeader variant="user" profileTo="/profile" />
             </div>
 
             <div className="w-full max-w-md p-6 mt-4">

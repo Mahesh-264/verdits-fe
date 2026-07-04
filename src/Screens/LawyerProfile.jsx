@@ -28,7 +28,7 @@ const LawyerProfile = () => {
 
     // Custom hooks
     const documentGenerator = useDocumentGenerator();
-    const appointmentRequest = useAppointmentRequest(lawyer, user);
+    const appointmentRequest = useAppointmentRequest(lawyer, user?.role === 'user' ? user : null);
     const profile = useMemo(() => lawyer?.lawyerProfile || {}, [lawyer]);
 
     // Fetch lawyer data
@@ -45,11 +45,6 @@ const LawyerProfile = () => {
         };
         fetchLawyer();
     }, [id]);
-
-    // Callbacks
-    const handleBack = useCallback(() => {
-        navigate(-1);
-    }, [navigate]);
 
     const handleConnect = useCallback((type) => {
         if (type === 'chat') {
@@ -93,12 +88,12 @@ const LawyerProfile = () => {
     }
 
     if (!lawyer) {
-        return <ErrorState onBack={handleBack} />;
+        return <ErrorState />;
     }
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center pb-32 relative">
-            <PageHeader onBackClick={handleBack} />
+            <PageHeader />
 
             <ProfileHeader lawyer={lawyer} profile={profile} />
 
@@ -140,13 +135,14 @@ const LawyerProfile = () => {
                 onCreateAnother={documentGenerator.startNewDocument}
             />
 
-            {/* Appointment Actions */}
-            <AppointmentActions
-                requestStatus={appointmentRequest.requestStatus}
-                isSendingRequest={appointmentRequest.isSendingRequest}
-                onSendRequest={appointmentRequest.sendRequest}
-                onConnect={handleConnect}
-            />
+            {user?.role === 'user' ? (
+                <AppointmentActions
+                    requestStatus={appointmentRequest.requestStatus}
+                    isSendingRequest={appointmentRequest.isSendingRequest}
+                    onSendRequest={appointmentRequest.sendRequest}
+                    onConnect={handleConnect}
+                />
+            ) : null}
         </div>
     );
 };

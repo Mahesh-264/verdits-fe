@@ -11,10 +11,10 @@ const LandingPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#f3f8fb] flex flex-col items-center justify-center p-6 text-[#062552] font-sans selection:bg-[#15a276]/20">
+        <div className="min-h-screen bg-[radial-gradient(circle_at_12%_0%,rgba(255,255,221,0.92)_0,rgba(255,255,221,0)_34%),linear-gradient(90deg,#fffdb7_0%,#fffcc8_42%,#fffde8_100%)] flex flex-col items-center justify-center p-6 text-[#062552] font-sans selection:bg-[#15a276]/20">
             {/* Header */}
             <div className="text-center mb-14 flex flex-col items-center">
-                <BrandLogo className="h-24 md:h-28 mb-6" />
+                <BrandLogo className="h-32 md:h-40 mb-6" />
                 <h1 className="text-4xl md:text-5xl font-bold text-[#062552] mb-4">
                     Welcome to VERDITS
                 </h1>

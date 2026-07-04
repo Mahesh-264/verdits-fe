@@ -49,7 +49,7 @@ export default function LocationSearchCard({
           type="button"
           onClick={onRequestLocation}
           disabled={loading}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#062552] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0b3b70] disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#15a276] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#fff2bf] disabled:opacity-60"
         >
           <RefreshCcw size={16} />
           {loading ? 'Checking location...' : 'Use my location'}
@@ -75,7 +75,7 @@ export default function LocationSearchCard({
           <button
             type="submit"
             disabled={searchingLocation}
-            className="inline-flex items-center justify-center rounded-2xl bg-[#15a276] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#118b66] disabled:opacity-60"
+            className="inline-flex items-center justify-center rounded-2xl bg-[#15a276] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#fff2bf] disabled:opacity-60"
           >
             {searchingLocation ? 'Searching...' : 'Search'}
           </button>

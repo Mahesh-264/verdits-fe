@@ -394,7 +394,9 @@ export default function Register() {
         <div className="min-h-screen bg-[#f3f8fb] flex items-center justify-center p-4 font-sans text-[#062552] py-12">
             <div className="w-full max-w-3xl bg-white border border-[#d7e9ef] rounded-2xl p-8 shadow-2xl shadow-[#062552]/10">
                 <div className="flex justify-center mb-6">
-                    <BrandLogo className="h-16 max-w-[240px]" />
+                    <Link to="/" aria-label="Go to role selection">
+                        <BrandLogo className="h-16 max-w-[240px]" />
+                    </Link>
                 </div>
                 <div className="flex items-center justify-center gap-3 mb-8">
                     {getIcon()}
@@ -559,11 +561,6 @@ export default function Register() {
                 <p className="text-center text-[#5f7488] mt-6">
                     Already have an account? <Link to={`/login?role=${role}`} className="text-[#15a276] hover:underline font-medium">Login</Link>
                 </p>
-                <div className="mt-4 text-center">
-                    <Link to="/" className="text-[#5f7488] hover:text-[#062552] text-sm transition">
-                        &larr; Back to Role Selection
-                    </Link>
-                </div>
             </div>
         </div>
     );

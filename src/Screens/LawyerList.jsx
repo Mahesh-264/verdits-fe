@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, MapPin, Star } from 'lucide-react';
+import { MapPin, Star } from 'lucide-react';
 import api from '../api/axios';
 import LocationSearchCard from '../components/location/LocationSearchCard.jsx';
 import useSearchLocation from '../hooks/useSearchLocation.js';
-import BrandLogo from '../components/BrandLogo';
+import AppHeader from '../components/AppHeader.jsx';
 import {
   formatDistanceLabel,
   getCategoryDiscoveryConfig,
@@ -66,10 +66,7 @@ const LawyerList = () => {
 
   return (
     <div className="min-h-screen bg-[#f3f8fb]">
-      <div className="sticky top-0 z-10 flex items-center gap-4 bg-[#062552] p-4 text-white shadow-md">
-        <ArrowLeft onClick={() => navigate(-1)} className="cursor-pointer" />
-        <BrandLogo className="h-10 max-w-[160px]" light />
-      </div>
+      <AppHeader variant="user" profileTo="/profile" />
 
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4">
         <div>

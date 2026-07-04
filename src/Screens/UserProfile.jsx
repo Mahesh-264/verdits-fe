@@ -3,7 +3,6 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  ArrowLeft,
   Calendar,
   Edit2,
   LogOut,
@@ -17,7 +16,7 @@ import {
 } from 'lucide-react';
 import api from '../api/axios';
 import { logout, updateUser } from '../redux/authSlice';
-import BrandLogo from '../components/BrandLogo';
+import AppHeader from '../components/AppHeader.jsx';
 
 // Shared profile editor for users and lawyers, including location refresh for discovery accuracy.
 const UserProfile = () => {
@@ -187,19 +186,15 @@ const UserProfile = () => {
 
   return (
     <div className="min-h-screen bg-[#f3f8fb] pb-10">
-      <div className="sticky top-0 z-10 flex items-center justify-between bg-[#062552] p-4 text-white shadow-md">
-        <div className="flex items-center gap-4">
-          <ArrowLeft onClick={() => navigate(-1)} className="cursor-pointer hover:text-gray-300" />
-          <BrandLogo className="h-10 max-w-[160px]" light />
-        </div>
+      <AppHeader variant={isLawyer ? 'lawyer' : 'user'} profileTo="/profile">
         {isEditing ? (
-          <button onClick={() => setIsEditing(false)} className="text-gray-300 hover:text-white">
+          <button onClick={() => setIsEditing(false)} className="text-[#6f633f] hover:text-[#0d1117]">
             <X />
           </button>
         ) : (
           <div className="w-6" />
         )}
-      </div>
+      </AppHeader>
 
       <div className="mx-auto max-w-3xl px-4">
         <div className="relative mb-6 rounded-b-[2.5rem] bg-white px-6 pb-8 pt-5 text-center shadow-sm">
@@ -244,7 +239,7 @@ const UserProfile = () => {
                   type="button"
                   onClick={handleUseCurrentLocation}
                   disabled={loadingLocation}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#062552] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0b3b70] disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#15a276] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#fff2bf] disabled:opacity-60"
                 >
                   <Navigation size={16} />
                   {loadingLocation ? 'Updating location...' : 'Use current location'}
@@ -308,7 +303,7 @@ const UserProfile = () => {
               type="button"
               onClick={handleUseCurrentLocation}
               disabled={loadingLocation}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#062552] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0b3b70] disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#15a276] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#fff2bf] disabled:opacity-60"
             >
               <Navigation size={16} />
               {loadingLocation ? 'Updating location...' : 'Use current location'}
@@ -329,7 +324,7 @@ const UserProfile = () => {
           ) : (
             <button
               onClick={() => setIsEditing(true)}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#062552] py-4 font-bold text-white shadow-lg transition active:scale-95"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#15a276] py-4 font-bold text-white shadow-lg transition hover:bg-[#fff2bf] active:scale-95"
             >
               <Edit2 size={20} />
               Edit Profile

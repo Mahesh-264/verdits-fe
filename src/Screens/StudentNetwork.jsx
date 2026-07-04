@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BadgePlus, Sparkles, UserPlus, Users } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/axios.jsx';
 import { updateUser } from '../redux/authSlice.jsx';
 import StudentLayout from './StudentLayout.jsx';
@@ -15,6 +15,7 @@ const getDisplayName = (user) => {
 export default function StudentNetwork() {
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'lawyers' ? 'lawyers' : 'students');
   const [students, setStudents] = useState([]);
@@ -166,8 +167,15 @@ export default function StudentNetwork() {
                 <p className="text-[#7f8ba2] text-[16px]">Loading registered students...</p>
               ) : students.length === 0 ? (
                 <p className="text-[#7f8ba2] text-[16px]">No registered students found yet.</p>
-              ) : students.map((student) => (
-                <div key={student._id || student.id} className="rounded-[26px] border border-[#dbe2ef] p-6 text-center">
+              ) : students.map((student) => {
+                const studentId = student._id || student.id;
+
+                return (
+                <div
+                  key={studentId}
+                  onClick={() => navigate(`/student-profile/${studentId}`)}
+                  className="cursor-pointer rounded-[26px] border border-[#dbe2ef] p-6 text-center transition hover:-translate-y-0.5 hover:shadow-md"
+                >
                   {student.profileImage ? (
                     <img src={student.profileImage} alt={getDisplayName(student)} className="h-28 w-28 mx-auto rounded-full object-cover" />
                   ) : (
@@ -190,34 +198,41 @@ export default function StudentNetwork() {
                   {hasIncomingRequest(student._id || student.id) ? (
                     <button
                       type="button"
-                      onClick={() => handleAcceptStudent(student._id || student.id)}
-                      disabled={actionLoadingId === (student._id || student.id)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleAcceptStudent(studentId);
+                      }}
+                      disabled={actionLoadingId === studentId}
                       className="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 py-4 text-[18px] font-semibold text-white hover:bg-emerald-700 transition disabled:opacity-60"
                     >
                       <UserPlus size={18} />
-                      {actionLoadingId === (student._id || student.id) ? 'Accepting...' : 'Accept Request'}
+                      {actionLoadingId === studentId ? 'Accepting...' : 'Accept Request'}
                     </button>
-                  ) : isConnected(student._id || student.id) ? (
+                  ) : isConnected(studentId) ? (
                     <button type="button" disabled className="mt-6 w-full rounded-2xl bg-[#e8f7f2] py-4 text-[18px] font-semibold text-[#15a276]">
                       Connected
                     </button>
-                  ) : hasOutgoingRequest(student._id || student.id) ? (
+                  ) : hasOutgoingRequest(studentId) ? (
                     <button type="button" disabled className="mt-6 w-full rounded-2xl bg-[#eef2f8] py-4 text-[18px] font-semibold text-[#5e6c87]">
                       Request Sent
                     </button>
                   ) : (
                     <button
                       type="button"
-                      onClick={() => handleConnectStudent(student._id || student.id)}
-                      disabled={actionLoadingId === (student._id || student.id)}
-                      className="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-[#062552] py-4 text-[18px] font-semibold text-white hover:bg-[#0b3b70] transition disabled:opacity-60"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleConnectStudent(studentId);
+                      }}
+                      disabled={actionLoadingId === studentId}
+                      className="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-[#15a276] py-4 text-[18px] font-semibold text-white hover:bg-[#fff2bf] transition disabled:opacity-60"
                     >
                       <UserPlus size={18} />
-                      {actionLoadingId === (student._id || student.id) ? 'Sending...' : 'Connect'}
+                      {actionLoadingId === studentId ? 'Sending...' : 'Connect'}
                     </button>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         ) : (
@@ -230,8 +245,15 @@ export default function StudentNetwork() {
                 <p className="text-[#7f8ba2] text-[16px]">Loading verified lawyers...</p>
               ) : lawyers.length === 0 ? (
                 <p className="text-[#7f8ba2] text-[16px]">No verified lawyers available yet.</p>
-              ) : lawyers.map((lawyer) => (
-                <div key={lawyer._id || lawyer.id} className="rounded-[26px] border border-[#dbe2ef] p-6">
+              ) : lawyers.map((lawyer) => {
+                const lawyerId = lawyer._id || lawyer.id;
+
+                return (
+                <div
+                  key={lawyerId}
+                  onClick={() => navigate(`/lawyer-profile/${lawyerId}`)}
+                  className="cursor-pointer rounded-[26px] border border-[#dbe2ef] p-6 transition hover:-translate-y-0.5 hover:shadow-md"
+                >
                   <div className="flex items-center gap-4">
                     {lawyer.profileImage ? (
                       <img src={lawyer.profileImage} alt={getDisplayName(lawyer)} className="h-20 w-20 rounded-full object-cover" />
@@ -253,22 +275,26 @@ export default function StudentNetwork() {
 
                   <button
                     type="button"
-                    onClick={() => handleFollowLawyer(lawyer._id || lawyer.id)}
-                    disabled={actionLoadingId === (lawyer._id || lawyer.id)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleFollowLawyer(lawyerId);
+                    }}
+                    disabled={actionLoadingId === lawyerId}
                     className={`mt-6 rounded-2xl px-6 py-4 text-[18px] font-semibold transition disabled:opacity-60 ${
-                      isFollowingLawyer(lawyer._id || lawyer.id)
+                      isFollowingLawyer(lawyerId)
                         ? 'bg-[#e8f7f2] text-[#15a276]'
-                        : 'bg-[#062552] text-white hover:bg-[#0b3b70]'
+                        : 'bg-[#15a276] text-white hover:bg-[#fff2bf]'
                     }`}
                   >
-                    {actionLoadingId === (lawyer._id || lawyer.id)
+                    {actionLoadingId === lawyerId
                       ? 'Updating...'
-                      : isFollowingLawyer(lawyer._id || lawyer.id)
+                      : isFollowingLawyer(lawyerId)
                         ? 'Following'
                         : 'Follow'}
                   </button>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}

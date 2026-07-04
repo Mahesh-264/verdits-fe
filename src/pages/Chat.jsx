@@ -479,12 +479,12 @@ export default function Chat() {
                                     onClick={() => {
                                         if (isDirectChatMode) {
                                             setLockedPartnerId(null);
-                                            navigate(-1);
+                                            navigate(user?.role === 'lawyer' ? '/lawyer-dash' : '/user-home');
                                             return;
                                         }
                                         dispatch(setActivePartner(null));
                                     }}
-                                    className="md:hidden text-2xl text-[#b8c8dc] mr-1 hover:text-white"
+                                    className="hidden"
                                 >
                                     ←
                                 </button>

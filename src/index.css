@@ -1,34 +1,212 @@
 @import "tailwindcss";
-/* In index.css */
+
+:root {
+  --verdicts-ink: #0d1117;
+  --verdicts-charcoal: #17130a;
+  --verdicts-graphite: #2b2412;
+  --verdicts-slate: #6f633f;
+  --verdicts-gold: #f1d15f;
+  --verdicts-gold-dark: #988b64;
+  --verdicts-gold-soft: #fff4bf;
+  --verdicts-ivory: #fffde6;
+  --verdicts-panel: rgba(255, 254, 240, 0.92);
+  --verdicts-line: rgba(183, 143, 18, 0.34);
+  --verdicts-muted: #6f633f;
+}
+
+html {
+  min-height: 100%;
+  background: linear-gradient(90deg, #fffdb7 0%, #fffcc8 42%, #fffde8 100%);
+}
+
 body {
+  min-height: 100%;
   overflow-x: hidden;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 255, 221, 0.92) 0, rgba(255, 255, 221, 0) 34%),
+    linear-gradient(90deg, #fffdb7 0%, #fffcc8 42%, #fffde8 100%);
+  color: var(--verdicts-ink);
+}
+
+#root {
+  min-height: 100vh;
+  background: transparent;
 }
 
 .lawyer-theme {
-  background: #f3f8fb;
-  color: #062552;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 255, 221, 0.92) 0, rgba(255, 255, 221, 0) 34%),
+    linear-gradient(90deg, #fffdb7 0%, #fffcc8 42%, #fffde8 100%);
+  color: var(--verdicts-ink);
+}
+
+[class*="bg-[#f3f8fb]"],
+[class*="bg-[#f7fbfc]"],
+[class*="bg-[#fbfcff]"],
+[class*="bg-[#eef5ff]"],
+[class*="bg-[#eaf1f7]"],
+[class*="bg-[#fffdf6]"],
+[class*="bg-[#fffaf0]"] {
+  background-color: transparent !important;
+}
+
+[class*="bg-[#fffef9]"],
+[class*="bg-[#f8f3e3]"] {
+  background-color: var(--verdicts-panel) !important;
+}
+
+[class*="bg-[#e8f7f2]"],
+[class*="bg-green-100"],
+[class*="bg-emerald-100"],
+[class*="bg-emerald-500/10"] {
+  background-color: rgba(241, 209, 95, 0.16) !important;
+}
+
+[class*="bg-[#062552]"],
+[class*="bg-[#0b3b70]"],
+[class*="bg-[#114a38]"] {
+  background-color: var(--verdicts-charcoal) !important;
+}
+
+[class*="hover:bg-[#0b3b70]"]:hover,
+[class*="hover:bg-[#118b66]"]:hover,
+[class*="hover:bg-[#176049]"]:hover {
+  background-color: var(--verdicts-graphite) !important;
+}
+
+[class*="bg-[#15a276]"],
+[class*="bg-[#19b98d]"],
+[class*="bg-emerald-500"],
+[class*="bg-emerald-600"],
+[class*="bg-cyan-400"] {
+  background-color: var(--verdicts-gold) !important;
+  color: var(--verdicts-ink) !important;
+}
+
+[class*="hover:bg-[#15a276]"]:hover,
+[class*="hover:bg-emerald-700"]:hover {
+  background-color: var(--verdicts-gold-dark) !important;
+}
+
+[class*="text-[#062552]"],
+[class*="text-[#0b1f44]"],
+[class*="text-[#243b67]"],
+[class*="text-zinc-950"] {
+  color: var(--verdicts-ink) !important;
+}
+
+[class*="text-[#4b647c]"],
+[class*="text-[#5f7488]"],
+[class*="text-[#44516d]"],
+[class*="text-[#5e6c87]"],
+[class*="text-[#7f8ba2]"],
+[class*="text-[#8a95ab]"],
+[class*="text-zinc-500"],
+[class*="text-zinc-400"] {
+  color: var(--verdicts-muted) !important;
+}
+
+[class*="text-[#15a276]"],
+[class*="text-[#118b66]"],
+[class*="text-[#19b98d]"],
+[class*="text-emerald-500"],
+[class*="text-emerald-400"],
+[class*="text-emerald-300"],
+[class*="text-cyan-400"],
+[class*="text-cyan-300"],
+[class*="text-purple-400"],
+[class*="text-pink-400"] {
+  color: var(--verdicts-gold-dark) !important;
+}
+
+[class*="border-[#dbe2ef]"],
+[class*="border-[#d7e9ef]"],
+[class*="border-[#15a276]"],
+[class*="border-[#15a276]/"],
+[class*="border-emerald-500"],
+[class*="border-cyan-500"] {
+  border-color: var(--verdicts-line) !important;
+}
+
+[class*="focus:border-[#15a276]"]:focus,
+[class*="focus-within:border-[#15a276]"]:focus-within {
+  border-color: var(--verdicts-gold) !important;
+}
+
+input,
+textarea,
+select {
+  background-color: rgba(255, 254, 245, 0.95);
+  color: var(--verdicts-ink);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #8c7b4d;
+}
+
+[class*="shadow-[#062552]/"],
+[class*="shadow-[#15a276]/"] {
+  --tw-shadow-color: rgba(85, 65, 0, 0.16) !important;
+}
+
+::selection {
+  background: rgba(241, 209, 95, 0.34);
+  color: var(--verdicts-ink);
+}
+
+[class*="bg-white"] {
+  background-color: var(--verdicts-panel) !important;
+  color: var(--verdicts-ink) !important;
+}
+
+[class*="text-white"] {
+  color: var(--verdicts-ivory) !important;
+}
+
+[class*="bg-[#15a276]"][class*="text-white"],
+[class*="bg-[#19b98d]"][class*="text-white"],
+[class*="bg-[#d6a400]"][class*="text-white"],
+[class*="bg-[#f1d15f]"][class*="text-white"],
+[class*="bg-emerald-500"][class*="text-white"],
+[class*="bg-emerald-600"][class*="text-white"],
+[class*="bg-cyan-400"][class*="text-white"] {
+  color: var(--verdicts-ink) !important;
+}
+
+[class*="border-white"] {
+  border-color: rgba(255, 249, 220, 0.72) !important;
+}
+
+[class*="rounded-3xl"] {
+  border-radius: 1rem !important;
+}
+
+[class*="rounded-2xl"] {
+  border-radius: 0.875rem !important;
 }
 
 .lawyer-theme [class*="bg-zinc-950"],
 .lawyer-theme [class*="bg-zinc-900"],
 .lawyer-theme [class*="bg-zinc-800"] {
-  background-color: #ffffff;
+  background-color: var(--verdicts-panel);
+  color: var(--verdicts-ink);
 }
 
 .lawyer-theme [class*="border-zinc-800"],
 .lawyer-theme [class*="border-zinc-700"] {
-  border-color: #dbe2ef;
+  border-color: rgba(214, 184, 91, 0.42);
 }
 
 .lawyer-theme [class*="text-zinc-500"] {
-  color: #6d7a92;
+  color: var(--verdicts-muted);
 }
 
 .lawyer-theme [class*="text-zinc-400"],
 .lawyer-theme [class*="text-zinc-300"],
 .lawyer-theme [class*="text-zinc-200"],
 .lawyer-theme [class*="text-zinc-100"] {
-  color: #44516d;
+  color: #302a1c;
 }
 
 .lawyer-theme [class*="text-zinc-950"],
@@ -36,72 +214,82 @@ body {
 .lawyer-theme h2,
 .lawyer-theme h3,
 .lawyer-theme h4 {
-  color: #062552;
+  color: var(--verdicts-ink);
 }
 
 .lawyer-theme [class*="bg-cyan-400"] {
-  background-color: #15a276;
+  background-color: var(--verdicts-gold);
 }
 
 .lawyer-theme [class*="text-cyan-400"],
 .lawyer-theme [class*="text-cyan-300"],
 .lawyer-theme [class*="text-purple-400"],
 .lawyer-theme [class*="text-pink-400"] {
-  color: #15a276;
+  color: var(--verdicts-gold-dark);
 }
 
 .lawyer-theme [class*="border-cyan-500"] {
-  border-color: rgba(21, 162, 118, 0.35);
+  border-color: rgba(214, 173, 66, 0.45);
 }
 
 .lawyer-theme input,
 .lawyer-theme textarea,
 .lawyer-theme select {
-  background-color: #fbfcff;
-  border-color: #dbe2ef;
-  color: #062552;
+  background-color: rgba(255, 254, 245, 0.95);
+  border-color: var(--verdicts-line);
+  color: var(--verdicts-ink);
 }
 
 .lawyer-theme input::placeholder,
 .lawyer-theme textarea::placeholder {
-  color: #8a95ab;
+  color: #8c7b4d;
 }
 
 .lawyer-theme .shadow-2xl {
-  box-shadow: 0 20px 60px rgba(16, 33, 68, 0.12);
+  box-shadow: 0 20px 60px rgba(85, 65, 0, 0.18);
 }
 
 .lawyer-theme button[class*="bg-zinc-900"],
 .lawyer-theme button[class*="bg-zinc-800"],
 .lawyer-theme a[class*="bg-zinc-900"] {
-  background-color: #f6f8fc;
-  color: #062552;
+  background-color: rgba(255, 249, 217, 0.94);
+  color: var(--verdicts-ink);
 }
 
 .lawyer-theme button[class*="bg-zinc-900"]:hover,
 .lawyer-theme button[class*="bg-zinc-800"]:hover,
 .lawyer-theme a[class*="bg-zinc-900"]:hover {
-  background-color: #eef3fb;
+  background-color: var(--verdicts-gold-soft);
 }
 
 .lawyer-theme button[class*="bg-white"] {
-  background-color: #062552;
-  color: #ffffff;
+  background-color: var(--verdicts-gold);
+  color: var(--verdicts-ink);
 }
 
 .lawyer-theme button[class*="bg-white"]:hover {
-  background-color: #0b3b70;
+  background-color: var(--verdicts-gold-dark);
 }
 
 .lawyer-theme header button[class*="bg-white"] {
-  background-color: #ffffff;
-  color: #062552;
+  background-color: rgba(255, 254, 240, 0.9);
+  color: var(--verdicts-ink);
 }
 
 .lawyer-theme header button[class*="bg-white"]:hover {
-  background-color: #f3f8fb;
+  background-color: var(--verdicts-gold-soft);
 }
 
 .lawyer-theme .fixed.inset-0 {
-  color: #062552;
+  color: var(--verdicts-ink);
+}
+
+.lawyer-theme [class*="bg-black/80"],
+.lawyer-theme [class*="bg-black/85"] {
+  background-color: rgba(5, 7, 10, 0.88) !important;
+}
+
+.lawyer-theme [class*="text-blue-300"],
+.lawyer-theme [class*="text-blue-200"] {
+  color: #f1d15f !important;
 }

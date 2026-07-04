@@ -49,7 +49,9 @@ export default function StudentLayout({ children }) {
         <div className="max-w-[1440px] mx-auto px-4 py-3 md:px-6">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
             <div className="flex items-center justify-between gap-4 xl:shrink-0">
-              <BrandLogo className="h-10 max-w-[160px]" />
+              <Link to="/student-home" className="shrink-0" aria-label="Go to dashboard home">
+                <BrandLogo className="h-14 max-w-[180px]" variant="dashboard" />
+              </Link>
 
               <div className="flex items-center gap-3 xl:hidden">
                 <NotificationBell buttonClassName="border-[#dbe2ef] bg-white text-[#062552] hover:bg-[#f3f8fb]" />

@@ -97,7 +97,7 @@ const AppointmentActions = React.memo(({
                     {requestStatus !== 'Rejected' && requestStatus !== 'Pending' && !isSendingRequest && (
                         <button
                             onClick={onSendRequest}
-                            className="w-full bg-[#15a276] hover:bg-[#118b66] text-white font-bold py-3 rounded-xl shadow-lg transition mt-4"
+                            className="w-full bg-[#15a276] hover:bg-[#fff2bf] text-white font-bold py-3 rounded-xl shadow-lg transition mt-4"
                         >
                             Send Appointment Request
                         </button>

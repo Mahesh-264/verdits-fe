@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 export const LoadingState = React.memo(() => (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -8,15 +9,15 @@ export const LoadingState = React.memo(() => (
 
 LoadingState.displayName = 'LoadingState';
 
-export const ErrorState = React.memo(({ onBack }) => (
+export const ErrorState = React.memo(() => (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
         <h2 className="text-xl font-bold text-gray-800">Lawyer not found</h2>
-        <button
-            onClick={onBack}
+        <Link
+            to="/user-home"
             className="mt-4 text-[#15a276] font-semibold hover:text-[#118b66] transition"
         >
-            Go Back
-        </button>
+            Go to dashboard home
+        </Link>
     </div>
 ));
 

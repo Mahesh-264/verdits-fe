@@ -1,5 +1,5 @@
-import React from 'react';
-import { BriefcaseBusiness, CalendarDays, Clock3, IndianRupee, MapPin, Users } from 'lucide-react';
+import React, { useState } from 'react';
+import { BriefcaseBusiness, CalendarDays, Clock3, IndianRupee, MapPin, Users, X } from 'lucide-react';
 import api from '../../api/axios.jsx';
 import ReactionBar from './ReactionBar.jsx';
 
@@ -16,6 +16,7 @@ const typeLabels = {
 };
 
 export default function FeedPostCard({ post, onApply, onJoin }) {
+  const [selectedImage, setSelectedImage] = useState(null);
   const creatorName = post.creatorName || post.lawyerName || 'User';
   const creatorRole = post.creatorRole || 'user';
   const avatar = post.creatorAvatar || creatorName.charAt(0).toUpperCase();
@@ -90,9 +91,14 @@ export default function FeedPostCard({ post, onApply, onJoin }) {
         {post.media?.length ? (
           <div className={`grid gap-3 ${post.media.length === 1 ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3'}`}>
             {post.media.map((imageUrl) => (
-              <div key={imageUrl} className="overflow-hidden rounded-[24px] border border-[#dbe2ef] bg-[#f7f9fd]">
-                <img src={imageUrl} alt={post.title || creatorName} className="h-56 w-full object-cover" />
-              </div>
+              <button
+                key={imageUrl}
+                type="button"
+                onClick={() => setSelectedImage(imageUrl)}
+                className="overflow-hidden rounded-[24px] border border-[#dbe2ef] bg-[#f7f9fd] text-left transition hover:border-[#15a276]"
+              >
+                <img src={imageUrl} alt={post.title || creatorName} className="max-h-[520px] w-full object-contain" />
+              </button>
             ))}
           </div>
         ) : null}
@@ -166,6 +172,24 @@ export default function FeedPostCard({ post, onApply, onJoin }) {
           ) : null}
         </div>
       </div>
+
+      {selectedImage ? (
+        <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm">
+          <button
+            type="button"
+            onClick={() => setSelectedImage(null)}
+            className="absolute right-4 top-4 rounded-full bg-white/95 p-2 text-[#0b1f44] shadow-lg transition hover:bg-[#fff2bf]"
+            aria-label="Close image preview"
+          >
+            <X size={20} />
+          </button>
+          <img
+            src={selectedImage}
+            alt={post.title || creatorName}
+            className="max-h-[92vh] max-w-[94vw] rounded-2xl object-contain shadow-2xl"
+          />
+        </div>
+      ) : null}
     </article>
   );
 }

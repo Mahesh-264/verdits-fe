@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Check, Paperclip, Plus, X } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Check, ExternalLink, Paperclip, Plus, X } from 'lucide-react';
 
 const TagInput = ({ value, onChange }) => {
   const [draft, setDraft] = useState('');
@@ -77,6 +77,17 @@ export function InternshipApplicationModal({
   onSubmit,
 }) {
   const [form, setForm] = useState(initialValues);
+  const [resumePreviewOpen, setResumePreviewOpen] = useState(false);
+  const resumePreviewUrl = useMemo(
+    () => (form.resumeFile ? URL.createObjectURL(form.resumeFile) : ''),
+    [form.resumeFile]
+  );
+
+  useEffect(() => () => {
+    if (resumePreviewUrl) {
+      URL.revokeObjectURL(resumePreviewUrl);
+    }
+  }, [resumePreviewUrl]);
 
   if (!open || !internship) return null;
 
@@ -166,10 +177,21 @@ export function InternshipApplicationModal({
                           resumeFile: file || null,
                           resumeFileName: file?.name || '',
                         }));
+                        setResumePreviewOpen(false);
                       }}
                       accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     />
                   </label>
+                  {form.resumeFile ? (
+                    <button
+                      type="button"
+                      onClick={() => setResumePreviewOpen(true)}
+                      className="mt-2 inline-flex w-full items-center justify-between gap-3 rounded-2xl border border-[#dbe2ef] bg-white px-4 py-3 text-left text-sm font-semibold text-[#0b1f44] transition hover:bg-[#f8faff]"
+                    >
+                      <span className="min-w-0 truncate">{form.resumeFileName}</span>
+                      <ExternalLink size={16} className="shrink-0 text-[#15a276]" />
+                    </button>
+                  ) : null}
                 </Field>
               </div>
               <Field label="Short Bio / Cover Message">
@@ -209,6 +231,72 @@ export function InternshipApplicationModal({
             </button>
           </div>
         </form>
+      </div>
+
+      {resumePreviewOpen && form.resumeFile ? (
+        <LocalResumePreviewModal
+          file={form.resumeFile}
+          fileName={form.resumeFileName}
+          url={resumePreviewUrl}
+          onClose={() => setResumePreviewOpen(false)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function LocalResumePreviewModal({ file, fileName, url, onClose }) {
+  const fileType = file?.type || '';
+  const lowerName = String(fileName || '').toLowerCase();
+  const isPdf = fileType === 'application/pdf' || lowerName.endsWith('.pdf');
+  const isImage = fileType.startsWith('image/');
+  const canEmbed = isPdf || isImage;
+
+  return (
+    <div className="fixed inset-0 z-[180] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+      <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl">
+        <div className="flex items-center justify-between gap-4 border-b border-[#e3e8f3] px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#15a276]">Resume Preview</p>
+            <h3 className="mt-1 truncate text-lg font-semibold text-[#0b1f44]">{fileName}</h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <a
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-2xl border border-[#dbe2ef] px-4 py-2 text-sm font-semibold text-[#243b67] transition hover:bg-[#f8faff]"
+            >
+              <ExternalLink size={16} />
+              Open
+            </a>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full border border-[#dbe2ef] p-2 text-[#5e6c87] transition hover:bg-[#f7f9fd]"
+              aria-label="Close resume preview"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        <div className="min-h-[60vh] flex-1 bg-[#f8faff] p-4">
+          {isImage ? (
+            <div className="flex h-full min-h-[60vh] items-center justify-center">
+              <img src={url} alt={fileName} className="max-h-[76vh] max-w-full object-contain" />
+            </div>
+          ) : canEmbed ? (
+            <iframe title={fileName} src={url} className="h-[76vh] w-full rounded-2xl border border-[#dbe2ef] bg-white" />
+          ) : (
+            <div className="flex min-h-[60vh] flex-col items-center justify-center rounded-2xl border border-dashed border-[#dbe2ef] bg-white p-6 text-center">
+              <p className="text-lg font-semibold text-[#0b1f44]">Preview may not be available for this file type.</p>
+              <p className="mt-2 max-w-md text-sm leading-6 text-[#5e6c87]">
+                Use Open to view the selected resume in a browser tab or your system document viewer before applying.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

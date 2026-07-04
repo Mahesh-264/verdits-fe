@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, MessageCircle, Star } from 'lucide-react';
+import { MapPin, MessageCircle, Star } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import api from '../api/axios';
 import LocationSearchCard from '../components/location/LocationSearchCard.jsx';
 import useSearchLocation from '../hooks/useSearchLocation.js';
-import BrandLogo from '../components/BrandLogo';
+import AppHeader from '../components/AppHeader.jsx';
 import {
   formatDistanceLabel,
   getRadiusValue,
@@ -82,11 +82,7 @@ const InstantConsult = () => {
 
   return (
     <div className="min-h-screen bg-[#f3f8fb]">
-      <div className="sticky top-0 z-10 flex items-center gap-4 bg-[#062552] p-4 text-white shadow-md">
-        <ArrowLeft onClick={() => navigate(-1)} className="cursor-pointer hover:text-gray-300 transition" />
-        <BrandLogo className="h-10 max-w-[160px]" light />
-        <span className="text-lg font-bold tracking-wide">Instant Consultation</span>
-      </div>
+      <AppHeader variant="user" profileTo="/profile" />
 
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4">
         <div className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm">

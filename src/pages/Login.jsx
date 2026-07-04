@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { setAuth, setLoading } from '../redux/authSlice';
 import api from '../api/axios';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
@@ -10,6 +10,7 @@ import BrandLogo from '../components/BrandLogo.jsx';
 export default function Login() {
     const [searchParams] = useSearchParams();
     const role = searchParams.get('role') || 'user';
+    const { user, isAuthenticated } = useSelector((state) => state.auth);
     
     // States for All users
     const [email, setEmail] = useState('');
@@ -21,12 +22,18 @@ export default function Login() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
-    const handleRedirect = (user) => {
-        if (user.role === 'admin') navigate('/admin-dash');
-        else if (user.role === 'lawyer') navigate('/lawyer-dash');
-        else if (user.role === 'student') navigate('/student-home');
-        else navigate('/user-home');
+    const handleRedirect = (nextUser, options) => {
+        if (nextUser.role === 'admin') navigate('/admin-dash', options);
+        else if (nextUser.role === 'lawyer') navigate('/lawyer-dash', options);
+        else if (nextUser.role === 'student') navigate('/student-home', options);
+        else navigate('/user-home', options);
     };
+
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            handleRedirect(user, { replace: true });
+        }
+    }, [isAuthenticated, user]);
 
     const handleEmailLogin = async (e) => {
         e.preventDefault();
@@ -52,7 +59,7 @@ export default function Login() {
                 console.log('🔌 Socket connected on login');
             }
             
-            handleRedirect(data.user);
+            handleRedirect(data.user, { replace: true });
         } catch (err) {
             setErrorMessage(err.response?.data?.message || 'Login failed. Please try again.');
             setErrorCode(err.response?.data?.code || '');
@@ -68,7 +75,9 @@ export default function Login() {
         <div className="min-h-screen bg-[#f3f8fb] flex items-center justify-center p-4 font-sans text-[#062552]">
             <div className="w-full max-w-md bg-white border border-[#d7e9ef] p-8 rounded-3xl shadow-2xl shadow-[#062552]/10">
                 <div className="flex justify-center mb-6">
-                    <BrandLogo className="h-16 max-w-[230px]" />
+                    <Link to="/" aria-label="Go to role selection">
+                        <BrandLogo className="h-24 max-w-[300px]" />
+                    </Link>
                 </div>
                 <h2 className="text-3xl font-bold text-center mb-2 capitalize">
                     {role} Login
@@ -132,11 +141,6 @@ export default function Login() {
                         Register
                     </Link>
                 </p>
-                <div className="mt-4 text-center">
-                    <Link to="/" className="text-[#5f7488] hover:text-[#062552] text-sm transition">
-                        &larr; Back to Role Selection
-                    </Link>
-                </div>
             </div>
         </div>
     );
