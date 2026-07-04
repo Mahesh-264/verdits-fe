@@ -7,9 +7,9 @@ import {
     deleteBatchMessages, toggleMessageSelection,
     clearSelection, removeMessageLocally, sendMediaMessage
 } from '../redux/chatSlice';
-import { logout } from '../redux/authSlice';
 import api from '../api/axios';
 import globalSocket from '../utils/socket.jsx';
+import useSessionLogout from '../hooks/useSessionLogout';
 import {
     FaEllipsisV, FaPaperPlane, FaTimes, FaPhone, FaVideo, FaCommentDots,
     FaPaperclip, FaSignOutAlt, FaSearch, FaCheckDouble,
@@ -101,6 +101,7 @@ export default function Chat() {
 
     const { user } = useSelector(state => state.auth);
     const { conversations, availableLawyers, messages, activePartner, selectedMessages } = useSelector(state => state.chat);
+    const handleLogout = useSessionLogout(user?.role);
     const [lockedPartnerId, setLockedPartnerId] = useState(
         location.state?.selectedPartner?._id || location.state?.selectedPartner?.id || searchParams.get('partnerId') || null
     );
@@ -427,7 +428,7 @@ export default function Chat() {
                             <span className="text-[11px] text-[#8de2c6] font-medium uppercase tracking-wider">{user?.role}</span>
                         </div>
                     </div>
-                    <button onClick={() => dispatch(logout())} className="text-[#b8c8dc] hover:text-white p-2 transition-colors"><FaSignOutAlt size={18} /></button>
+                    <button onClick={handleLogout} className="text-[#b8c8dc] hover:text-white p-2 transition-colors" aria-label="Log out"><FaSignOutAlt size={18} /></button>
                 </div>
 
                 <div className="p-2 border-b border-[#dbe2ef]">

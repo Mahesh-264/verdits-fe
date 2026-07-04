@@ -3,9 +3,12 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setAuth, setLoading } from '../redux/authSlice';
 import api from '../api/axios';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { setAccessToken, setRefreshToken } from '../utils/authStorage';
+import { authenticateWithGoogle } from '../api/authApi.js';
+import { setAccessToken, setRefreshToken, storeAuthSession } from '../utils/authStorage';
+import { getDashboardPath } from '../utils/authRedirect.js';
 import socket from '../utils/socket.jsx';
 import BrandLogo from '../components/BrandLogo.jsx';
+import GoogleAuthButton from '../components/auth/GoogleAuthButton.jsx';
 
 export default function Login() {
     const [searchParams] = useSearchParams();
@@ -15,6 +18,7 @@ export default function Login() {
     // States for All users
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [remember, setRemember] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [errorCode, setErrorCode] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,11 +33,13 @@ export default function Login() {
         else navigate('/user-home', options);
     };
 
-    useEffect(() => {
-        if (isAuthenticated && user) {
-            handleRedirect(user, { replace: true });
+    const connectSocket = (accessToken) => {
+        socket.auth.token = accessToken;
+        if (!socket.connected) {
+            socket.connect();
+            console.log('Socket connected on login');
         }
-    }, [isAuthenticated, user]);
+    };
 
     const handleEmailLogin = async (e) => {
         e.preventDefault();
@@ -51,15 +57,8 @@ export default function Login() {
             setAccessToken(data.accessToken);
             setRefreshToken(data.refreshToken);
             dispatch(setAuth(data.user));
-            
-            // 🔌 Connect socket immediately after login
-            socket.auth.token = data.accessToken;
-            if (!socket.connected) {
-                socket.connect();
-                console.log('🔌 Socket connected on login');
-            }
-            
-            handleRedirect(data.user, { replace: true });
+            connectSocket(data.accessToken);
+            handleRedirect(data.user);
         } catch (err) {
             setErrorMessage(err.response?.data?.message || 'Login failed. Please try again.');
             setErrorCode(err.response?.data?.code || '');
@@ -69,7 +68,39 @@ export default function Login() {
         }
     };
 
+    const handleGoogleSuccess = async ({ credential }) => {
+        setErrorMessage('');
+        setErrorCode('');
+        setIsSubmitting(true);
 
+        try {
+            const result = await authenticateWithGoogle({ credential, role });
+
+            if (result.requiresProfile) {
+                const googleSignup = {
+                    completionToken: result.completionToken,
+                    googleProfile: result.googleProfile,
+                    role,
+                    remember,
+                };
+                window.sessionStorage.setItem('googleSignup', JSON.stringify(googleSignup));
+                navigate(`/register?role=${role}`, {
+                    state: { googleSignup },
+                });
+                return;
+            }
+
+            storeAuthSession(result, remember);
+            dispatch(setAuth(result.user));
+            connectSocket(result.accessToken);
+            navigate(getDashboardPath(result.user.role), { replace: true });
+        } catch (err) {
+            setErrorMessage(err.response?.data?.message || 'Google sign-in failed.');
+            setErrorCode(err.response?.data?.code || '');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-[#f3f8fb] flex items-center justify-center p-4 font-sans text-[#062552]">
@@ -83,6 +114,18 @@ export default function Login() {
                     {role} Login
                 </h2>
                 <p className="text-[#5f7488] text-center mb-8">Access your {role} dashboard</p>
+
+                <GoogleAuthButton
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => setErrorMessage('Google sign-in was cancelled or failed.')}
+                    disabled={isSubmitting}
+                />
+
+                <div className="my-5 flex items-center gap-3 text-xs uppercase text-[#8a95ab]">
+                    <span className="h-px flex-1 bg-[#d7e9ef]" />
+                    <span>or sign in with email</span>
+                    <span className="h-px flex-1 bg-[#d7e9ef]" />
+                </div>
 
                 <form onSubmit={handleEmailLogin} className="space-y-4">
                     <input
@@ -113,6 +156,22 @@ export default function Login() {
                             }
                         }}
                     />
+
+                    <div className="flex items-center justify-between gap-4 text-sm">
+                        <label className="flex items-center gap-2 text-[#5f7488]">
+                            <input
+                                type="checkbox"
+                                checked={remember}
+                                onChange={(event) => setRemember(event.target.checked)}
+                                className="h-4 w-4 accent-[#15a276]"
+                            />
+                            Remember me
+                        </label>
+                        <Link to={`/forgot-password?role=${role}`} className="font-semibold text-[#15a276] hover:underline">
+                            Forgot Password
+                        </Link>
+                    </div>
+
                     {errorMessage && (
                         <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
                             <p>{errorMessage}</p>
@@ -136,7 +195,7 @@ export default function Login() {
                 </form>
 
                 <p className="mt-8 text-center text-[#5f7488] text-sm">
-                    Don't have an account?
+                    Don&apos;t have an account?
                     <Link to={`/register?role=${role}`} className="text-[#15a276] font-semibold hover:text-[#118b66] hover:underline ml-1">
                         Register
                     </Link>

@@ -1,16 +1,21 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Provider } from 'react-redux';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { store } from './redux/store.jsx';
 import './index.css'
 import App from './App.jsx'
-import LandingPage from '../src/LandingPage.jsx';
 
-createRoot(document.getElementById('root')).render(
+const app = (
   <StrictMode>
     <Provider store={store}>
-      {/* <LandingPage /> */}
       <App />
     </Provider>
-  </StrictMode>,
+  </StrictMode>
+);
+
+const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+createRoot(document.getElementById('root')).render(
+  clientId ? <GoogleOAuthProvider clientId={clientId}>{app}</GoogleOAuthProvider> : app,
 )

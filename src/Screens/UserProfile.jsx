@@ -15,8 +15,9 @@ import {
   X,
 } from 'lucide-react';
 import api from '../api/axios';
-import { logout, updateUser } from '../redux/authSlice';
-import AppHeader from '../components/AppHeader.jsx';
+import { updateUser } from '../redux/authSlice';
+import BrandLogo from '../components/BrandLogo';
+import useSessionLogout from '../hooks/useSessionLogout';
 
 // Shared profile editor for users and lawyers, including location refresh for discovery accuracy.
 const UserProfile = () => {
@@ -49,10 +50,7 @@ const UserProfile = () => {
     isOnline: Boolean(user?.lawyerProfile?.isOnline),
   });
 
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate('/login');
-  };
+  const handleLogout = useSessionLogout(user?.role);
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
