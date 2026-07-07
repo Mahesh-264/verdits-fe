@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { setAuth, setLoading } from '../redux/authSlice';
 import api from '../api/axios';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
@@ -13,7 +13,6 @@ import GoogleAuthButton from '../components/auth/GoogleAuthButton.jsx';
 export default function Login() {
     const [searchParams] = useSearchParams();
     const role = searchParams.get('role') || 'user';
-    const { user, isAuthenticated } = useSelector((state) => state.auth);
     
     // States for All users
     const [email, setEmail] = useState('');
@@ -114,6 +113,9 @@ export default function Login() {
                     {role} Login
                 </h2>
                 <p className="text-[#5f7488] text-center mb-8">Access your {role} dashboard</p>
+                <Link to="/" className="mb-6 inline-flex text-sm font-semibold text-[#15a276] hover:underline">
+                    &larr; Back to Role Selection
+                </Link>
 
                 <GoogleAuthButton
                     onSuccess={handleGoogleSuccess}
