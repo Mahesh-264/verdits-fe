@@ -185,8 +185,21 @@ export default function Login() {
                     </div>
 
                     {errorMessage && (
+<<<<<<< HEAD
                         <div data-error-code={errorCode || undefined} className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
                             <p>{errorMessage}</p>
+=======
+                        <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-semibold text-red-900 shadow-sm">
+                            <p>{errorMessage}</p>
+                            {errorCode === 'ACCOUNT_NOT_FOUND' && (
+                                <p className="mt-2 text-red-800">
+                                    New here?{' '}
+                                    <Link to={`/register?role=${role}`} className="font-bold text-red-950 underline underline-offset-2">
+                                        Create your account
+                                    </Link>
+                                </p>
+                            )}
+>>>>>>> 2ef6863de39dd4cc32d8007197ab33e77173eca3
                         </div>
                     )}
                     <button

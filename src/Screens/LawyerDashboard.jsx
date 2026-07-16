@@ -77,9 +77,220 @@ const noticeDocumentTypes = [
   'Custom Legal Notice',
 ];
 
+const commonNoticeFields = [
+  {
+    id: 'clientNames',
+    label: 'Client / sender name',
+    type: 'names',
+    addLabel: 'Add another client',
+    required: true,
+  },
+  {
+    id: 'oppositePartyNames',
+    label: 'Opposite party / recipient name',
+    type: 'names',
+    addLabel: 'Add another recipient',
+    required: true,
+  },
+  {
+    id: 'clientAddress',
+    label: 'Client address',
+    type: 'textarea',
+    rows: 2,
+  },
+  {
+    id: 'oppositePartyAddress',
+    label: 'Recipient address',
+    type: 'textarea',
+    rows: 2,
+    required: true,
+  },
+  {
+    id: 'jurisdiction',
+    label: 'Jurisdiction / city',
+    type: 'text',
+  },
+  {
+    id: 'legalNoticeReceived',
+    label: 'Legal notice already received or sent',
+    type: 'checkbox',
+  },
+  {
+    id: 'previousNoticeDetails',
+    label: 'Previous notice details',
+    type: 'textarea',
+    rows: 2,
+    placeholder: 'Mention date, sender, reply status, or any important reference.',
+    dependsOn: 'legalNoticeReceived',
+  },
+];
+
+const noticeTypeFields = {
+  'Legal Notice for Recovery of Money': [
+    { id: 'amount', label: 'Amount due', type: 'text', required: true },
+    { id: 'transactionDate', label: 'Transaction / loan date', type: 'date' },
+    { id: 'dueDate', label: 'Payment due date', type: 'date' },
+    { id: 'paymentProof', label: 'Payment proof / documents', type: 'textarea', rows: 2 },
+    { id: 'reliefRequired', label: 'Relief required', type: 'text', placeholder: 'Example: pay full amount with interest within 15 days' },
+  ],
+  'Legal Notice for Breach of Contract': [
+    { id: 'contractDate', label: 'Contract date', type: 'date' },
+    { id: 'contractPurpose', label: 'Contract purpose', type: 'text', required: true },
+    { id: 'breachedTerms', label: 'Terms breached', type: 'textarea', rows: 2, required: true },
+    { id: 'losses', label: 'Loss / damage suffered', type: 'textarea', rows: 2 },
+    { id: 'reliefRequired', label: 'Relief required', type: 'text' },
+  ],
+  'Tenant Eviction Notice': [
+    { id: 'propertyAddress', label: 'Rental property address', type: 'textarea', rows: 2, required: true },
+    { id: 'tenancyStartDate', label: 'Tenancy start date', type: 'date' },
+    { id: 'rentAmount', label: 'Monthly rent', type: 'text' },
+    { id: 'evictionReason', label: 'Reason for eviction', type: 'textarea', rows: 2, required: true },
+    { id: 'vacateDeadline', label: 'Vacate deadline', type: 'date' },
+  ],
+  'Consumer Complaint Notice': [
+    { id: 'productService', label: 'Product / service', type: 'text', required: true },
+    { id: 'purchaseDate', label: 'Purchase / service date', type: 'date' },
+    { id: 'invoiceDetails', label: 'Invoice / order details', type: 'text' },
+    { id: 'defectOrIssue', label: 'Defect or issue faced', type: 'textarea', rows: 2, required: true },
+    { id: 'reliefRequired', label: 'Refund / replacement / compensation required', type: 'text' },
+  ],
+  'Employment Termination Dispute Notice': [
+    { id: 'employeeName', label: 'Employee name', type: 'text' },
+    { id: 'employerName', label: 'Employer name', type: 'text' },
+    { id: 'joiningDate', label: 'Joining date', type: 'date' },
+    { id: 'terminationDate', label: 'Termination date', type: 'date', required: true },
+    { id: 'terminationIssue', label: 'Termination issue', type: 'textarea', rows: 2, required: true },
+    { id: 'duesPending', label: 'Pending salary / dues', type: 'text' },
+  ],
+  'Cheque Bounce Notice': [
+    { id: 'chequeNumber', label: 'Cheque number', type: 'text', required: true },
+    { id: 'chequeDate', label: 'Cheque date', type: 'date' },
+    { id: 'bankName', label: 'Bank name', type: 'text' },
+    { id: 'chequeAmount', label: 'Cheque amount', type: 'text', required: true },
+    { id: 'bounceDate', label: 'Bounce date', type: 'date' },
+    { id: 'returnReason', label: 'Bank return reason', type: 'text' },
+  ],
+  'Property Dispute Notice': [
+    { id: 'propertyAddress', label: 'Property address', type: 'textarea', rows: 2, required: true },
+    { id: 'ownershipDetails', label: 'Ownership / possession details', type: 'textarea', rows: 2 },
+    { id: 'disputeType', label: 'Type of dispute', type: 'text', required: true },
+    { id: 'incidentDate', label: 'Incident date', type: 'date' },
+    { id: 'reliefRequired', label: 'Relief required', type: 'text' },
+  ],
+  'Defamation Notice': [
+    { id: 'defamatoryStatement', label: 'Defamatory statement / act', type: 'textarea', rows: 2, required: true },
+    { id: 'publicationDate', label: 'Date of publication / statement', type: 'date' },
+    { id: 'publicationMedium', label: 'Where it was said or published', type: 'text' },
+    { id: 'harmCaused', label: 'Harm caused', type: 'textarea', rows: 2 },
+    { id: 'reliefRequired', label: 'Apology / removal / compensation required', type: 'text' },
+  ],
+  'Custom Legal Notice': [
+    { id: 'customIssue', label: 'What is this notice about?', type: 'textarea', rows: 3, required: true },
+    { id: 'importantDates', label: 'Important dates', type: 'text' },
+    { id: 'supportingDocuments', label: 'Supporting documents', type: 'textarea', rows: 2 },
+    { id: 'reliefRequired', label: 'Relief required', type: 'text' },
+  ],
+};
+
+const additionalNoticeFields = [
+  {
+    id: 'facts',
+    label: 'Facts in short',
+    type: 'textarea',
+    rows: 3,
+    placeholder: 'Add the important story in simple points.',
+    required: true,
+  },
+  {
+    id: 'deadline',
+    label: 'Compliance deadline',
+    type: 'text',
+    placeholder: 'Example: 15 days from receipt of this notice',
+  },
+];
+
 const initialNoticeForm = {
   documentType: noticeDocumentTypes[0],
-  details: '',
+  clientNames: [''],
+  oppositePartyNames: [''],
+  clientAddress: '',
+  oppositePartyAddress: '',
+  jurisdiction: '',
+  legalNoticeReceived: false,
+  previousNoticeDetails: '',
+  amount: '',
+  transactionDate: '',
+  dueDate: '',
+  paymentProof: '',
+  reliefRequired: '',
+  contractDate: '',
+  contractPurpose: '',
+  breachedTerms: '',
+  losses: '',
+  propertyAddress: '',
+  tenancyStartDate: '',
+  rentAmount: '',
+  evictionReason: '',
+  vacateDeadline: '',
+  productService: '',
+  purchaseDate: '',
+  invoiceDetails: '',
+  defectOrIssue: '',
+  employeeName: '',
+  employerName: '',
+  joiningDate: '',
+  terminationDate: '',
+  terminationIssue: '',
+  duesPending: '',
+  chequeNumber: '',
+  chequeDate: '',
+  bankName: '',
+  chequeAmount: '',
+  bounceDate: '',
+  returnReason: '',
+  ownershipDetails: '',
+  disputeType: '',
+  incidentDate: '',
+  defamatoryStatement: '',
+  publicationDate: '',
+  publicationMedium: '',
+  harmCaused: '',
+  customIssue: '',
+  importantDates: '',
+  supportingDocuments: '',
+  facts: '',
+  deadline: '',
+};
+
+const getNoticeFields = (documentType) => [
+  ...commonNoticeFields,
+  ...(noticeTypeFields[documentType] || []),
+  ...additionalNoticeFields,
+];
+
+const isNoticeFieldFilled = (field, form) => {
+  if (field.type === 'checkbox') return true;
+  if (field.type === 'names') {
+    return (form[field.id] || []).some((value) => String(value || '').trim());
+  }
+  return Boolean(String(form[field.id] || '').trim());
+};
+
+const formatNoticeDetails = (documentType, form) => {
+  const lines = getNoticeFields(documentType)
+    .filter((field) => !field.dependsOn || form[field.dependsOn])
+    .map((field) => {
+      const value = field.type === 'names'
+        ? (form[field.id] || []).map((name) => String(name || '').trim()).filter(Boolean).join(', ')
+        : field.type === 'checkbox'
+          ? (form[field.id] ? 'Yes' : 'No')
+          : String(form[field.id] || '').trim();
+
+      return value ? `${field.label}: ${value}` : '';
+    })
+    .filter(Boolean);
+
+  return [`Document type: ${documentType}`, ...lines].join('\n');
 };
 
 const getNoticeRequestError = (error, fallbackMessage) => {
@@ -485,16 +696,56 @@ export default function LawyerDashboard() {
     }
   };
 
+  const selectedNoticeFields = useMemo(
+    () => getNoticeFields(noticeForm.documentType),
+    [noticeForm.documentType]
+  );
+
   const handleNoticeInput = (event) => {
-    const { name, value } = event.target;
-    setNoticeForm((current) => ({ ...current, [name]: value }));
+    const { name, type, checked, value } = event.target;
+    setNoticeForm((current) => ({
+      ...current,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const handleNoticeNameInput = (fieldId, index, value) => {
+    setNoticeForm((current) => {
+      const names = [...(current[fieldId] || [''])];
+      names[index] = value;
+      return { ...current, [fieldId]: names };
+    });
+  };
+
+  const addNoticeName = (fieldId) => {
+    setNoticeForm((current) => ({
+      ...current,
+      [fieldId]: [...(current[fieldId] || ['']), ''],
+    }));
+  };
+
+  const removeNoticeName = (fieldId, index) => {
+    setNoticeForm((current) => {
+      const names = (current[fieldId] || ['']).filter((_, nameIndex) => nameIndex !== index);
+      return { ...current, [fieldId]: names.length ? names : [''] };
+    });
   };
 
   const handleGenerateNotice = async (event) => {
     event.preventDefault();
 
-    if (!noticeForm.documentType || !noticeForm.details.trim()) {
-      setNoticeError('Please select a document type and add the basic details.');
+    const missingField = selectedNoticeFields.find(
+      (field) => field.required
+        && (!field.dependsOn || noticeForm[field.dependsOn])
+        && !isNoticeFieldFilled(field, noticeForm)
+    );
+
+    if (!noticeForm.documentType || missingField) {
+      setNoticeError(
+        missingField
+          ? `Please add ${missingField.label.toLowerCase()}.`
+          : 'Please select a document type and add the basic details.'
+      );
       return;
     }
 
@@ -502,7 +753,10 @@ export default function LawyerDashboard() {
       setNoticeLoading(true);
       setNoticeError('');
       setNoticeMessage('');
-      const { data } = await api.post('/ai/notice/generate', noticeForm);
+      const { data } = await api.post('/ai/notice/generate', {
+        documentType: noticeForm.documentType,
+        details: formatNoticeDetails(noticeForm.documentType, noticeForm),
+      });
       setNoticeDraft(data?.draft || '');
     } catch (error) {
       console.error('Error generating notice:', error);
@@ -1287,24 +1541,108 @@ export default function LawyerDashboard() {
                   name="documentType"
                   value={noticeForm.documentType}
                   onChange={handleNoticeInput}
-                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-[#15a276]"
+                  className="w-full rounded-xl border border-zinc-700 bg-white px-4 py-3 text-zinc-950 outline-none focus:border-[#15a276]"
                 >
                   {noticeDocumentTypes.map((type) => (
-                    <option key={type} value={type}>{type}</option>
+                    <option key={type} value={type} className="text-zinc-950">{type}</option>
                   ))}
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-bold text-zinc-200 mb-2">Basic Information</label>
-                <textarea
-                  name="details"
-                  value={noticeForm.details}
-                  onChange={handleNoticeInput}
-                  rows="13"
-                  placeholder="Add party names, addresses, facts, dates, amounts, obligations, notices already sent, relief required, deadline, and jurisdiction."
-                  className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-[#15a276]"
-                />
+                <div className="max-h-[48vh] space-y-4 overflow-y-auto pr-2">
+                  {selectedNoticeFields.map((field) => {
+                    if (field.dependsOn && !noticeForm[field.dependsOn]) return null;
+
+                    if (field.type === 'checkbox') {
+                      return (
+                        <label
+                          key={field.id}
+                          className="flex items-start gap-3 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-semibold text-zinc-100"
+                        >
+                          <input
+                            type="checkbox"
+                            name={field.id}
+                            checked={Boolean(noticeForm[field.id])}
+                            onChange={handleNoticeInput}
+                            className="mt-1 h-4 w-4 rounded border-zinc-600 accent-[#15a276]"
+                          />
+                          {field.label}
+                        </label>
+                      );
+                    }
+
+                    if (field.type === 'names') {
+                      const names = noticeForm[field.id] || [''];
+
+                      return (
+                        <div key={field.id}>
+                          <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">
+                            {field.label}{field.required ? ' *' : ''}
+                          </label>
+                          <div className="space-y-2">
+                            {names.map((name, index) => (
+                              <div key={`${field.id}-${index}`} className="flex gap-2">
+                                <input
+                                  value={name}
+                                  onChange={(event) => handleNoticeNameInput(field.id, index, event.target.value)}
+                                  placeholder={`${field.label} ${index + 1}`}
+                                  className="min-w-0 flex-1 rounded-xl border border-zinc-700 bg-white px-4 py-3 text-zinc-950 outline-none focus:border-[#15a276]"
+                                />
+                                {names.length > 1 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeNoticeName(field.id, index)}
+                                    className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-zinc-300 bg-white text-zinc-950 transition hover:border-red-700 hover:bg-red-50 hover:text-red-800"
+                                    aria-label={`Remove ${field.label.toLowerCase()}`}
+                                  >
+                                    <FaTimes />
+                                  </button>
+                                ) : null}
+                              </div>
+                            ))}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => addNoticeName(field.id)}
+                            className="mt-2 inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-bold text-zinc-950 transition hover:border-[#15a276] hover:bg-emerald-50"
+                          >
+                            <FaPlus />
+                            {field.addLabel || 'Add another name'}
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div key={field.id}>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">
+                          {field.label}{field.required ? ' *' : ''}
+                        </label>
+                        {field.type === 'textarea' ? (
+                          <textarea
+                            name={field.id}
+                            value={noticeForm[field.id] || ''}
+                            onChange={handleNoticeInput}
+                            rows={field.rows || 3}
+                            placeholder={field.placeholder || field.label}
+                            className="w-full resize-none rounded-xl border border-zinc-700 bg-white px-4 py-3 text-zinc-950 outline-none focus:border-[#15a276]"
+                          />
+                        ) : (
+                          <input
+                            type={field.type}
+                            name={field.id}
+                            value={noticeForm[field.id] || ''}
+                            onChange={handleNoticeInput}
+                            placeholder={field.placeholder || field.label}
+                            className="w-full rounded-xl border border-zinc-700 bg-white px-4 py-3 text-zinc-950 outline-none focus:border-[#15a276]"
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               {noticeError ? (

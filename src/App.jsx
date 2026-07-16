@@ -96,8 +96,9 @@ export default function App() {
   }, [dispatch, isAuthenticated]);
 
   return (
-    <BrowserRouter>
-      <Routes>
+    <div className="min-h-screen lawyer-theme">
+      <BrowserRouter>
+        <Routes>
         {/* --- Public Routes --- */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -165,9 +166,11 @@ export default function App() {
         {/* --- Admin Dashboard --- */}
         <Route path="/admin-dash" element={
           <ProtectedRoute allowedRoles={['admin']}>
-            <div className="min-h-screen bg-zinc-950 text-white p-8">
-              <h1 className="text-3xl font-bold text-red-500">Admin Panel</h1>
-              <p className="text-zinc-400 mt-2">Lawyer verification and platform stats.</p>
+            <div className="min-h-screen p-8">
+              <div className="max-w-5xl mx-auto rounded-3xl border border-[var(--verdicts-line)] bg-[var(--verdicts-panel)] p-8 shadow-xl shadow-[rgba(85,65,0,0.12)]">
+                <h1 className="text-3xl font-bold text-[var(--verdicts-ink)]">Admin Panel</h1>
+                <p className="mt-2 text-[var(--verdicts-muted)]">Lawyer verification and platform stats.</p>
+              </div>
             </div>
           </ProtectedRoute>
         } />
@@ -212,7 +215,8 @@ export default function App() {
         {/* --- Global Redirects --- */}
         <Route path="/" element={<LandingPage />} />
         <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </BrowserRouter>
+        </Routes>
+      </BrowserRouter>
+    </div>
   );
 }
