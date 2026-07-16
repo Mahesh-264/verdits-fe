@@ -22,7 +22,7 @@ export default function VerifyOtp() {
   const email = searchParams.get('email') || pending?.email || '';
   const role = searchParams.get('role') || pending?.role || 'user';
   const [digits, setDigits] = useState(Array(6).fill(''));
-  const [seconds, setSeconds] = useState(60);
+  const [seconds, setSeconds] = useState(30);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -82,7 +82,7 @@ export default function VerifyOtp() {
     try {
       await resendRegistrationOtp({ email, role });
       setDigits(Array(6).fill(''));
-      setSeconds(60);
+      setSeconds(30);
       setMessage('A new code was sent to your email.');
       inputs.current[0]?.focus();
     } catch (requestError) {
@@ -102,6 +102,9 @@ export default function VerifyOtp() {
         <p className="mt-2 text-center text-sm text-[#5f7488]">
           Enter the 6-digit code sent to <span className="font-semibold text-[#062552]">{email}</span>
         </p>
+        <Link to="/" className="mt-6 inline-flex text-sm font-semibold text-[#15a276] hover:underline">
+          &larr; Back to Role Selection
+        </Link>
 
         <form onSubmit={handleSubmit} className="mt-8">
           <div className="grid grid-cols-6 gap-2" onPaste={handlePaste}>

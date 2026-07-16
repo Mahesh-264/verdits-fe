@@ -4,9 +4,13 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import api from '../api/axios.jsx';
 import {
     authenticateWithGoogle,
+    checkRegistrationEmail,
+    checkRegistrationPhone,
     registerAccount,
-    sendPhoneOtp,
-    verifyPhoneOtp,
+    sendRegistrationEmailOtp,
+    sendRegistrationPhoneOtp,
+    verifyRegistrationEmailOtp,
+    verifyRegistrationPhoneOtp,
 } from '../api/authApi.js';
 import { FaGavel, FaMapMarkerAlt, FaSpinner, FaUser, FaUserGraduate } from 'react-icons/fa';
 import BrandLogo from '../components/BrandLogo.jsx';
@@ -75,6 +79,10 @@ const readGoogleSignup = () => {
     }
 };
 
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+const normalizePhoneInput = (value) => String(value || '').replace(/[\s-]/g, '');
+const isValidMobile = (value) => /^\+?[0-9]{10,15}$/.test(normalizePhoneInput(value));
+
 export default function Register() {
     const [searchParams] = useSearchParams();
     const role = searchParams.get('role') || 'user';
@@ -92,10 +100,17 @@ export default function Register() {
     const [locationHint, setLocationHint] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
-    const [mobileOtp, setMobileOtp] = useState('');
-    const [mobileOtpSent, setMobileOtpSent] = useState(false);
-    const [mobileVerified, setMobileVerified] = useState(false);
-    const [mobileBusy, setMobileBusy] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
+    const [emailOtp, setEmailOtp] = useState('');
+    const [emailOtpSent, setEmailOtpSent] = useState(false);
+    const [emailVerified, setEmailVerified] = useState(false);
+    const [emailBusy, setEmailBusy] = useState(false);
+    const [emailResendSeconds, setEmailResendSeconds] = useState(0);
+    const [phoneOtp, setPhoneOtp] = useState('');
+    const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+    const [phoneVerified, setPhoneVerified] = useState(false);
+    const [phoneBusy, setPhoneBusy] = useState(false);
+    const [phoneResendSeconds, setPhoneResendSeconds] = useState(0);
     const [googleSignup, setGoogleSignup] = useState(null);
     const [formData, setFormData] = useState({
         firstName: '',
@@ -132,6 +147,8 @@ export default function Register() {
         }
 
         setGoogleSignup(saved);
+        setEmailVerified(true);
+        setEmailOtpSent(false);
         setFormData((current) => ({
             ...current,
             firstName: saved.googleProfile?.firstName || current.firstName,
@@ -141,6 +158,18 @@ export default function Register() {
             confirmPassword: '',
         }));
     }, [location.state, role]);
+
+    useEffect(() => {
+        if (emailResendSeconds <= 0) return undefined;
+        const timer = window.setTimeout(() => setEmailResendSeconds((seconds) => Math.max(seconds - 1, 0)), 1000);
+        return () => window.clearTimeout(timer);
+    }, [emailResendSeconds]);
+
+    useEffect(() => {
+        if (phoneResendSeconds <= 0) return undefined;
+        const timer = window.setTimeout(() => setPhoneResendSeconds((seconds) => Math.max(seconds - 1, 0)), 1000);
+        return () => window.clearTimeout(timer);
+    }, [phoneResendSeconds]);
 
     const syncResolvedAddress = useCallback((resolvedAddress, hint = '') => {
         const normalizedAddress = normalizeAddressPayload(resolvedAddress);
@@ -412,6 +441,8 @@ export default function Register() {
                 };
                 window.sessionStorage.setItem('googleSignup', JSON.stringify(nextGoogleSignup));
                 setGoogleSignup(nextGoogleSignup);
+                setEmailVerified(true);
+                setEmailOtpSent(false);
                 setFormData((current) => ({
                     ...current,
                     firstName: result.googleProfile?.firstName || current.firstName,
@@ -434,36 +465,99 @@ export default function Register() {
         }
     };
 
-    const handleSendMobileOtp = async () => {
-        if (!formData.phone.trim()) {
-            setErrorMessage('Enter your mobile number first.');
+    const handleSendEmailOtp = async () => {
+        const email = formData.email.trim();
+        if (!isValidEmail(email)) {
+            setErrorMessage('Invalid email');
             return;
         }
 
-        setMobileBusy(true);
+        setEmailBusy(true);
         setErrorMessage('');
+        setSuccessMessage('');
         try {
-            await sendPhoneOtp(formData.phone.trim());
-            setMobileOtpSent(true);
-            setMobileVerified(false);
+            await checkRegistrationEmail({ email, role });
+            const result = await sendRegistrationEmailOtp({
+                email,
+                role,
+                firstName: formData.firstName,
+            });
+            setEmailOtpSent(true);
+            setEmailVerified(false);
+            setEmailOtp('');
+            setEmailResendSeconds(result.resendAfter || 30);
+            setSuccessMessage('OTP sent to your email.');
         } catch (error) {
-            setErrorMessage(error.response?.data?.message || 'Unable to send mobile verification code.');
+            setErrorMessage(error.response?.data?.message || 'Unable to send email verification code.');
         } finally {
-            setMobileBusy(false);
+            setEmailBusy(false);
         }
     };
 
-    const handleVerifyMobileOtp = async () => {
-        setMobileBusy(true);
+    const handleVerifyEmailOtp = async () => {
+        setEmailBusy(true);
         setErrorMessage('');
+        setSuccessMessage('');
         try {
-            await verifyPhoneOtp(formData.phone.trim(), mobileOtp);
-            setMobileVerified(true);
-            setMobileOtpSent(false);
+            const result = await verifyRegistrationEmailOtp({
+                email: formData.email.trim(),
+                role,
+                otp: emailOtp,
+            });
+            setEmailVerified(true);
+            setEmailOtpSent(false);
+            setEmailResendSeconds(0);
+            setSuccessMessage(result.message || 'Verification successful');
         } catch (error) {
-            setErrorMessage(error.response?.data?.message || 'Invalid mobile verification code.');
+            setErrorMessage(error.response?.data?.message || 'Incorrect OTP');
         } finally {
-            setMobileBusy(false);
+            setEmailBusy(false);
+        }
+    };
+
+    const handleSendPhoneOtp = async () => {
+        const phone = normalizePhoneInput(formData.phone);
+        if (!isValidMobile(phone)) {
+            setErrorMessage('Invalid mobile number');
+            return;
+        }
+
+        setPhoneBusy(true);
+        setErrorMessage('');
+        setSuccessMessage('');
+        try {
+            await checkRegistrationPhone({ phone, role });
+            const result = await sendRegistrationPhoneOtp({ phone, role });
+            setPhoneOtpSent(true);
+            setPhoneVerified(false);
+            setPhoneOtp('');
+            setPhoneResendSeconds(result.resendAfter || 30);
+            setSuccessMessage('OTP sent to your mobile number.');
+        } catch (error) {
+            setErrorMessage(error.response?.data?.message || 'Unable to send mobile verification code.');
+        } finally {
+            setPhoneBusy(false);
+        }
+    };
+
+    const handleVerifyPhoneOtp = async () => {
+        setPhoneBusy(true);
+        setErrorMessage('');
+        setSuccessMessage('');
+        try {
+            const result = await verifyRegistrationPhoneOtp({
+                phone: normalizePhoneInput(formData.phone),
+                role,
+                otp: phoneOtp,
+            });
+            setPhoneVerified(true);
+            setPhoneOtpSent(false);
+            setPhoneResendSeconds(0);
+            setSuccessMessage(result.message || 'Verification successful');
+        } catch (error) {
+            setErrorMessage(error.response?.data?.message || 'Incorrect OTP');
+        } finally {
+            setPhoneBusy(false);
         }
     };
 
@@ -477,12 +571,21 @@ export default function Register() {
                 firstName: formData.firstName,
                 lastName: formData.lastName,
                 email: formData.email,
-                phone: formData.phone,
+                phone: normalizePhoneInput(formData.phone),
                 password: formData.password,
                 confirmPassword: formData.confirmPassword,
                 role,
-                phoneVerified: mobileVerified,
+                emailVerified,
+                phoneVerified,
             };
+
+            if (!emailVerified) {
+                throw new Error('Email must be verified before creating an account');
+            }
+
+            if (!phoneVerified) {
+                throw new Error('Mobile number must be verified before creating an account');
+            }
 
             if (role === 'lawyer') {
                 let resolvedAddress = normalizeAddressPayload(formData.address);
@@ -513,20 +616,13 @@ export default function Register() {
                     ...payload,
                     completionToken: googleSignup.completionToken,
                 });
-                window.sessionStorage.setItem('pendingRegistration', JSON.stringify({
-                    email: result.email,
-                    role: result.role,
-                }));
-                navigate(`/verify-otp?email=${encodeURIComponent(result.email)}&role=${result.role}`);
+                window.sessionStorage.removeItem('googleSignup');
+                finishAuth(result);
                 return;
             }
 
             const result = await registerAccount(payload);
-            window.sessionStorage.setItem('pendingRegistration', JSON.stringify({
-                email: result.email,
-                role: result.role,
-            }));
-            navigate(`/verify-otp?email=${encodeURIComponent(result.email)}&role=${result.role}`);
+            finishAuth(result);
         } catch (error) {
             setErrorMessage(error.response?.data?.message || error.message || 'Signup failed');
         } finally {
@@ -539,6 +635,27 @@ export default function Register() {
         if (role === 'student') return <FaUserGraduate className="text-emerald-500 text-3xl" />;
         return <FaUser className="text-[#15a276] text-3xl" />;
     };
+
+    const baseFieldsComplete = Boolean(
+        formData.firstName.trim()
+        && formData.lastName.trim()
+        && isValidEmail(formData.email)
+        && isValidMobile(formData.phone)
+        && formData.password.length >= 8
+        && formData.confirmPassword.length >= 8
+        && formData.password === formData.confirmPassword
+    );
+    const roleFieldsComplete = role === 'lawyer'
+        ? Boolean(
+            formData.barId.trim()
+            && formData.specialization.trim()
+            && formData.languages.trim()
+            && String(formData.experienceYears).trim()
+        )
+        : role === 'student'
+            ? Boolean(formData.collegeName.trim() && isValidEmail(formData.collegeEmail))
+            : true;
+    const canCreateAccount = baseFieldsComplete && roleFieldsComplete && emailVerified && phoneVerified && !submitting;
 
     return (
         <div className="min-h-screen bg-[#f3f8fb] flex items-center justify-center p-4 font-sans text-[#062552] py-12">
@@ -554,6 +671,9 @@ export default function Register() {
                         {isGoogleCompletion ? 'Complete Your Registration' : `${role} Registration`}
                     </h2>
                 </div>
+                <Link to="/" className="mb-6 inline-flex text-sm font-semibold text-[#15a276] hover:underline">
+                    &larr; Back to Role Selection
+                </Link>
 
                 {isGoogleCompletion ? (
                     <p className="mb-6 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
@@ -591,56 +711,136 @@ export default function Register() {
                         className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none w-full"
                         onChange={(event) => setFormData({ ...formData, lastName: event.target.value })}
                     />
-                    <input
-                        type="email"
-                        placeholder="Personal Email ID"
-                        required
-                        readOnly={isGoogleCompletion}
-                        value={formData.email}
-                        className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none w-full md:col-span-2"
-                        onChange={(event) => setFormData({ ...formData, email: event.target.value })}
-                    />
+                    <div className="md:col-span-2 space-y-3">
+                        <div className="flex flex-col gap-3 md:flex-row">
+                            <input
+                                type="email"
+                                placeholder="Personal Email ID"
+                                required
+                                readOnly={emailVerified}
+                                value={formData.email}
+                                className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none flex-1"
+                                onChange={(event) => {
+                                    setFormData({ ...formData, email: event.target.value });
+                                    setEmailVerified(false);
+                                    setEmailOtpSent(false);
+                                    setEmailOtp('');
+                                    setSuccessMessage('');
+                                }}
+                            />
+                            {emailVerified ? (
+                                <div className="flex items-center gap-3">
+                                    <span className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">
+                                        &#10003; Verified
+                                    </span>
+                                    {!isGoogleCompletion && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setEmailVerified(false);
+                                                setEmailOtpSent(false);
+                                            }}
+                                            className="rounded-xl border border-[#d7e9ef] px-4 py-3 text-sm font-bold text-[#5f7488]"
+                                        >
+                                            Edit
+                                        </button>
+                                    )}
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={handleSendEmailOtp}
+                                    disabled={emailBusy || !isValidEmail(formData.email) || emailResendSeconds > 0}
+                                    className="px-6 py-3 bg-[#e8f7f2] text-[#15a276] rounded-xl font-bold whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {emailBusy ? 'Sending...' : emailOtpSent && emailResendSeconds > 0 ? `Resend in ${emailResendSeconds}s` : emailOtpSent ? 'Resend OTP' : 'Verify Email'}
+                                </button>
+                            )}
+                        </div>
+                        {emailOtpSent && !emailVerified && (
+                            <div className="flex flex-col gap-3 md:flex-row">
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    maxLength={6}
+                                    value={emailOtp}
+                                    placeholder="Enter email OTP"
+                                    onChange={(event) => setEmailOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                                    className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none flex-1"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleVerifyEmailOtp}
+                                    disabled={emailBusy || emailOtp.length !== 6}
+                                    className="rounded-xl bg-[#15a276] px-6 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    Verify
+                                </button>
+                            </div>
+                        )}
+                    </div>
 
-                    <div className="md:col-span-2 flex gap-4">
+                    <div className="md:col-span-2 space-y-3">
+                        <div className="flex flex-col gap-3 md:flex-row">
                         <input
                             type="text"
                             placeholder="Mobile Number"
                             required
                             value={formData.phone}
+                            readOnly={phoneVerified}
                             className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none flex-1"
                             onChange={(event) => {
                                 setFormData({ ...formData, phone: event.target.value });
-                                setMobileVerified(false);
-                                setMobileOtpSent(false);
+                                setPhoneVerified(false);
+                                setPhoneOtpSent(false);
+                                setPhoneOtp('');
+                                setSuccessMessage('');
                             }}
                         />
-                        {role === 'student' && (
+                        {phoneVerified ? (
+                            <div className="flex items-center gap-3">
+                                <span className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">
+                                    &#10003; Verified
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setPhoneVerified(false);
+                                        setPhoneOtpSent(false);
+                                    }}
+                                    className="rounded-xl border border-[#d7e9ef] px-4 py-3 text-sm font-bold text-[#5f7488]"
+                                >
+                                    Edit
+                                </button>
+                            </div>
+                        ) : (
                             <button
                                 type="button"
-                                onClick={handleSendMobileOtp}
-                                disabled={mobileBusy || mobileVerified}
+                                onClick={handleSendPhoneOtp}
+                                disabled={phoneBusy || !isValidMobile(formData.phone) || phoneResendSeconds > 0}
                                 className="px-6 py-3 bg-[#e8f7f2] text-[#15a276] rounded-xl font-bold whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                {mobileVerified ? 'Verified' : mobileBusy ? 'Sending...' : 'Verify Mobile'}
+                                {phoneBusy ? 'Sending...' : phoneOtpSent && phoneResendSeconds > 0 ? `Resend in ${phoneResendSeconds}s` : phoneOtpSent ? 'Resend OTP' : 'Verify Mobile'}
                             </button>
                         )}
+                        </div>
                     </div>
 
-                    {role === 'student' && mobileOtpSent && (
-                        <div className="md:col-span-2 flex gap-4">
+                    {phoneOtpSent && !phoneVerified && (
+                        <div className="md:col-span-2 flex flex-col gap-3 md:flex-row">
                             <input
                                 type="text"
                                 inputMode="numeric"
                                 maxLength={6}
-                                value={mobileOtp}
+                                value={phoneOtp}
                                 placeholder="Enter mobile OTP"
-                                onChange={(event) => setMobileOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                                onChange={(event) => setPhoneOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
                                 className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none flex-1"
                             />
                             <button
                                 type="button"
-                                onClick={handleVerifyMobileOtp}
-                                disabled={mobileBusy || mobileOtp.length !== 6}
+                                onClick={handleVerifyPhoneOtp}
+                                disabled={phoneBusy || phoneOtp.length !== 6}
                                 className="rounded-xl bg-[#15a276] px-6 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 Verify
@@ -774,13 +974,19 @@ export default function Register() {
                         </p>
                     )}
 
+                    {successMessage && (
+                        <p className="md:col-span-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                            {successMessage}
+                        </p>
+                    )}
+
                     <button
                         type="submit"
-                        disabled={submitting}
-                        className="md:col-span-2 w-full font-bold py-4 rounded-xl mt-6 transition-all shadow-lg text-white bg-[#062552] hover:bg-[#0b3b70]"
+                        disabled={!canCreateAccount}
+                        className="md:col-span-2 w-full font-bold py-4 rounded-xl mt-6 transition-all shadow-lg text-white bg-[#062552] hover:bg-[#0b3b70] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         {submitting
-                            ? 'Sending verification code...'
+                            ? 'Creating Account...'
                             : 'Create Account'}
                     </button>
                 </form>

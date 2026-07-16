@@ -42,6 +42,9 @@ export default function ResetPassword() {
       <div className="w-full max-w-md rounded-2xl border border-[#d7e9ef] bg-white p-8 shadow-2xl shadow-[#062552]/10">
         <div className="mb-6 flex justify-center"><BrandLogo className="h-16 max-w-[230px]" /></div>
         <h1 className="text-center text-3xl font-bold">Reset password</h1>
+        <Link to="/" className="mt-6 inline-flex text-sm font-semibold text-[#15a276] hover:underline">
+          &larr; Back to Role Selection
+        </Link>
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
           <input type="email" required value={form.email} onChange={update('email')} placeholder="Email Address" className="w-full rounded-xl border border-[#d7e9ef] bg-[#f7fbfc] p-4 outline-none focus:border-[#15a276]" />
           <input type="text" inputMode="numeric" maxLength={6} required value={form.otp} onChange={update('otp')} placeholder="6-digit reset code" className="w-full rounded-xl border border-[#d7e9ef] bg-[#f7fbfc] p-4 outline-none focus:border-[#15a276]" />
