@@ -185,38 +185,26 @@ export default function Login() {
                     </div>
 
                     {errorMessage && (
-<<<<<<< HEAD
                         <div data-error-code={errorCode || undefined} className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
                             <p>{errorMessage}</p>
-=======
-                        <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-semibold text-red-900 shadow-sm">
-                            <p>{errorMessage}</p>
-                            {errorCode === 'ACCOUNT_NOT_FOUND' && (
-                                <p className="mt-2 text-red-800">
-                                    New here?{' '}
-                                    <Link to={`/register?role=${role}`} className="font-bold text-red-950 underline underline-offset-2">
-                                        Create your account
-                                    </Link>
-                                </p>
-                            )}
->>>>>>> 2ef6863de39dd4cc32d8007197ab33e77173eca3
                         </div>
                     )}
+
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="w-full py-4 rounded-xl font-bold shadow-lg transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-70 bg-[#062552] text-white hover:bg-[#0b3b70]"
+                        className="w-full rounded-2xl bg-[#15a276] px-6 py-4 text-white font-semibold transition hover:bg-[#0f8968] disabled:cursor-not-allowed disabled:bg-[#8dc7b7]"
                     >
-                        {isSubmitting ? 'Signing In...' : 'Sign In'}
+                        {isSubmitting ? 'Signing in...' : 'Sign in'}
                     </button>
-                </form>
 
-                <p className="mt-8 text-center text-[#5f7488] text-sm">
-                    Don&apos;t have an account?
-                    <Link to={`/register?role=${role}`} className="text-[#15a276] font-semibold hover:text-[#118b66] hover:underline ml-1">
-                        Register
-                    </Link>
-                </p>
+                    <p className="text-center text-sm text-[#5f7488]">
+                        Don&apos;t have an account?{' '}
+                        <Link to={`/register?role=${role}`} className="text-[#15a276] hover:underline font-medium">
+                            Create your account
+                        </Link>
+                    </p>
+                </form>
             </div>
         </div>
     );
