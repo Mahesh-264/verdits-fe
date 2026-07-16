@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Calendar,
@@ -21,7 +20,6 @@ import useSessionLogout from '../hooks/useSessionLogout';
 
 // Shared profile editor for users and lawyers, including location refresh for discovery accuracy.
 const UserProfile = () => {
-  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const isLawyer = user?.role === 'lawyer';

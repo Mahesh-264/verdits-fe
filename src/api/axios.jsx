@@ -3,6 +3,7 @@ import { clearAuthStorage, getAccessToken, getRefreshToken, setAccessToken } fro
 
 const api = axios.create({
     baseURL: '/api',
+    timeout: 15000,
     withCredentials: true,
     headers: { 'Content-Type': 'application/json' },
 });
@@ -21,7 +22,8 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        const isAuthenticationRequest = /^\/auth\/(login|register|google|forgot-password|reset-password)/.test(originalRequest?.url || '');
+        if (error.response?.status === 401 && !originalRequest._retry && !isAuthenticationRequest) {
             originalRequest._retry = true;
             try {
                 const refreshToken = getRefreshToken();

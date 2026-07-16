@@ -82,6 +82,12 @@ const initialNoticeForm = {
   details: '',
 };
 
+const getNoticeRequestError = (error, fallbackMessage) => {
+  if (error.response?.data?.message) return error.response.data.message;
+  if (error.request) return 'Unable to reach the server. Please check your connection and try again.';
+  return fallbackMessage;
+};
+
 export default function LawyerDashboard() {
   const { user } = useSelector((state) => state.auth);
   const navigate = useNavigate();
@@ -500,7 +506,7 @@ export default function LawyerDashboard() {
       setNoticeDraft(data?.draft || '');
     } catch (error) {
       console.error('Error generating notice:', error);
-      setNoticeError(error.response?.data?.message || 'Failed to generate notice.');
+      setNoticeError(getNoticeRequestError(error, 'Failed to generate notice.'));
     } finally {
       setNoticeLoading(false);
     }
@@ -527,7 +533,7 @@ export default function LawyerDashboard() {
       setNoticeEditPrompt('');
     } catch (error) {
       console.error('Error editing notice:', error);
-      setNoticeError(error.response?.data?.message || 'Failed to edit notice.');
+      setNoticeError(getNoticeRequestError(error, 'Failed to edit notice.'));
     } finally {
       setNoticeEditing(false);
     }

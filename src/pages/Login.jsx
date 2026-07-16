@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setAuth, setLoading } from '../redux/authSlice';
-import api from '../api/axios';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { authenticateWithGoogle } from '../api/authApi.js';
+import { authenticateWithGoogle, loginAccount } from '../api/authApi.js';
 import { setAccessToken, setRefreshToken, storeAuthSession } from '../utils/authStorage';
 import { getDashboardPath } from '../utils/authRedirect.js';
 import socket from '../utils/socket.jsx';
@@ -20,6 +19,7 @@ export default function Login() {
     const [remember, setRemember] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [errorCode, setErrorCode] = useState('');
+    const [errorField, setErrorField] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const dispatch = useDispatch();
@@ -44,11 +44,12 @@ export default function Login() {
         e.preventDefault();
         setErrorMessage('');
         setErrorCode('');
+        setErrorField('');
         setIsSubmitting(true);
         dispatch(setLoading(true));
 
         try {
-            const { data } = await api.post('/auth/login', {
+            const data = await loginAccount({
                 email: email.trim(),
                 password,
                 role,
@@ -59,8 +60,15 @@ export default function Login() {
             connectSocket(data.accessToken);
             handleRedirect(data.user);
         } catch (err) {
-            setErrorMessage(err.response?.data?.message || 'Login failed. Please try again.');
-            setErrorCode(err.response?.data?.code || '');
+            const response = err.response?.data;
+            const message = err.code === 'ECONNABORTED'
+                ? 'The request timed out. Please try again.'
+                : !err.response
+                    ? 'The server is unavailable. Please check your connection and try again.'
+                    : response?.message || 'Unable to sign in. Please try again.';
+            setErrorMessage(message);
+            setErrorCode(response?.code || '');
+            setErrorField(response?.field || '');
         } finally {
             dispatch(setLoading(false));
             setIsSubmitting(false);
@@ -135,12 +143,13 @@ export default function Login() {
                         placeholder="Email Address"
                         required
                         value={email}
-                        className="w-full bg-[#f7fbfc] p-4 rounded-xl outline-none border border-[#d7e9ef] focus:border-[#15a276] transition"
+                        aria-invalid={errorField === 'email'}
+                        className={`w-full bg-[#f7fbfc] p-4 rounded-xl outline-none border focus:border-[#15a276] transition ${errorField === 'email' ? 'border-red-500' : 'border-[#d7e9ef]'}`}
                         onChange={e => {
                             setEmail(e.target.value);
                             if (errorMessage) {
                                 setErrorMessage('');
-                                setErrorCode('');
+                                setErrorCode(''); setErrorField('');
                             }
                         }}
                     />
@@ -149,12 +158,13 @@ export default function Login() {
                         placeholder="Password"
                         required
                         value={password}
-                        className="w-full bg-[#f7fbfc] p-4 rounded-xl outline-none border border-[#d7e9ef] focus:border-[#15a276] transition"
+                        aria-invalid={errorField === 'password'}
+                        className={`w-full bg-[#f7fbfc] p-4 rounded-xl outline-none border focus:border-[#15a276] transition ${errorField === 'password' ? 'border-red-500' : 'border-[#d7e9ef]'}`}
                         onChange={e => {
                             setPassword(e.target.value);
                             if (errorMessage) {
                                 setErrorMessage('');
-                                setErrorCode('');
+                                setErrorCode(''); setErrorField('');
                             }
                         }}
                     />
@@ -175,16 +185,8 @@ export default function Login() {
                     </div>
 
                     {errorMessage && (
-                        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                        <div data-error-code={errorCode || undefined} className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
                             <p>{errorMessage}</p>
-                            {errorCode === 'ACCOUNT_NOT_FOUND' && (
-                                <p className="mt-2 text-red-100">
-                                    New here?{' '}
-                                    <Link to={`/register?role=${role}`} className="font-semibold underline underline-offset-2">
-                                        Create your account
-                                    </Link>
-                                </p>
-                            )}
                         </div>
                     )}
                     <button
