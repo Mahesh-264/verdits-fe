@@ -173,12 +173,12 @@ export default function Login() {
                     </div>
 
                     {errorMessage && (
-                        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                        <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-semibold text-red-900 shadow-sm">
                             <p>{errorMessage}</p>
                             {errorCode === 'ACCOUNT_NOT_FOUND' && (
-                                <p className="mt-2 text-red-100">
+                                <p className="mt-2 text-red-800">
                                     New here?{' '}
-                                    <Link to={`/register?role=${role}`} className="font-semibold underline underline-offset-2">
+                                    <Link to={`/register?role=${role}`} className="font-bold text-red-950 underline underline-offset-2">
                                         Create your account
                                     </Link>
                                 </p>
