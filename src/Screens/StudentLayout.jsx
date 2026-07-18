@@ -20,6 +20,7 @@ export default function StudentLayout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const [showProfileMenu, setShowProfileMenu] = React.useState(false);
 
   React.useEffect(() => {
     const syncStudent = async () => {
@@ -40,6 +41,59 @@ export default function StudentLayout({ children }) {
 
   const displayName = user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
   const profileInitial = (displayName || 'Student').charAt(0).toUpperCase();
+  const locationLabel = user?.address?.city || user?.address?.district || user?.address?.state || '';
+
+  const profileMenu = (
+    <div className="absolute right-0 top-14 z-50 w-80 rounded-2xl border border-[#d7e9ef] bg-white p-4 text-[#062552] shadow-2xl shadow-[#062552]/15">
+      <div className="flex items-start gap-3 border-b border-[#e6eef2] pb-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#15a276]/20 bg-[#15a276] font-bold text-white">
+          {user?.profileImage ? (
+            <img src={user.profileImage} alt="Profile" className="h-full w-full object-cover" />
+          ) : (
+            <span>{profileInitial}</span>
+          )}
+        </div>
+        <div className="min-w-0">
+          <h3 className="truncate text-base font-bold">{displayName || 'Student'}</h3>
+          <p className="text-xs font-bold uppercase tracking-wide text-[#15a276]">Student</p>
+          <p className="mt-1 truncate text-xs text-[#5f7488]">
+            {user?.studentProfile?.collegeName || 'Student profile'}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-2 py-4 text-sm text-[#43556a]">
+        {user?.email ? <p className="truncate">{user.email}</p> : null}
+        {user?.phone ? <p>{user.phone}</p> : null}
+        {locationLabel ? <p className="truncate">{locationLabel}</p> : null}
+        <p className="text-xs font-semibold text-[#5f7488]">
+          Year: <span className="text-[#062552]">{user?.studentProfile?.currentYear || 'Not added'}</span>
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setShowProfileMenu(false);
+            navigate('/student-profile');
+          }}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#d7e9ef] bg-[#f7fbfc] px-3 py-2 text-sm font-bold text-[#062552] transition hover:border-[#15a276]"
+        >
+          <User size={16} />
+          Profile
+        </button>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-900 transition hover:bg-red-100"
+        >
+          <LogOut size={16} />
+          Logout
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#f3f8fb] text-[#062552]">
@@ -48,23 +102,26 @@ export default function StudentLayout({ children }) {
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
             <div className="flex items-center justify-between gap-4 xl:shrink-0">
               <Link to="/student-home" className="shrink-0" aria-label="Go to dashboard home">
-                <BrandLogo className="h-14 max-w-[180px]" variant="dashboard" />
+                <BrandLogo className="h-16" showWordmark />
               </Link>
 
               <div className="flex items-center gap-3 xl:hidden">
                 <NotificationBell buttonClassName="border-[#dbe2ef] bg-white text-[#062552] hover:bg-[#f3f8fb]" />
-                <button
-                  type="button"
-                  onClick={() => navigate('/student-profile')}
-                  className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-[#15a276]/20 bg-[#15a276] font-bold text-white shadow-sm transition hover:scale-[1.03]"
-                  aria-label="Profile"
-                >
-                  {user?.profileImage ? (
-                    <img src={user.profileImage} alt="Profile" className="h-full w-full object-cover" />
-                  ) : (
-                    <span>{profileInitial}</span>
-                  )}
-                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowProfileMenu((current) => !current)}
+                    className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-[#15a276]/20 bg-[#15a276] font-bold text-white shadow-sm transition hover:scale-[1.03]"
+                    aria-label="Profile"
+                  >
+                    {user?.profileImage ? (
+                      <img src={user.profileImage} alt="Profile" className="h-full w-full object-cover" />
+                    ) : (
+                      <span>{profileInitial}</span>
+                    )}
+                  </button>
+                  {showProfileMenu ? profileMenu : null}
+                </div>
               </div>
             </div>
 
@@ -103,18 +160,21 @@ export default function StudentLayout({ children }) {
 
               <div className="hidden items-center gap-3 xl:flex">
                 <NotificationBell buttonClassName="border-[#dbe2ef] bg-white text-[#062552] hover:bg-[#f3f8fb]" />
-                <button
-                  type="button"
-                  onClick={() => navigate('/student-profile')}
-                  className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-[#15a276]/20 bg-[#15a276] font-bold text-white shadow-sm transition hover:scale-[1.03]"
-                  aria-label="Profile"
-                >
-                  {user?.profileImage ? (
-                    <img src={user.profileImage} alt="Profile" className="h-full w-full object-cover" />
-                  ) : (
-                    <span>{profileInitial}</span>
-                  )}
-                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowProfileMenu((current) => !current)}
+                    className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-[#15a276]/20 bg-[#15a276] font-bold text-white shadow-sm transition hover:scale-[1.03]"
+                    aria-label="Profile"
+                  >
+                    {user?.profileImage ? (
+                      <img src={user.profileImage} alt="Profile" className="h-full w-full object-cover" />
+                    ) : (
+                      <span>{profileInitial}</span>
+                    )}
+                  </button>
+                  {showProfileMenu ? profileMenu : null}
+                </div>
               </div>
 
               <button

@@ -305,7 +305,6 @@ export default function LawyerDashboard() {
   const [searchParams] = useSearchParams();
   const [appointments, setAppointments] = useState([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
-  const [showProfileInfo, setShowProfileInfo] = useState(false);
   const [showAppointmentsModal, setShowAppointmentsModal] = useState(false);
   const [showClientsModal, setShowClientsModal] = useState(false);
   const [showStudentInteractionModal, setShowStudentInteractionModal] = useState(false);
@@ -898,40 +897,7 @@ export default function LawyerDashboard() {
 
   return (
     <div className="lawyer-theme min-h-screen bg-[#f3f8fb] text-[#062552] relative">
-      <AppHeader variant="lawyer" onProfileClick={() => setShowProfileInfo((current) => !current)} />
-
-      {showProfileInfo && (
-        <div className="fixed right-4 top-20 w-72 bg-zinc-900 border border-zinc-800 p-5 rounded-xl shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 md:right-6">
-          <div className="text-right">
-            <h3 className="text-lg font-bold text-white leading-tight">
-              {user?.name || (user?.firstName ? `${user.firstName} ${user.lastName}` : 'Lawyer')}
-            </h3>
-            <p className="text-[12px] text-[#15a276] font-bold tracking-wide uppercase">
-              {user?.lawyerProfile?.specialization || 'Legal Services'}
-            </p>
-            <div className="text-[12px] text-zinc-400 mt-3 space-y-2 block border-t border-zinc-800 pt-3">
-              <p className="flex justify-between items-center">
-                <span>Bar Council ID:</span>
-                <span className="text-zinc-200 font-medium bg-zinc-950 px-2 py-1 rounded">
-                  {user?.lawyerProfile?.barId || 'Not Provided'}
-                </span>
-              </p>
-              <p className="flex justify-between items-center">
-                <span>Age:</span>
-                <span className="text-zinc-200 font-medium bg-zinc-950 px-2 py-1 rounded">
-                  {user?.age || 'N/A'}
-                </span>
-              </p>
-              <p className="flex justify-between items-center">
-                <span>Location:</span>
-                <span className="text-zinc-200 font-medium bg-zinc-950 px-2 py-1 rounded">
-                  {user?.address?.city || user?.address?.district || 'Not Set'}
-                </span>
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <AppHeader variant="lawyer" profileTo="/profile" showBrandName />
 
       <div className="max-w-6xl mx-auto p-6 md:p-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 relative z-20">

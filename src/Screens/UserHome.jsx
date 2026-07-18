@@ -88,7 +88,7 @@ const UserHome = () => {
 
     return (
         <div className="min-h-screen bg-[#f3f8fb] pb-52">
-            <AppHeader variant="user" profileTo="/profile" />
+            <AppHeader variant="user" profileTo="/profile" showBrandName />
 
             {/* Grid Menu */}
             <div className="mx-auto w-full max-w-md p-6 grid grid-cols-2 gap-6 mt-10">

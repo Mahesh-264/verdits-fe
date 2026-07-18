@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Star, Clock } from 'lucide-react';
+import { Star, Clock, User } from 'lucide-react';
 import { getProfileImageUrl } from '../utils/lawyerProfileHelpers';
 
 const ProfileHeader = React.memo(({ lawyer, profile }) => {
@@ -9,11 +9,17 @@ const ProfileHeader = React.memo(({ lawyer, profile }) => {
         <div className="w-full max-w-md bg-white mt-2 pb-6 shadow-sm border-b border-gray-100">
             <div className="p-6 flex gap-5 items-start">
                 <div className="h-24 w-24 rounded-full overflow-hidden shadow-lg border-2 border-white shrink-0">
-                    <img
-                        src={profileImage}
-                        alt={lawyer.name}
-                        className="h-full w-full object-cover"
-                    />
+                    {profileImage ? (
+                        <img
+                            src={profileImage}
+                            alt={lawyer.name}
+                            className="h-full w-full object-cover"
+                        />
+                    ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-[#e8f7f2] text-[#15a276]">
+                            <User size={42} />
+                        </div>
+                    )}
                 </div>
                 <div className="flex-1">
                     <h1 className="text-2xl font-bold text-gray-900 leading-tight">{lawyer.name}</h1>

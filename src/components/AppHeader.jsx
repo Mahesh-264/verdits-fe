@@ -1,8 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { LogOut, Mail, MapPin, Phone, UserCircle } from 'lucide-react';
 import BrandLogo from './BrandLogo.jsx';
 import NotificationBell from './notifications/NotificationBell.jsx';
+import useSessionLogout from '../hooks/useSessionLogout.js';
 
 const variantStyles = {
   user: {
@@ -34,21 +36,33 @@ export default function AppHeader({
   variant = 'user',
   profileTo,
   onProfileClick,
+  showBrandName = true,
   children,
 }) {
   const { user } = useSelector((state) => state.auth);
   const navigate = useNavigate();
+  const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const styles = variantStyles[variant] || variantStyles.user;
   const fallbackInitial = variant === 'lawyer' ? 'L' : variant === 'student' ? 'S' : 'U';
   const dashboardHome = variant === 'lawyer' ? '/lawyer-dash' : variant === 'student' ? '/student-home' : '/user-home';
+  const handleLogout = useSessionLogout(user?.role || variant);
+  const displayName = user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Profile';
+  const roleLabel = user?.role || variant;
+  const locationLabel = user?.address?.city || user?.address?.district || user?.address?.state || '';
 
   const handleProfileClick = () => {
+    setShowProfileMenu((current) => !current);
+  };
+
+  const handleViewProfile = () => {
+    setShowProfileMenu(false);
+
     if (onProfileClick) {
       onProfileClick();
       return;
     }
 
-    if (profileTo) navigate(profileTo);
+    navigate(profileTo || (variant === 'student' ? '/student-profile' : '/profile'));
   };
 
   return (
@@ -61,13 +75,13 @@ export default function AppHeader({
             className="shrink-0 cursor-pointer"
             aria-label="Go to dashboard home"
           >
-            <BrandLogo className="h-14 max-w-[180px]" light={styles.logoLight} variant="dashboard" />
+            <BrandLogo className="h-16" light={styles.logoLight} showWordmark={showBrandName} />
           </button>
         </div>
 
         {children ? <div className="hidden min-w-0 flex-1 items-center justify-center lg:flex">{children}</div> : null}
 
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="relative flex shrink-0 items-center gap-3">
           <NotificationBell buttonClassName={styles.notificationButton} />
           <button
             type="button"
@@ -81,6 +95,74 @@ export default function AppHeader({
               <span>{getInitial(user, fallbackInitial)}</span>
             )}
           </button>
+
+          {showProfileMenu ? (
+            <div className="absolute right-0 top-14 z-50 w-80 rounded-2xl border border-[#d7e9ef] bg-white p-4 text-[#062552] shadow-2xl shadow-[#062552]/15">
+              <div className="flex items-start gap-3 border-b border-[#e6eef2] pb-4">
+                <div className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border font-bold ${styles.avatar}`}>
+                  {user?.profileImage ? (
+                    <img src={user.profileImage} alt="Profile" className="h-full w-full object-cover" />
+                  ) : (
+                    <span>{getInitial(user, fallbackInitial)}</span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <h3 className="truncate text-base font-bold">{displayName}</h3>
+                  <p className="text-xs font-bold uppercase tracking-wide text-[#15a276]">{roleLabel}</p>
+                  {variant === 'lawyer' ? (
+                    <p className="mt-1 truncate text-xs text-[#5f7488]">
+                      {user?.lawyerProfile?.specialization || 'Legal Services'}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="space-y-2 py-4 text-sm text-[#43556a]">
+                {user?.email ? (
+                  <p className="flex items-center gap-2">
+                    <Mail size={15} className="text-[#15a276]" />
+                    <span className="truncate">{user.email}</span>
+                  </p>
+                ) : null}
+                {user?.phone ? (
+                  <p className="flex items-center gap-2">
+                    <Phone size={15} className="text-[#15a276]" />
+                    <span>{user.phone}</span>
+                  </p>
+                ) : null}
+                {locationLabel ? (
+                  <p className="flex items-center gap-2">
+                    <MapPin size={15} className="text-[#15a276]" />
+                    <span className="truncate">{locationLabel}</span>
+                  </p>
+                ) : null}
+                {variant === 'lawyer' ? (
+                  <p className="text-xs font-semibold text-[#5f7488]">
+                    Bar Council ID: <span className="text-[#062552]">{user?.lawyerProfile?.barId || 'Not provided'}</span>
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleViewProfile}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#d7e9ef] bg-[#f7fbfc] px-3 py-2 text-sm font-bold text-[#062552] transition hover:border-[#15a276]"
+                >
+                  <UserCircle size={16} />
+                  Profile
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-900 transition hover:bg-red-100"
+                >
+                  <LogOut size={16} />
+                  Logout
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </header>

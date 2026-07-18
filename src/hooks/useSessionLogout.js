@@ -18,7 +18,9 @@ export default function useSessionLogout(role) {
     } finally {
       socket.disconnect();
       dispatch(clearSession());
-      navigate(`/login${role ? `?role=${role}` : ''}`);
+      // A logout clears both persisted tokens and the Redux user. Landing is
+      // now the single signed-out destination; a fresh login is required.
+      navigate('/', { replace: true });
     }
   }, [dispatch, navigate, role]);
 }

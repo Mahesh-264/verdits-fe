@@ -1,20 +1,31 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { FaUser, FaUserGraduate, FaGavel } from 'react-icons/fa';
-import BrandLogo from './components/BrandLogo';
 
 const LandingPage = () => {
     const navigate = useNavigate();
+    const { isAuthenticated } = useSelector((state) => state.auth);
 
     const handleRoleSelect = (role) => {
         navigate(`/login?role=${role}`);
     };
 
+    // The landing page is only for signed-out visitors. This prevents browser
+    // back navigation from taking an active dashboard session back to it.
+    if (isAuthenticated) {
+        return <Navigate to="/dashboard" replace />;
+    }
+
     return (
         <div className="min-h-screen bg-[radial-gradient(circle_at_12%_0%,rgba(255,255,221,0.92)_0,rgba(255,255,221,0)_34%),linear-gradient(90deg,#fffdb7_0%,#fffcc8_42%,#fffde8_100%)] flex flex-col items-center justify-center p-6 text-[#062552] font-sans selection:bg-[#15a276]/20">
             {/* Header */}
             <div className="text-center mb-14 flex flex-col items-center">
-                <BrandLogo className="h-32 md:h-40 mb-6" />
+                <img
+                    src="/verdits-logo.png"
+                    alt="VERDITS Justice Simplified"
+                    className="mb-6 h-32 w-32 object-contain md:h-40 md:w-40"
+                />
                 <h1 className="text-4xl md:text-5xl font-bold text-[#062552] mb-4">
                     Welcome to VERDITS
                 </h1>

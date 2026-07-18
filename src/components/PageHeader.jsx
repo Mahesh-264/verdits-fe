@@ -7,13 +7,12 @@ import BrandLogo from './BrandLogo';
 const PageHeader = React.memo(() => {
     const navigate = useNavigate();
     const { user } = useSelector((state) => state.auth);
-    const dashboardHome = user?.role === 'student' ? '/student-home' : '/user-home';
+    const dashboardHome = user?.role === 'lawyer'
+        ? '/lawyer-dash'
+        : user?.role === 'student'
+            ? '/student-home'
+            : '/user-home';
     const handleBack = () => {
-        if (window.history.length > 1) {
-            navigate(-1);
-            return;
-        }
-
         navigate(dashboardHome, { replace: true });
     };
 
@@ -33,7 +32,7 @@ const PageHeader = React.memo(() => {
                 className="cursor-pointer transition hover:opacity-90"
                 aria-label="Go to dashboard home"
             >
-                <BrandLogo className="h-14 max-w-[180px]" variant="dashboard" />
+                <BrandLogo className="h-16" showWordmark />
             </button>
             <span className="text-lg font-bold tracking-wide">Lawyer Profile</span>
         </div>

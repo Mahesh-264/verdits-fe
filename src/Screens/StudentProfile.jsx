@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BriefcaseBusiness, GraduationCap, MapPin, X } from 'lucide-react';
+import { ArrowLeft, BriefcaseBusiness, GraduationCap, MapPin, X } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/axios.jsx';
 import { updateUser } from '../redux/authSlice.jsx';
 import ReactionBar from '../components/feed/ReactionBar.jsx';
@@ -53,6 +53,7 @@ export default function StudentProfile() {
   const { user } = useSelector((state) => state.auth);
   const { id: profileId } = useParams();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const [viewedStudent, setViewedStudent] = useState(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(Boolean(profileId));
   const [isEditing, setIsEditing] = useState(false);
@@ -219,6 +220,15 @@ export default function StudentProfile() {
   return (
     <StudentLayout>
       <div className="space-y-8">
+        <button
+          type="button"
+          onClick={() => navigate('/student-home', { replace: true })}
+          className="inline-flex items-center gap-2 rounded-2xl border border-[#d7e9ef] bg-white px-4 py-3 text-sm font-bold text-[#062552] shadow-sm transition hover:border-[#15a276]"
+        >
+          <ArrowLeft size={18} />
+          Back to Dashboard
+        </button>
+
         <section className="rounded-[28px] border border-[#dbe2ef] bg-white overflow-hidden shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
           <div className="h-40 bg-gradient-to-r from-[#15a276] to-[#15a276]" />
           <div className="p-6 md:p-8">

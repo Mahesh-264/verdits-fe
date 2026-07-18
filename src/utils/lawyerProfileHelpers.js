@@ -44,8 +44,7 @@ export const formatDocumentDetails = (questions, answers) => {
 };
 
 export const getProfileImageUrl = (lawyer) => {
-    return lawyer?.profileImage || 
-        `https://ui-avatars.com/api/?name=${lawyer?.name}&background=0D8ABC&color=fff`;
+    return lawyer?.profileImage || '';
 };
 
 export const extractInitials = (name) => {

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import {
+  ArrowLeft,
   Calendar,
   Edit2,
   LogOut,
@@ -13,16 +14,18 @@ import {
   User,
   X,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { updateUser } from '../redux/authSlice';
-import BrandLogo from '../components/BrandLogo';
 import useSessionLogout from '../hooks/useSessionLogout';
 
 // Shared profile editor for users and lawyers, including location refresh for discovery accuracy.
 const UserProfile = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
   const isLawyer = user?.role === 'lawyer';
+  const dashboardHome = isLawyer ? '/lawyer-dash' : '/user-home';
 
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -193,13 +196,28 @@ const UserProfile = () => {
       </AppHeader>
 
       <div className="mx-auto max-w-3xl px-4">
+        <button
+          type="button"
+          onClick={() => navigate(dashboardHome, { replace: true })}
+          className="my-4 inline-flex items-center gap-2 rounded-2xl border border-[#d7e9ef] bg-white px-4 py-3 text-sm font-bold text-[#062552] shadow-sm transition hover:border-[#15a276]"
+        >
+          <ArrowLeft size={18} />
+          Back to Dashboard
+        </button>
+
         <div className="relative mb-6 rounded-b-[2.5rem] bg-white px-6 pb-8 pt-5 text-center shadow-sm">
           <div className="mx-auto h-24 w-24 rounded-full border-2 border-[#15a276] p-1">
-            <img
-              src={user?.profileImage || `https://ui-avatars.com/api/?name=${formData.firstName}+${formData.lastName}&background=0D8ABC&color=fff`}
-              alt="Profile"
-              className="h-full w-full rounded-full object-cover"
-            />
+            {user?.profileImage ? (
+              <img
+                src={user.profileImage}
+                alt="Profile"
+                className="h-full w-full rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center rounded-full bg-[#e8f7f2] text-[#15a276]">
+                <User size={42} />
+              </div>
+            )}
           </div>
           <h1 className="mt-4 text-2xl font-bold text-gray-900">
             {`${formData.firstName} ${formData.lastName}`.trim() || 'Profile'}
