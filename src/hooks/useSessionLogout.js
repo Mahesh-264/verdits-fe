@@ -1,26 +1,24 @@
 import { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
 import { logout as clearSession } from '../redux/authSlice';
 import { logoutAccount } from '../api/authApi';
-import { getRefreshToken } from '../utils/authStorage';
 import socket from '../utils/socket.jsx';
 
-export default function useSessionLogout(role) {
+export default function useSessionLogout() {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
-
   return useCallback(async () => {
     try {
-      await logoutAccount(getRefreshToken());
+      await logoutAccount();
     } catch (error) {
       console.error('Server logout failed:', error);
     } finally {
       socket.disconnect();
       dispatch(clearSession());
-      // A logout clears both persisted tokens and the Redux user. Landing is
-      // now the single signed-out destination; a fresh login is required.
-      navigate('/', { replace: true });
+      window.localStorage.setItem('auth:logout', String(Date.now()));
+      // Always leave the authenticated route completely. A browser-level
+      // replace prevents protected-route or API redirect races from sending
+      // the user to the login form instead of the role-selection landing page.
+      window.location.replace('/');
     }
-  }, [dispatch, navigate, role]);
+  }, [dispatch]);
 }

@@ -11,6 +11,7 @@ const authSlice = createSlice({
         isAuthenticated: !!initialUser,
         loading: false,
         error: null,
+        initialized: false,
     },
     reducers: {
         // 1. Set User on Login/Register
@@ -19,6 +20,7 @@ const authSlice = createSlice({
             state.isAuthenticated = true;
             state.loading = false;
             state.error = null;
+            state.initialized = true;
             setStoredUser(action.payload);
         },
 
@@ -37,12 +39,16 @@ const authSlice = createSlice({
             state.isAuthenticated = false;
             state.loading = false;
             state.error = null;
+            state.initialized = true;
             clearAuthStorage();
         },
 
         // 4. Loading State
         setLoading: (state, action) => {
             state.loading = action.payload;
+        },
+        setInitialized: (state, action) => {
+            state.initialized = action.payload;
         },
 
         // 5. Error Handling
@@ -58,5 +64,5 @@ const authSlice = createSlice({
     },
 });
 
-export const { setAuth, updateUser, logout, setLoading, setError, clearError } = authSlice.actions;
+export const { setAuth, updateUser, logout, setLoading, setInitialized, setError, clearError } = authSlice.actions;
 export default authSlice.reducer;

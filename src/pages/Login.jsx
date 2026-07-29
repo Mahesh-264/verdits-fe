@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setAuth, setLoading } from '../redux/authSlice';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link, useLocation, useSearchParams } from 'react-router-dom';
 import { authenticateWithGoogle, loginAccount } from '../api/authApi.js';
-import { setAccessToken, setRefreshToken, storeAuthSession } from '../utils/authStorage';
+import { storeAuthSession } from '../utils/authStorage';
 import { getDashboardPath } from '../utils/authRedirect.js';
 import socket from '../utils/socket.jsx';
 import BrandLogo from '../components/BrandLogo.jsx';
@@ -24,19 +24,23 @@ export default function Login() {
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const getSafeDestination = (user) => {
+        const from = location.state?.from;
+        return typeof from === 'string' && from.startsWith('/') && !from.startsWith('//')
+            ? from
+            : getDashboardPath(user.role);
+    };
 
     const handleRedirect = (nextUser, options) => {
-        if (nextUser.role === 'admin') navigate('/admin-dash', options);
-        else if (nextUser.role === 'lawyer') navigate('/lawyer-dash', options);
-        else if (nextUser.role === 'student') navigate('/student-home', options);
-        else navigate('/user-home', options);
+        navigate(getSafeDestination(nextUser), { replace: true, ...options });
     };
 
     const connectSocket = (accessToken) => {
         socket.auth.token = accessToken;
         if (!socket.connected) {
             socket.connect();
-            console.log('Socket connected on login');
         }
     };
 
@@ -54,8 +58,7 @@ export default function Login() {
                 password,
                 role,
             });
-            setAccessToken(data.accessToken);
-            setRefreshToken(data.refreshToken);
+            storeAuthSession(data, remember);
             dispatch(setAuth(data.user));
             connectSocket(data.accessToken);
             handleRedirect(data.user);
@@ -100,7 +103,7 @@ export default function Login() {
             storeAuthSession(result, remember);
             dispatch(setAuth(result.user));
             connectSocket(result.accessToken);
-            navigate(getDashboardPath(result.user.role), { replace: true });
+            navigate(getSafeDestination(result.user), { replace: true });
         } catch (err) {
             setErrorMessage(err.response?.data?.message || 'Google sign-in failed.');
             setErrorCode(err.response?.data?.code || '');

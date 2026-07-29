@@ -136,10 +136,9 @@ export default function NotificationBell({ className = '', buttonClassName = '',
       loadNotifications();
     };
 
-    const handleNotificationUpdate = (data) => {
+    const handleNotificationUpdate = () => {
       // Real-time notification update
       loadNotifications();
-      console.log('📬 Real-time notification:', data);
     };
 
     socket.on('notification:new', handleNewNotification);

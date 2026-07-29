@@ -99,7 +99,9 @@ export const setRefreshToken = (token) => {
 export const storeAuthSession = (session, remember = false) => {
   setAuthPersistence(remember);
   setAccessToken(session.accessToken);
-  setRefreshToken(session.refreshToken);
+  // The refresh token is delivered as an HttpOnly cookie by the API. Never
+  // persist it in JavaScript-readable storage where an XSS bug could exfiltrate it.
+  setRefreshToken(null);
 };
 
 export const clearAuthStorage = () => {

@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'; // 🟢 Added Navigate
 import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { setAuth, logout } from './redux/authSlice';
+import { setAuth, logout, setInitialized } from './redux/authSlice';
 import { getAccessToken } from './utils/authStorage';
 import api from './api/axios.jsx';
 import socket from './utils/socket.jsx';
@@ -48,10 +49,12 @@ const DashboardHub = () => {
 
 // --- SECURITY GATEKEEPER ---
 const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { user, isAuthenticated } = useSelector((state) => state.auth);
+  const { user, isAuthenticated, initialized } = useSelector((state) => state.auth);
+  const location = useLocation();
 
-  if (!isAuthenticated) return <Navigate to="/login" />;
-  if (allowedRoles && !allowedRoles.includes(user.role)) return <DashboardHub />;
+  if (!initialized) return <div className="min-h-screen" aria-busy="true" />;
+  if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />;
+  if (allowedRoles && !allowedRoles.includes(user.role)) return <Navigate to="/dashboard" replace />;
 
   return children;
 };
@@ -63,7 +66,10 @@ export default function App() {
   useEffect(() => {
     const initializeAuth = async () => {
       const token = getAccessToken();
-      if (!token) return;
+      if (!token) {
+        dispatch(setInitialized(true));
+        return;
+      }
 
       try {
         const { data } = await api.get('/auth/me');
@@ -73,27 +79,39 @@ export default function App() {
         if (!socket.connected) {
           socket.auth.token = token; // Update token
           socket.connect();
-          console.log('🔌 Socket connected on app init');
         }
       } catch {
         dispatch(logout());
+      } finally {
+        dispatch(setInitialized(true));
       }
     };
 
     if (!isAuthenticated) {
       initializeAuth();
     } else {
+      dispatch(setInitialized(true));
       // 🔌 Also connect socket if already authenticated (page refresh)
       if (!socket.connected) {
         const token = getAccessToken();
         if (token) {
           socket.auth.token = token;
           socket.connect();
-          console.log('🔌 Socket reconnected after page refresh');
         }
       }
     }
   }, [dispatch, isAuthenticated]);
+
+  useEffect(() => {
+    const syncLogout = (event) => {
+      if (event.key === 'auth:logout') {
+        socket.disconnect();
+        dispatch(logout());
+      }
+    };
+    window.addEventListener('storage', syncLogout);
+    return () => window.removeEventListener('storage', syncLogout);
+  }, [dispatch]);
 
   return (
     <div className="min-h-screen lawyer-theme">

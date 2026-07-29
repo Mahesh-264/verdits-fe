@@ -21,6 +21,7 @@ export default function StudentNetwork() {
   const [students, setStudents] = useState([]);
   const [lawyers, setLawyers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [actionLoadingId, setActionLoadingId] = useState('');
 
   useEffect(() => {
@@ -34,15 +35,22 @@ export default function StudentNetwork() {
     const loadNetwork = async () => {
       try {
         setLoading(true);
-        const [studentsResponse, lawyersResponse] = await Promise.all([
+        setLoadError('');
+        const [studentsResult, lawyersResult] = await Promise.allSettled([
           api.get('/auth/students'),
           api.get('/auth/lawyers'),
         ]);
 
-        setStudents(studentsResponse.data || []);
-        setLawyers(lawyersResponse.data || []);
-      } catch (error) {
-        console.error('Error loading network data:', error);
+        if (studentsResult.status === 'fulfilled') {
+          setStudents(Array.isArray(studentsResult.value.data) ? studentsResult.value.data : []);
+        }
+        if (lawyersResult.status === 'fulfilled') {
+          setLawyers(Array.isArray(lawyersResult.value.data) ? lawyersResult.value.data : []);
+        }
+        if (studentsResult.status === 'rejected' || lawyersResult.status === 'rejected') {
+          const failure = studentsResult.status === 'rejected' ? studentsResult.reason : lawyersResult.reason;
+          setLoadError(failure.response?.data?.message || 'Unable to load all network results. Please try again.');
+        }
       } finally {
         setLoading(false);
       }
@@ -156,6 +164,8 @@ export default function StudentNetwork() {
             Follow Lawyers
           </button>
         </div>
+
+        {loadError ? <p role="alert" className="text-sm font-medium text-red-700">{loadError}</p> : null}
 
         {activeTab === 'students' ? (
           <section className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">

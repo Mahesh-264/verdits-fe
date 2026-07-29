@@ -1,12 +1,19 @@
 import axios from 'axios';
-import { clearAuthStorage, getAccessToken, getRefreshToken, setAccessToken } from '../utils/authStorage';
+import { clearAuthStorage, getAccessToken, setAccessToken } from '../utils/authStorage';
+
+const configuredApiUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, '');
+const apiBaseUrl = configuredApiUrl
+    ? (configuredApiUrl.endsWith('/api') ? configuredApiUrl : `${configuredApiUrl}/api`)
+    : '/api';
 
 const api = axios.create({
-    baseURL: '/api',
+    baseURL: apiBaseUrl,
     timeout: 15000,
     withCredentials: true,
     headers: { 'Content-Type': 'application/json' },
 });
+
+let refreshPromise = null;
 
 // 🛡️ Request Interceptor: Attach Token to every call
 api.interceptors.request.use((config) => {
@@ -22,21 +29,21 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
-        const isAuthenticationRequest = /^\/auth\/(login|register|google|forgot-password|reset-password)/.test(originalRequest?.url || '');
-        if (error.response?.status === 401 && !originalRequest._retry && !isAuthenticationRequest) {
+        // Logout is handled by the shared session-logout hook, which always
+        // clears the local session and returns the visitor to the role picker.
+        // Do not let a stale/expired token on this request trigger the global
+        // unauthenticated redirect to /login first.
+        const isAuthenticationRequest = /^\/auth\/(login|register|google|forgot-password|reset-password|logout)/.test(originalRequest?.url || '');
+        if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthenticationRequest) {
             originalRequest._retry = true;
             try {
-                const refreshToken = getRefreshToken();
-                if (!refreshToken) {
-                    throw new Error('No refresh token found for this tab');
-                }
-
                 // Use a separate axios call to avoid infinite loops
-                const { data } = await axios.post(
-                    '/api/auth/refresh',
-                    { refreshToken },
+                refreshPromise ??= axios.post(
+                    `${apiBaseUrl.replace(/\/$/, '')}/auth/refresh`,
+                    {},
                     { withCredentials: true }
-                );
+                ).then(({ data }) => data).finally(() => { refreshPromise = null; });
+                const data = await refreshPromise;
 
                 // Update local storage with the new token
                 setAccessToken(data.accessToken);
