@@ -131,9 +131,18 @@ export default function NotificationBell({ className = '', buttonClassName = '',
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const handleNewNotification = () => {
-      // Reload notifications when a new one arrives
-      loadNotifications();
+    const handleNewNotification = (notification) => {
+      // The server sends the saved notification. Add it immediately so the
+      // badge and panel update even when the next HTTP refresh is delayed.
+      if (notification?._id) {
+        setNotifications((current) => [
+          notification,
+          ...current.filter((item) => item._id !== notification._id),
+        ]);
+        if (!notification.readAt) setUnreadCount((current) => current + 1);
+      } else {
+        loadNotifications();
+      }
     };
 
     const handleNotificationUpdate = () => {
@@ -182,23 +191,27 @@ export default function NotificationBell({ className = '', buttonClassName = '',
   };
 
   const openNotification = async (notification) => {
+    const wasUnread = !notification.readAt;
+
+    setNotifications((current) =>
+      current.map((item) =>
+        item._id === notification._id ? { ...item, readAt: item.readAt || new Date().toISOString() } : item
+      )
+    );
+    if (wasUnread) setUnreadCount((current) => Math.max(0, current - 1));
+    setOpen(false);
+
     try {
-      if (!notification.readAt) {
+      if (wasUnread) {
         await api.patch(`/notifications/${notification._id}/read`);
       }
-
-      setNotifications((current) =>
-        current.map((item) =>
-          item._id === notification._id ? { ...item, readAt: item.readAt || new Date().toISOString() } : item
-        )
-      );
-      setUnreadCount((current) => Math.max(0, current - (notification.readAt ? 0 : 1)));
-      setOpen(false);
-
-      navigate(resolveNotificationLink(notification, user));
     } catch (error) {
       console.error('Error opening notification:', error);
     }
+
+    // Opening a notification should still take the user to its destination if
+    // marking it read briefly fails.
+    navigate(resolveNotificationLink(notification, user));
   };
 
   return (

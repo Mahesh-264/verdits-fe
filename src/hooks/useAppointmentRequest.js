@@ -15,7 +15,7 @@ export const useAppointmentRequest = (lawyer, user) => {
             }
 
             try {
-                const lawyerId = lawyer._id || lawyer.id;
+                const lawyerId = lawyer._id || lawyer.id || lawyer?._doc?._id;
                 const userId = user._id || user.id;
                 const { data } = await api.get(`/appointments/${lawyerId}`);
                 const existing = data.find(
@@ -39,9 +39,12 @@ export const useAppointmentRequest = (lawyer, user) => {
         try {
             setIsSendingRequest(true);
 
-            const lawyerId = lawyer._id || lawyer.id;
-            const userId = user._id || user.id;
-            const { data } = await api.post('/appointments', { lawyerId, userId });
+            const lawyerId = lawyer._id || lawyer.id || lawyer?._doc?._id;
+            if (!lawyerId) {
+                alert('The lawyer profile is missing its ID. Please refresh the page and try again.');
+                return;
+            }
+            const { data } = await api.post('/appointments', { lawyerId });
 
             setRequestStatus(normalizeStatus(data?.status) || 'Pending');
         } catch (error) {

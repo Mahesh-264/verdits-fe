@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Star, Clock, User } from 'lucide-react';
+import { Clock, User } from 'lucide-react';
 import { getProfileImageUrl } from '../utils/lawyerProfileHelpers';
 
 const ProfileHeader = React.memo(({ lawyer, profile }) => {
@@ -28,9 +28,6 @@ const ProfileHeader = React.memo(({ lawyer, profile }) => {
                     <div className="flex items-center gap-3 mt-2 text-sm text-gray-600 flex-wrap">
                         <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
                             <Clock size={14} /> {profile.experienceYears || 0} Yrs Exp
-                        </span>
-                        <span className="flex items-center text-[#15a276] font-bold gap-1 bg-[#e8f7f2] px-2 py-1 rounded">
-                            <Star size={14} fill="currentColor" /> 4.8
                         </span>
                     </div>
                 </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -30,6 +30,14 @@ const getAppointmentStatus = (appointments, lawyerId, clientId) => {
     );
 
     return String(matchedAppointment?.status || '').toLowerCase();
+};
+
+const getParticipantName = (participant) => {
+    if (!participant) return 'Contact';
+    const fullName = `${participant.firstName || ''} ${participant.lastName || ''}`.trim();
+    if (fullName) return fullName;
+    if (participant.name) return participant.name;
+    return String(participant.role || '').toLowerCase() === 'lawyer' ? 'Lawyer' : (participant.phone || 'Client');
 };
 
 const getMessageDate = (value) => {
@@ -101,6 +109,10 @@ export default function Chat() {
 
     const { user } = useSelector(state => state.auth);
     const { conversations, availableLawyers, messages, activePartner, selectedMessages } = useSelector(state => state.chat);
+    const lawyerList = useMemo(
+        () => (Array.isArray(availableLawyers) ? availableLawyers : []),
+        [availableLawyers]
+    );
     const handleLogout = useSessionLogout(user?.role);
     const [lockedPartnerId, setLockedPartnerId] = useState(
         location.state?.selectedPartner?._id || location.state?.selectedPartner?.id || searchParams.get('partnerId') || null
@@ -188,12 +200,12 @@ export default function Chat() {
         const normalizedLockedPartnerId = String(lockedPartnerId);
         const syncedPartner =
             conversations.find((conversation) => String(conversation.contact?._id || conversation._id) === normalizedLockedPartnerId)?.contact ||
-            availableLawyers.find((lawyer) => String(lawyer._id || lawyer.id) === normalizedLockedPartnerId);
+            lawyerList.find((lawyer) => String(lawyer._id || lawyer.id) === normalizedLockedPartnerId);
 
         if (syncedPartner && String(activePartner?._id || activePartner?.id) !== normalizedLockedPartnerId) {
             dispatch(setActivePartner(syncedPartner));
         }
-    }, [lockedPartnerId, conversations, availableLawyers, activePartner, dispatch]);
+    }, [lockedPartnerId, conversations, lawyerList, activePartner, dispatch]);
 
     // 🟢 1. THE FLAWLESS SOCKET CONNECTION (React 18 Strict Mode Safe)
     useEffect(() => {
@@ -260,11 +272,11 @@ export default function Chat() {
 
     // 2. Data Fetching
     useEffect(() => {
-        if (user?._id) {
+        if (user?._id || user?.id) {
             if (user.role === 'user') dispatch(fetchAllLawyers());
             dispatch(fetchConversations());
         }
-    }, [dispatch, user?._id, user?.role]);
+    }, [dispatch, user?._id, user?.id, user?.role]);
 
     // 3. Chat Switching & History Fetching
     useEffect(() => {
@@ -389,7 +401,7 @@ export default function Chat() {
             ...(c.contact || {}), unreadCount: c.unreadCount || 0, lastMessage: c.lastMessage || 'Tap to view chat', timestamp: c.timestamp, originalId: c._id
         }));
         const activeLawyerIds = activeConvos.map(c => String(c._id));
-        const remainingLawyers = availableLawyers
+        const remainingLawyers = lawyerList
             .filter(l => !activeLawyerIds.includes(String(l._id)))
             .map(l => ({
                 ...l, unreadCount: 0, lastMessage: l.lawyerProfile?.specialization || 'Tap to start chat', timestamp: null, originalId: l._id
@@ -447,7 +459,7 @@ export default function Chat() {
                             </div>
                             <div className="flex-1 min-w-0 border-b border-[#e4ebf5] pb-3 pt-1">
                                 <div className="flex justify-between items-center mb-0.5">
-                                    <h4 className="text-[16px] font-medium text-[#0b1f44] truncate">{item.name || item.phone || "Client"}</h4>
+                                    <h4 className="text-[16px] font-medium text-[#0b1f44] truncate">{getParticipantName(item)}</h4>
                                     {item.timestamp && <span className={`text-[12px] shrink-0 ${item.unreadCount > 0 ? 'text-[#15a276] font-semibold' : 'text-[#7f8ba2]'}`}>{formatConversationTimestamp(item.timestamp)}</span>}
                                 </div>
                                 <div className="flex justify-between items-center">
@@ -491,8 +503,8 @@ export default function Chat() {
                                 </button>
                                 {renderAvatar(activePartner, "w-10 h-10", "text-xl")}
                                 <div className="flex flex-col justify-center">
-                                    <h3 className="text-[16px] text-white font-medium leading-tight">{activePartner.name || activePartner.phone || "Client"}</h3>
-                                    <p className="text-[12px] text-[#b8c8dc] truncate">{activePartner.role === 'user' ? 'Client Account' : (activePartner.lawyerProfile?.specialization || 'Professional Account')}</p>
+                                    <h3 className="text-[16px] text-white font-medium leading-tight">{getParticipantName(activePartner)}</h3>
+                                    <p className="text-[12px] text-[#b8c8dc] truncate">{String(activePartner.role || '').toLowerCase() === 'user' ? 'Client Account' : (activePartner.lawyerProfile?.specialization || activePartner.specialization || 'Lawyer')}</p>
                                 </div>
                             </div>
                             <div className="flex gap-3 text-[#b8c8dc] text-lg items-center">

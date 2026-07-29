@@ -1,7 +1,10 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../api/axios"; // Adjust path if needed
 
-export const fetchAllLawyers = createAsyncThunk("chat/fetchAllLawyers", async () => { const res = await api.get("/auth/lawyers"); return res.data; });
+export const fetchAllLawyers = createAsyncThunk("chat/fetchAllLawyers", async () => {
+    const res = await api.get("/auth/lawyers");
+    return Array.isArray(res.data?.lawyers) ? res.data.lawyers : [];
+});
 export const fetchConversations = createAsyncThunk("chat/fetchConversations", async () => { const res = await api.get("/chat/conversations"); return res.data.chatList; });
 export const fetchHistory = createAsyncThunk("chat/fetchHistory", async (partnerId) => { const res = await api.get(`/chat/history/${partnerId}`); return res.data.messages; });
 export const markMessagesAsRead = createAsyncThunk("chat/markAsRead", async (partnerId) => { await api.put(`/chat/read-all/${partnerId}`); return partnerId; });
