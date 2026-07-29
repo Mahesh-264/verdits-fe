@@ -17,7 +17,7 @@ const PageHeader = React.memo(() => {
     };
 
     return (
-        <div className="w-full bg-[#f8f3e3]/95 text-[#0d1117] border-b border-[#d6b85b]/45 p-4 flex items-center gap-4 shadow-sm sticky top-0 z-20 backdrop-blur">
+        <div className="relative w-full bg-[#f8f3e3]/95 text-[#0d1117] border-b border-[#d6b85b]/45 p-4 flex items-center gap-4 shadow-sm sticky top-0 z-20 backdrop-blur">
             <button
                 type="button"
                 onClick={handleBack}
@@ -34,7 +34,7 @@ const PageHeader = React.memo(() => {
             >
                 <BrandLogo className="h-16" showWordmark />
             </button>
-            <span className="text-lg font-bold tracking-wide">Lawyer Profile</span>
+            <span className="absolute left-1/2 -translate-x-1/2 text-lg font-bold tracking-wide">Lawyer Profile</span>
         </div>
     );
 });
