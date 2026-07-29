@@ -1,24 +1,26 @@
 import { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { logout as clearSession } from '../redux/authSlice';
 import { logoutAccount } from '../api/authApi';
 import socket from '../utils/socket.jsx';
+import { getAccessToken } from '../utils/authStorage';
 
 export default function useSessionLogout() {
   const dispatch = useDispatch();
-  return useCallback(async () => {
-    try {
-      await logoutAccount();
-    } catch (error) {
-      console.error('Server logout failed:', error);
-    } finally {
-      socket.disconnect();
-      dispatch(clearSession());
-      window.localStorage.setItem('auth:logout', String(Date.now()));
-      // Always leave the authenticated route completely. A browser-level
-      // replace prevents protected-route or API redirect races from sending
-      // the user to the login form instead of the role-selection landing page.
-      window.location.replace('/');
-    }
-  }, [dispatch]);
+  const navigate = useNavigate();
+
+  return useCallback(() => {
+    // Start the server-side logout without holding up the visitor's navigation.
+    // Preserve the current token for this request because local storage is
+    // cleared immediately below.
+    const accessToken = getAccessToken();
+    void logoutAccount(accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : undefined)
+      .catch((error) => console.error('Server logout failed:', error));
+
+    socket.disconnect();
+    dispatch(clearSession());
+    window.localStorage.setItem('auth:logout', String(Date.now()));
+    navigate('/', { replace: true });
+  }, [dispatch, navigate]);
 }

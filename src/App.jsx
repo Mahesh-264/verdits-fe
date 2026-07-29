@@ -35,7 +35,7 @@ import StudentJamSessions from './Screens/StudentJamSessions.jsx';
 const DashboardHub = () => {
   const { user } = useSelector((state) => state.auth);
 
-  if (!user) return <Navigate to="/login" />;
+  if (!user) return <Navigate to="/" replace />;
   if (user.role === 'admin') return <Navigate to="/admin-dash" />;
 
   // 🟢 LOGIC UPDATE: 
@@ -53,7 +53,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   const location = useLocation();
 
   if (!initialized) return <div className="min-h-screen" aria-busy="true" />;
-  if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />;
+  if (!isAuthenticated) return <Navigate to="/" replace state={{ from: `${location.pathname}${location.search}` }} />;
   if (allowedRoles && !allowedRoles.includes(user.role)) return <Navigate to="/dashboard" replace />;
 
   return children;

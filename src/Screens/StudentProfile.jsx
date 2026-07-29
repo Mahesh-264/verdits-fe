@@ -89,7 +89,7 @@ export default function StudentProfile() {
       try {
         setIsLoadingProfile(true);
         const { data } = await api.get('/auth/students');
-        const match = (Array.isArray(data) ? data : []).find((student) =>
+        const match = (Array.isArray(data?.students) ? data.students : []).find((student) =>
           String(student._id || student.id) === String(profileId)
         );
         setViewedStudent(match || null);

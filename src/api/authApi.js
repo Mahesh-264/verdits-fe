@@ -13,6 +13,6 @@ export const loginAccount = (payload) => api.post('/auth/login', payload).then((
 export const authenticateWithGoogle = (payload) => api.post('/auth/google', payload).then(({ data }) => data);
 export const requestPasswordReset = (email) => api.post('/auth/forgot-password', { email }).then(({ data }) => data);
 export const resetPassword = (payload) => api.post('/auth/reset-password', payload).then(({ data }) => data);
-export const logoutAccount = () => api.post('/auth/logout').then(({ data }) => data);
+export const logoutAccount = (config) => api.post('/auth/logout', undefined, config).then(({ data }) => data);
 export const sendPhoneOtp = (phone) => api.post('/auth/send-otp', { phone, isRegister: true }).then(({ data }) => data);
 export const verifyPhoneOtp = (phone, otp) => api.post('/auth/verify-phone-otp', { phone, otp }).then(({ data }) => data);
