@@ -62,6 +62,15 @@ const resolveNotificationLink = (notification, user) => {
     return `/lawyer-dash?section=student-interactions&tab=jamSessions${metadata.sessionId ? `&itemId=${metadata.sessionId}` : ''}`;
   }
 
+  if (
+    notification?.type === 'team_join_request'
+    || notification?.type === 'team_join_accepted'
+    || notification?.type === 'team_join_rejected'
+    || notification?.type === 'team_member_removed'
+  ) {
+    return '/lawyer-dash?section=team';
+  }
+
   if (notification?.type === 'new_post') {
     if (metadata.internshipId) {
       return `/student-explore?tab=internships&itemId=${metadata.internshipId}`;
