@@ -12,6 +12,8 @@ import {
   Phone,
   Save,
   User,
+  UserPlus,
+  Users,
   X,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -26,6 +28,11 @@ const UserProfile = () => {
   const { user } = useSelector((state) => state.auth);
   const isLawyer = user?.role === 'lawyer';
   const dashboardHome = isLawyer ? '/lawyer-dash' : '/user-home';
+  const lawyerTeam = user?.lawyerProfile?.team || null;
+  const hasTeam = Boolean(lawyerTeam?.teamCode);
+  const isTeamOwner = lawyerTeam?.role === 'owner';
+  const teamMembers = Array.isArray(lawyerTeam?.members) ? lawyerTeam.members : [];
+  const teamSize = isTeamOwner ? teamMembers.length + 1 : hasTeam ? 1 : 0;
 
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -238,6 +245,79 @@ const UserProfile = () => {
           {renderField({ icon: Navigation, label: 'Latitude', name: 'latitude', value: formData.latitude })}
           {renderField({ icon: Navigation, label: 'Longitude', name: 'longitude', value: formData.longitude })}
         </div>
+
+        {isLawyer ? (
+          <section className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#fff4cf] text-[#062552]">
+                <Users size={24} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold text-[#0b1f44]">My Team</h2>
+                    <p className="mt-1 text-sm text-[#5e6c87]">
+                      {hasTeam
+                        ? `${isTeamOwner ? 'Senior lawyer' : 'Junior lawyer'} at ${lawyerTeam.firmName || 'your team'}.`
+                        : 'Create a team as a senior lawyer or join one with a senior lawyer code.'}
+                    </p>
+                  </div>
+                  {hasTeam ? (
+                    <span className="rounded-full bg-[#e8f7f2] px-3 py-1 text-sm font-bold text-[#14795d]">
+                      {isTeamOwner ? 'Owner' : 'Member'}
+                    </span>
+                  ) : null}
+                </div>
+
+                {hasTeam ? (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                      <p className="text-xs font-medium text-gray-400">Firm</p>
+                      <p className="mt-1 font-semibold text-gray-900">{lawyerTeam.firmName || 'Not set'}</p>
+                    </div>
+                    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                      <p className="text-xs font-medium text-gray-400">Team Code</p>
+                      <p className="mt-1 font-mono font-bold tracking-wider text-gray-900">{lawyerTeam.teamCode}</p>
+                    </div>
+                    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                      <p className="text-xs font-medium text-gray-400">Team Size</p>
+                      <p className="mt-1 font-semibold text-gray-900">{teamSize}/{lawyerTeam.maxTeamSize || teamSize}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => navigate('/lawyer-dash?section=team&mode=create')}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#15a276] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#12845f]"
+                    >
+                      <Users size={18} />
+                      Create a team
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/lawyer-dash?section=team&mode=join')}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#d7e9ef] bg-white px-4 py-3 text-sm font-bold text-[#062552] transition hover:border-[#15a276]"
+                    >
+                      <UserPlus size={18} />
+                      Join a team
+                    </button>
+                  </div>
+                )}
+
+                {hasTeam ? (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/lawyer-dash?section=team')}
+                    className="mt-4 inline-flex items-center justify-center gap-2 rounded-2xl border border-[#d7e9ef] bg-white px-4 py-3 text-sm font-bold text-[#062552] transition hover:border-[#15a276]"
+                  >
+                    Manage Team
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         {isLawyer ? (
           <section className="mt-6 rounded-3xl bg-white p-6 shadow-sm">

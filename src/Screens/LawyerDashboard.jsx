@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   FaBriefcase,
@@ -13,12 +13,13 @@ import {
   FaTimes,
   FaUserGraduate,
 } from 'react-icons/fa';
-import { Users } from 'lucide-react';
+import { Copy, KeyRound, UserPlus, Users } from 'lucide-react';
 import api from '../api/axios';
 import AppHeader from '../components/AppHeader.jsx';
 import FeedPostCard from '../components/feed/FeedPostCard.jsx';
 import PostComposerModal from '../components/feed/PostComposerModal.jsx';
 import ReactionBar from '../components/feed/ReactionBar.jsx';
+import { updateUser } from '../redux/authSlice.jsx';
 
 const normalizeStatus = (status) => {
   const formattedStatus = String(status || '').toLowerCase();
@@ -64,6 +65,38 @@ const emptyDrawerState = {
   parentLabel: '',
   items: [],
 };
+
+const initialCreateTeamForm = {
+  firmName: '',
+  seniorLawyerName: '',
+  maxTeamSize: 5,
+};
+
+const initialJoinTeamForm = {
+  teamCode: '',
+};
+
+const initialTeamCaseForm = {
+  clientName: '',
+  caseTitle: '',
+  caseDetails: '',
+  basicInfo: '',
+  courtName: '',
+  hearingDate: '',
+  documents: '',
+  status: 'new',
+};
+
+const teamCaseStatuses = [
+  { value: 'new', label: 'New' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'hearing_scheduled', label: 'Hearing Scheduled' },
+  { value: 'closed', label: 'Closed' },
+];
+
+const getTeamCaseStatusLabel = (status) => (
+  teamCaseStatuses.find((item) => item.value === status)?.label || 'New'
+);
 
 const noticeDocumentTypes = [
   'Legal Notice for Recovery of Money',
@@ -301,12 +334,23 @@ const getNoticeRequestError = (error, fallbackMessage) => {
 
 export default function LawyerDashboard() {
   const { user } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [appointments, setAppointments] = useState([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [showAppointmentsModal, setShowAppointmentsModal] = useState(false);
   const [showClientsModal, setShowClientsModal] = useState(false);
+  const [showTeamModal, setShowTeamModal] = useState(false);
+  const [teamMode, setTeamMode] = useState('create');
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [teamWorkspaceLoading, setTeamWorkspaceLoading] = useState(false);
+  const [teamError, setTeamError] = useState('');
+  const [teamMessage, setTeamMessage] = useState('');
+  const [teamWorkspace, setTeamWorkspace] = useState(null);
+  const [showTeamCaseForm, setShowTeamCaseForm] = useState(false);
+  const [savingTeamCase, setSavingTeamCase] = useState(false);
+  const [updatingTeamCaseId, setUpdatingTeamCaseId] = useState('');
   const [showStudentInteractionModal, setShowStudentInteractionModal] = useState(false);
   const [showNoticeGenerator, setShowNoticeGenerator] = useState(false);
   const [studentInteractionTab, setStudentInteractionTab] = useState('internships');
@@ -334,6 +378,9 @@ export default function LawyerDashboard() {
   const [updatingApplicantId, setUpdatingApplicantId] = useState('');
   const [togglingInternshipId, setTogglingInternshipId] = useState('');
   const [deletingInternshipId, setDeletingInternshipId] = useState('');
+  const [createTeamForm, setCreateTeamForm] = useState(initialCreateTeamForm);
+  const [joinTeamForm, setJoinTeamForm] = useState(initialJoinTeamForm);
+  const [teamCaseForm, setTeamCaseForm] = useState(initialTeamCaseForm);
   const [internshipForm, setInternshipForm] = useState({
     title: '',
     description: '',
@@ -415,11 +462,29 @@ export default function LawyerDashboard() {
       setShowAppointmentsModal(true);
     }
 
+    if (searchParams.get('section') === 'team') {
+      const requestedMode = searchParams.get('mode');
+      const currentHasTeam = Boolean(user?.lawyerProfile?.team?.teamCode);
+      setTeamMode(currentHasTeam ? 'overview' : requestedMode === 'join' ? 'join' : 'create');
+      setTeamError('');
+      setTeamMessage('');
+      setShowTeamModal(true);
+    }
+
     const requestedTab = searchParams.get('tab');
     if (['internships', 'jamSessions', 'posts'].includes(requestedTab)) {
       setStudentInteractionTab(requestedTab);
     }
-  }, [searchParams]);
+  }, [searchParams, user?.lawyerProfile?.team?.teamCode]);
+
+  useEffect(() => {
+    const fullName = `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
+    if (!fullName) return;
+
+    setCreateTeamForm((current) => (
+      current.seniorLawyerName ? current : { ...current, seniorLawyerName: fullName }
+    ));
+  }, [user?.firstName, user?.lastName]);
 
   useEffect(() => {
     if (!user) return;
@@ -508,6 +573,163 @@ export default function LawyerDashboard() {
   const handleJamSessionInput = (event) => {
     const { name, value } = event.target;
     setJamSessionForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleCreateTeamInput = (event) => {
+    const { name, value } = event.target;
+    setCreateTeamForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleJoinTeamInput = (event) => {
+    const { name, value } = event.target;
+    setJoinTeamForm((current) => ({ ...current, [name]: value.toUpperCase() }));
+  };
+
+  const handleTeamCaseInput = (event) => {
+    const { name, value } = event.target;
+    setTeamCaseForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const loadTeamWorkspace = useCallback(async () => {
+    if (!user?.lawyerProfile?.team?.teamCode) {
+      setTeamWorkspace(null);
+      return;
+    }
+
+    try {
+      setTeamWorkspaceLoading(true);
+      const { data } = await api.get('/auth/lawyer/team');
+      setTeamWorkspace(data?.team || null);
+    } catch (error) {
+      console.error('Error loading team workspace:', error);
+      setTeamWorkspace(null);
+    } finally {
+      setTeamWorkspaceLoading(false);
+    }
+  }, [user?.lawyerProfile?.team?.teamCode]);
+
+  useEffect(() => {
+    const currentHasTeam = Boolean(user?.lawyerProfile?.team?.teamCode);
+    if (!showTeamModal || !currentHasTeam) return;
+    loadTeamWorkspace();
+  }, [loadTeamWorkspace, showTeamModal, user?.lawyerProfile?.team?.teamCode]);
+
+  const handleCreateTeam = async (event) => {
+    event.preventDefault();
+
+    try {
+      setTeamLoading(true);
+      setTeamError('');
+      setTeamMessage('');
+
+      const payload = {
+        firmName: createTeamForm.firmName.trim(),
+        seniorLawyerName: createTeamForm.seniorLawyerName.trim(),
+        maxTeamSize: Number(createTeamForm.maxTeamSize),
+      };
+
+      const { data } = await api.post('/auth/lawyer/team', payload);
+      if (data?.user) {
+        dispatch(updateUser(data.user));
+      }
+      setTeamMode('overview');
+      setTeamMessage(`Team created. Code: ${data?.team?.teamCode || ''}`);
+      setTeamWorkspace(data?.team ? { ...data.team, cases: [] } : null);
+    } catch (error) {
+      console.error('Error creating team:', error);
+      setTeamError(error.response?.data?.message || 'Failed to create team');
+    } finally {
+      setTeamLoading(false);
+    }
+  };
+
+  const handleJoinTeam = async (event) => {
+    event.preventDefault();
+
+    try {
+      setTeamLoading(true);
+      setTeamError('');
+      setTeamMessage('');
+
+      const { data } = await api.post('/auth/lawyer/team/join', {
+        teamCode: joinTeamForm.teamCode.trim(),
+      });
+      if (data?.user) {
+        dispatch(updateUser(data.user));
+      }
+      setTeamMode('overview');
+      setJoinTeamForm(initialJoinTeamForm);
+      setTeamMessage('Team joined successfully.');
+      const workspaceResponse = await api.get('/auth/lawyer/team');
+      setTeamWorkspace(workspaceResponse.data?.team || null);
+    } catch (error) {
+      console.error('Error joining team:', error);
+      setTeamError(error.response?.data?.message || 'Failed to join team');
+    } finally {
+      setTeamLoading(false);
+    }
+  };
+
+  const handleCopyTeamCode = async () => {
+    const teamCode = user?.lawyerProfile?.team?.teamCode;
+    if (!teamCode) return;
+
+    try {
+      await navigator.clipboard.writeText(teamCode);
+      setTeamMessage('Team code copied.');
+    } catch (error) {
+      console.error('Error copying team code:', error);
+      setTeamMessage('Select the team code and copy it manually.');
+    }
+  };
+
+  const handleAddTeamCase = async (event) => {
+    event.preventDefault();
+
+    try {
+      setSavingTeamCase(true);
+      setTeamError('');
+      setTeamMessage('');
+
+      const payload = {
+        clientName: teamCaseForm.clientName.trim(),
+        caseTitle: teamCaseForm.caseTitle.trim(),
+        caseDetails: teamCaseForm.caseDetails.trim(),
+        basicInfo: teamCaseForm.basicInfo.trim(),
+        courtName: teamCaseForm.courtName.trim(),
+        hearingDate: teamCaseForm.hearingDate,
+        documents: teamCaseForm.documents,
+        status: teamCaseForm.status,
+      };
+
+      const { data } = await api.post('/auth/lawyer/team/cases', payload);
+      setTeamWorkspace(data?.team || null);
+      setTeamCaseForm(initialTeamCaseForm);
+      setShowTeamCaseForm(false);
+      setTeamMessage('Team case added.');
+    } catch (error) {
+      console.error('Error adding team case:', error);
+      setTeamError(error.response?.data?.message || 'Failed to add team case');
+    } finally {
+      setSavingTeamCase(false);
+    }
+  };
+
+  const handleUpdateTeamCaseStatus = async (teamCase, status) => {
+    try {
+      setUpdatingTeamCaseId(teamCase.id);
+      setTeamError('');
+      setTeamMessage('');
+
+      const { data } = await api.patch(`/auth/lawyer/team/cases/${teamCase.id}/status`, { status });
+      setTeamWorkspace(data?.team || null);
+      setTeamMessage('Case status updated.');
+    } catch (error) {
+      console.error('Error updating team case status:', error);
+      setTeamError(error.response?.data?.message || 'Failed to update case status');
+    } finally {
+      setUpdatingTeamCaseId('');
+    }
   };
 
   const handlePublishInternship = async (event) => {
@@ -849,6 +1071,14 @@ export default function LawyerDashboard() {
   const acceptedClients = appointments.filter((appointment) => appointment.status === 'Accepted');
   const pendingCount = pendingAppointments.filter((appointment) => appointment.status === 'Pending').length;
   const clientCount = acceptedClients.length;
+  const lawyerTeam = user?.lawyerProfile?.team || null;
+  const hasTeam = Boolean(lawyerTeam?.teamCode);
+  const displayTeam = teamWorkspace || lawyerTeam || {};
+  const displayTeamRole = teamWorkspace?.role || lawyerTeam?.role;
+  const displayIsTeamOwner = displayTeamRole === 'owner';
+  const teamMembers = Array.isArray(displayTeam?.members) ? displayTeam.members : [];
+  const teamCases = Array.isArray(displayTeam?.cases) ? displayTeam.cases : [];
+  const teamSize = hasTeam ? teamMembers.length + 1 : 0;
 
   const cards = [
     {
@@ -875,6 +1105,20 @@ export default function LawyerDashboard() {
       icon: <FaBriefcase className="text-4xl text-[#062552]" />,
       desc: 'See all clients whose requests you have accepted.',
       onClick: () => setShowClientsModal(true),
+    },
+    {
+      title: 'My Team',
+      badge: displayIsTeamOwner && teamMembers.length > 0 ? teamMembers.length : null,
+      icon: <Users className="h-10 w-10 text-amber-300" />,
+      desc: hasTeam
+        ? `${displayIsTeamOwner ? 'Created' : 'Joined'} ${displayTeam.firmName || 'your team'}.`
+        : 'Create a team or join with a senior lawyer code.',
+      onClick: () => {
+        setTeamMode(hasTeam ? 'overview' : 'create');
+        setTeamError('');
+        setTeamMessage('');
+        setShowTeamModal(true);
+      },
     },
     {
       title: 'Student Interaction',
@@ -907,7 +1151,7 @@ export default function LawyerDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
           {cards.map((card, idx) => (
             <div
               key={idx}
@@ -1012,6 +1256,368 @@ export default function LawyerDashboard() {
               ))}
             </div>
           )}
+        </ModalShell>
+      )}
+
+      {showTeamModal && (
+        <ModalShell title="My Team" icon={<Users className="h-6 w-6 text-amber-300" />} onClose={() => setShowTeamModal(false)}>
+          {hasTeam ? (
+            <div className="space-y-5">
+              <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-amber-300">
+                      {displayIsTeamOwner ? 'Senior lawyer team' : 'Joined team'}
+                    </p>
+                    <h3 className="mt-2 text-2xl font-bold text-white">{displayTeam.firmName || 'My Team'}</h3>
+                    <p className="mt-2 text-sm text-zinc-400">Senior lawyer: {displayTeam.seniorLawyerName || 'Not added'}</p>
+                  </div>
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm">
+                    <p className="text-zinc-500">Team size</p>
+                    <p className="mt-1 text-xl font-bold text-white">
+                      {teamSize}/{displayTeam.maxTeamSize || teamSize}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                  <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3">
+                    <KeyRound className="h-5 w-5 shrink-0 text-amber-300" />
+                    <span className="min-w-0 flex-1 font-mono text-lg font-bold tracking-wider text-white">
+                      {displayTeam.teamCode}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyTeamCode}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-300 px-5 py-3 font-bold text-zinc-950 transition hover:bg-amber-200"
+                  >
+                    <Copy size={18} />
+                    Copy Code
+                  </button>
+                </div>
+              </div>
+
+              {teamWorkspaceLoading ? (
+                <p className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-semibold text-zinc-400">
+                  Refreshing team workspace...
+                </p>
+              ) : null}
+
+              <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+                <div className="space-y-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="text-lg font-bold text-white">Team Cases</h3>
+                      <p className="mt-1 text-sm text-zinc-500">Client matters added by senior or junior lawyers in this team.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowTeamCaseForm((current) => !current)}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-300 px-4 py-3 text-sm font-bold text-zinc-950 transition hover:bg-amber-200"
+                    >
+                      <FaPlus />
+                      {showTeamCaseForm ? 'Close Form' : 'Add Case'}
+                    </button>
+                  </div>
+
+                  {showTeamCaseForm ? (
+                    <form onSubmit={handleAddTeamCase} className="grid grid-cols-1 gap-4 rounded-xl border border-zinc-800 bg-zinc-950 p-5 md:grid-cols-2">
+                      <input
+                        name="clientName"
+                        value={teamCaseForm.clientName}
+                        onChange={handleTeamCaseInput}
+                        placeholder="Client name"
+                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
+                        required
+                      />
+                      <input
+                        name="caseTitle"
+                        value={teamCaseForm.caseTitle}
+                        onChange={handleTeamCaseInput}
+                        placeholder="Case title"
+                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
+                        required
+                      />
+                      <input
+                        name="courtName"
+                        value={teamCaseForm.courtName}
+                        onChange={handleTeamCaseInput}
+                        placeholder="Court name"
+                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
+                      />
+                      <input
+                        type="date"
+                        name="hearingDate"
+                        value={teamCaseForm.hearingDate}
+                        onChange={handleTeamCaseInput}
+                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
+                      />
+                      <textarea
+                        name="caseDetails"
+                        value={teamCaseForm.caseDetails}
+                        onChange={handleTeamCaseInput}
+                        placeholder="Case details"
+                        rows="4"
+                        className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300 md:col-span-2"
+                        required
+                      />
+                      <textarea
+                        name="basicInfo"
+                        value={teamCaseForm.basicInfo}
+                        onChange={handleTeamCaseInput}
+                        placeholder="Basic info"
+                        rows="3"
+                        className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
+                      />
+                      <textarea
+                        name="documents"
+                        value={teamCaseForm.documents}
+                        onChange={handleTeamCaseInput}
+                        placeholder="Documents, links, or file names. Add one per line."
+                        rows="3"
+                        className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
+                      />
+                      <select
+                        name="status"
+                        value={teamCaseForm.status}
+                        onChange={handleTeamCaseInput}
+                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
+                      >
+                        {teamCaseStatuses.map((status) => (
+                          <option key={status.value} value={status.value} className="text-zinc-950">
+                            {status.label}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="submit"
+                        disabled={savingTeamCase}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 font-bold text-zinc-950 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <FaCheck />
+                        {savingTeamCase ? 'Saving...' : 'Save Case'}
+                      </button>
+                    </form>
+                  ) : null}
+
+                  {teamCases.length === 0 ? (
+                    <EmptyBlock icon={<FaBriefcase size={24} />} message="No team cases added yet." />
+                  ) : (
+                    <div className="space-y-4">
+                      {teamCases.map((teamCase) => (
+                        <div key={teamCase.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                            <div>
+                              <h4 className="text-lg font-bold text-white">{teamCase.caseTitle || 'Untitled Case'}</h4>
+                              <p className="mt-1 text-sm text-zinc-400">Client: {teamCase.clientName || 'Not added'}</p>
+                              <p className="mt-1 text-xs text-zinc-500">Added by {teamCase.addedByName || 'Lawyer'} on {formatDate(teamCase.createdAt) || 'recently'}</p>
+                            </div>
+                            <select
+                              value={teamCase.status || 'new'}
+                              onChange={(event) => handleUpdateTeamCaseStatus(teamCase, event.target.value)}
+                              disabled={updatingTeamCaseId === teamCase.id}
+                              className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-amber-300 disabled:opacity-60"
+                            >
+                              {teamCaseStatuses.map((status) => (
+                                <option key={status.value} value={status.value} className="text-zinc-950">
+                                  {status.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <p className="mt-4 text-sm leading-7 text-zinc-300">{teamCase.caseDetails || 'No case details added.'}</p>
+
+                          <div className="mt-4 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
+                            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+                              <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Court</p>
+                              <p className="mt-1 text-zinc-200">{teamCase.courtName || 'Not added'}</p>
+                            </div>
+                            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+                              <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Hearing Date</p>
+                              <p className="mt-1 text-zinc-200">{formatDate(teamCase.hearingDate) || 'Not scheduled'}</p>
+                            </div>
+                            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+                              <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Status</p>
+                              <p className="mt-1 text-zinc-200">{getTeamCaseStatusLabel(teamCase.status)}</p>
+                            </div>
+                          </div>
+
+                          {teamCase.basicInfo ? (
+                            <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+                              <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Basic Info</p>
+                              <p className="mt-2 text-sm leading-6 text-zinc-300">{teamCase.basicInfo}</p>
+                            </div>
+                          ) : null}
+
+                          {teamCase.documents?.length ? (
+                            <div className="mt-4">
+                              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-zinc-500">Documents</p>
+                              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                {teamCase.documents.map((document, index) => (
+                                  <a
+                                    key={`${teamCase.id}-doc-${index}`}
+                                    href={String(document.url || '').startsWith('http') ? document.url : undefined}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-bold text-blue-300 transition hover:border-blue-500/50"
+                                  >
+                                    {document.name || document.url || `Document ${index + 1}`}
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-5">
+                  {displayIsTeamOwner ? (
+                    <div>
+                      <h3 className="mb-3 text-lg font-bold text-white">Junior Lawyers</h3>
+                      {teamMembers.length === 0 ? (
+                        <EmptyBlock icon={<UserPlus size={24} />} message="No junior lawyers have joined yet." />
+                      ) : (
+                        <div className="grid grid-cols-1 gap-3">
+                          {teamMembers.map((member) => (
+                            <div key={member.lawyerId || member.phone} className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+                              <h4 className="font-bold text-white">{member.name || 'Junior Lawyer'}</h4>
+                              <p className="mt-1 text-xs text-zinc-500">{member.email || member.phone || 'Contact not shared'}</p>
+                              <span className="mt-3 inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
+                                Joined {formatDate(member.joinedAt) || 'recently'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+                      <p className="text-sm font-semibold text-zinc-300">You are a junior lawyer in this team.</p>
+                      <p className="mt-2 text-sm text-zinc-500">
+                        Joined {formatDate(displayTeam.joinedAt) || 'recently'} with code {displayTeam.teamCode}.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTeamMode('create');
+                    setTeamError('');
+                    setTeamMessage('');
+                  }}
+                  className={`rounded-xl px-4 py-3 font-bold transition ${
+                    teamMode === 'create'
+                      ? 'bg-amber-300 text-zinc-950'
+                      : 'border border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-amber-300/50'
+                  }`}
+                >
+                  Create a team
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTeamMode('join');
+                    setTeamError('');
+                    setTeamMessage('');
+                  }}
+                  className={`rounded-xl px-4 py-3 font-bold transition ${
+                    teamMode === 'join'
+                      ? 'bg-amber-300 text-zinc-950'
+                      : 'border border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-amber-300/50'
+                  }`}
+                >
+                  Join a team
+                </button>
+              </div>
+
+              {teamMode === 'create' ? (
+                <form onSubmit={handleCreateTeam} className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Firm name</label>
+                    <input
+                      name="firmName"
+                      value={createTeamForm.firmName}
+                      onChange={handleCreateTeamInput}
+                      placeholder="Firm name"
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Senior lawyer name</label>
+                    <input
+                      name="seniorLawyerName"
+                      value={createTeamForm.seniorLawyerName}
+                      onChange={handleCreateTeamInput}
+                      placeholder="Senior lawyer name"
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Maximum team size</label>
+                    <input
+                      type="number"
+                      min="2"
+                      name="maxTeamSize"
+                      value={createTeamForm.maxTeamSize}
+                      onChange={handleCreateTeamInput}
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={teamLoading}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-300 px-5 py-3 font-bold text-zinc-950 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Users size={18} />
+                    {teamLoading ? 'Creating...' : 'Create Team'}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleJoinTeam} className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Team code</label>
+                    <input
+                      name="teamCode"
+                      value={joinTeamForm.teamCode}
+                      onChange={handleJoinTeamInput}
+                      placeholder="Enter team code"
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 font-mono text-lg font-bold tracking-wider text-white outline-none focus:border-amber-300"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={teamLoading}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-300 px-5 py-3 font-bold text-zinc-950 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <UserPlus size={18} />
+                    {teamLoading ? 'Joining...' : 'Join Team'}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+
+          {teamError ? (
+            <p className="mt-5 rounded-xl border border-red-900/50 bg-red-950/50 px-4 py-3 text-sm text-red-100">{teamError}</p>
+          ) : null}
+          {teamMessage ? (
+            <p className="mt-5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-200">{teamMessage}</p>
+          ) : null}
         </ModalShell>
       )}
 
