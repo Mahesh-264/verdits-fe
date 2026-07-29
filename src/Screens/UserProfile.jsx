@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { updateUser } from '../redux/authSlice';
 import useSessionLogout from '../hooks/useSessionLogout';
+import AppHeader from '../components/AppHeader.jsx';
 
 // Shared profile editor for users and lawyers, including location refresh for discovery accuracy.
 const UserProfile = () => {

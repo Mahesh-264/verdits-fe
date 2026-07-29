@@ -3,6 +3,13 @@ import { getAccessToken } from './authStorage';
 
 const getSocketUrl = () => {
     if (import.meta.env.VITE_SOCKET_URL) return import.meta.env.VITE_SOCKET_URL;
+    if (import.meta.env.VITE_API_URL) {
+        try {
+            return new URL(import.meta.env.VITE_API_URL).origin;
+        } catch {
+            // Fall through to the current origin for relative development URLs.
+        }
+    }
     if (typeof window !== 'undefined') return window.location.origin;
     return undefined;
 };
