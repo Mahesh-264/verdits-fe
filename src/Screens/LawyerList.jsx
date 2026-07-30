@@ -97,7 +97,7 @@ const LawyerList = () => {
               onClick={() => setSelectedRadius(filter.id)}
               className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                 selectedRadius === filter.id
-                  ? 'bg-[#062552] text-white'
+                  ? 'location-radius-active bg-[#062552] text-white'
                   : 'bg-white text-[#44516d] border border-[#dbe2ef] hover:border-[#15a276]'
               }`}
             >

@@ -251,6 +251,59 @@ textarea::placeholder {
   color: var(--verdicts-ink) !important;
 }
 
+/* Chat uses dark message bubbles and a dark conversation header.  It can be
+   rendered inside lawyer-theme, whose light-panel text override would otherwise
+   turn these labels black and make them unreadable. */
+.lawyer-theme .chat-page [class*="text-white"] {
+  color: var(--verdicts-ivory) !important;
+}
+
+.lawyer-theme .chat-page h3[class*="text-white"] {
+  color: var(--verdicts-ivory) !important;
+}
+
+/* Keep icons legible when they sit on the application's dark navy circles.
+   The global palette rules intentionally recolor some controls, but those
+   rules must not turn these Lucide glyphs the same color as their background. */
+.user-dark-icon,
+.user-dark-icon svg {
+  color: var(--verdicts-ivory) !important;
+}
+
+/* User Home uses one consistent yellow icon treatment. */
+.user-home-icon,
+.user-home-icon svg {
+  background-color: var(--verdicts-gold) !important;
+  color: var(--verdicts-ink) !important;
+}
+
+/* All case categories use a consistent black icon treatment. */
+.case-selection-icon {
+  background-color: var(--verdicts-charcoal) !important;
+}
+
+.case-selection-icon,
+.case-selection-icon svg {
+  color: var(--verdicts-ivory) !important;
+}
+
+/* Fixed dark actions need light foreground content even inside lawyer-theme. */
+.lawyer-theme .consultation-chat-button,
+.lawyer-theme .consultation-chat-button svg,
+.lawyer-theme .location-radius-active {
+  color: var(--verdicts-ivory) !important;
+}
+
+/* The chat header is dark, so its back control gets a high-contrast surface. */
+.lawyer-theme .chat-back-button {
+  background-color: var(--verdicts-ivory) !important;
+  color: var(--verdicts-ink) !important;
+}
+
+.lawyer-theme .chat-back-button svg {
+  color: var(--verdicts-ink) !important;
+}
+
 .lawyer-theme [class*="text-zinc-950"],
 .lawyer-theme h1,
 .lawyer-theme h2,

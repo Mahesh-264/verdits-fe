@@ -29,7 +29,7 @@ const CaseSelection = () => {
                             onClick={() => navigate(`/lawyers/${cat.id}`)}
                             className="bg-white p-4 rounded-xl shadow-sm border border-[#d7e9ef] flex items-center gap-4 cursor-pointer hover:shadow-md hover:border-[#15a276]/40 transition"
                         >
-                            <div className={`h-12 w-12 ${cat.color} rounded-full flex items-center justify-center text-white shrink-0`}>
+                            <div className="case-selection-icon h-12 w-12 rounded-full flex items-center justify-center shrink-0">
                                 {cat.icon}
                             </div>
                             <div>

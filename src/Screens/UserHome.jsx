@@ -119,7 +119,7 @@ const UserHome = () => {
                     onClick={() => navigate('/book-lawyer')}
                     className="bg-white p-6 rounded-2xl shadow-sm border border-[#d7e9ef] flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md hover:border-[#062552]/30 transition text-center"
                 >
-                    <div className="h-14 w-14 bg-[#062552] rounded-full flex items-center justify-center text-white shrink-0 shadow-inner">
+                    <div className="user-home-icon h-14 w-14 rounded-full flex items-center justify-center shrink-0 shadow-inner">
                         <BookOpen size={28} />
                     </div>
                     <div>
@@ -133,7 +133,7 @@ const UserHome = () => {
                     onClick={() => navigate('/instant-consult')}
                     className="bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md transition text-center border border-[#d7e9ef] hover:border-[#15a276]/40"
                 >
-                    <div className="h-14 w-14 bg-[#15a276] rounded-full flex items-center justify-center text-white shrink-0 shadow-inner">
+                    <div className="user-home-icon h-14 w-14 rounded-full flex items-center justify-center shrink-0 shadow-inner">
                         <MessageSquare size={28} />
                     </div>
                     <div>
@@ -147,7 +147,7 @@ const UserHome = () => {
                     onClick={handleDocumentCardClick}
                     className="bg-white p-6 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md transition text-center border border-[#d7e9ef] hover:border-[#15a276]/40"
                 >
-                    <div className="h-14 w-14 bg-[#19b98d] rounded-full flex items-center justify-center text-white">
+                    <div className="user-home-icon h-14 w-14 rounded-full flex items-center justify-center">
                         <Lightbulb size={28} />
                     </div>
                     <span className="font-medium text-gray-800 text-center">Know Your Document</span>
@@ -162,7 +162,7 @@ const UserHome = () => {
                     onClick={handleOpenMyLawyers}
                     className="bg-white p-6 rounded-2xl shadow-sm border border-[#d7e9ef] flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md hover:border-[#062552]/30 transition"
                 >
-                    <div className="h-14 w-14 bg-[#0b3b70] rounded-full flex items-center justify-center text-white">
+                    <div className="user-home-icon h-14 w-14 rounded-full flex items-center justify-center">
                         <Scale size={28} />
                     </div>
                     <span className="font-medium text-gray-800">My Lawyers</span>

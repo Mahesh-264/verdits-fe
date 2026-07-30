@@ -443,7 +443,7 @@ export default function Chat() {
     };
 
     return (
-        <div className="flex h-screen bg-[#f3f8fb] text-[#0b1f44] overflow-hidden font-sans select-none">
+        <div className="chat-page flex h-screen bg-[#f3f8fb] text-[#0b1f44] overflow-hidden font-sans select-none">
             {/* SIDEBAR */}
             <div className={`w-full md:w-[30%] min-w-[320px] max-w-[420px] border-r border-[#dbe2ef] flex flex-col bg-white ${isDirectChatMode ? 'hidden' : activePartner ? 'hidden md:flex' : 'flex'}`}>
                 <div className="p-3 bg-[#062552] flex justify-between items-center border-b border-[#0b3b70]">
@@ -506,7 +506,7 @@ export default function Chat() {
                                     <button
                                         type="button"
                                         onClick={handleBackToPreviousPage}
-                                        className="flex h-9 w-9 items-center justify-center rounded-full text-[#b8c8dc] transition-colors hover:bg-white/10 hover:text-white"
+                                        className="chat-back-button flex h-9 w-9 items-center justify-center rounded-full text-[#b8c8dc] transition-colors hover:bg-white/10 hover:text-white"
                                         aria-label="Back to previous page"
                                         title="Back"
                                     >
