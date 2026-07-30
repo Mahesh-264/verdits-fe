@@ -6,7 +6,7 @@ const ConsultationButton = React.memo(({ icon: Icon, label, price, onClick }) =>
         onClick={onClick}
         className={`flex flex-col items-center justify-center p-3 rounded-xl transition border ${
             label === 'Chat'
-                ? 'bg-[#062552] hover:bg-[#0b3b70] text-white shadow-lg shadow-[#062552]/20'
+                ? 'consultation-chat-button bg-[#062552] hover:bg-[#0b3b70] text-white shadow-lg shadow-[#062552]/20'
                 : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-100'
         }`}
     >
