@@ -43,11 +43,16 @@ const LawyerProfile = () => {
 
     const handleConnect = useCallback((type) => {
         if (type === 'chat') {
-            navigate('/chat', { state: { selectedPartner: lawyer } });
+            const partnerId = lawyer?._id || lawyer?.id;
+            if (!partnerId) return;
+
+            navigate(`/chat?partnerId=${encodeURIComponent(partnerId)}`, {
+                state: { selectedPartner: lawyer, returnTo: `/lawyer-profile/${id}` },
+            });
         } else {
             console.log('Initiating', type);
         }
-    }, [lawyer, navigate]);
+    }, [id, lawyer, navigate]);
 
     // Loading and error states
     if (loading) {
