@@ -351,6 +351,8 @@ export default function LawyerDashboard() {
   const [showTeamCaseForm, setShowTeamCaseForm] = useState(false);
   const [savingTeamCase, setSavingTeamCase] = useState(false);
   const [updatingTeamCaseId, setUpdatingTeamCaseId] = useState('');
+  const [updatingTeamRequestId, setUpdatingTeamRequestId] = useState('');
+  const [removingTeamMemberId, setRemovingTeamMemberId] = useState('');
   const [showStudentInteractionModal, setShowStudentInteractionModal] = useState(false);
   const [showNoticeGenerator, setShowNoticeGenerator] = useState(false);
   const [studentInteractionTab, setStudentInteractionTab] = useState('internships');
@@ -452,6 +454,17 @@ export default function LawyerDashboard() {
       setPostLoading(false);
     }
   }, [user?._id]);
+
+  const refreshCurrentUser = useCallback(async () => {
+    try {
+      const { data } = await api.get('/auth/me');
+      dispatch(updateUser(data));
+      return data;
+    } catch (error) {
+      console.error('Error refreshing current lawyer:', error);
+      return null;
+    }
+  }, [dispatch]);
 
   useEffect(() => {
     if (searchParams.get('section') === 'student-interactions') {
@@ -617,6 +630,11 @@ export default function LawyerDashboard() {
     loadTeamWorkspace();
   }, [loadTeamWorkspace, showTeamModal, user?.lawyerProfile?.team?.teamCode]);
 
+  useEffect(() => {
+    if (!showTeamModal) return;
+    refreshCurrentUser();
+  }, [refreshCurrentUser, showTeamModal]);
+
   const handleCreateTeam = async (event) => {
     event.preventDefault();
 
@@ -657,6 +675,13 @@ export default function LawyerDashboard() {
       const { data } = await api.post('/auth/lawyer/team/join', {
         teamCode: joinTeamForm.teamCode.trim(),
       });
+
+      if (data?.requestPending) {
+        setJoinTeamForm(initialJoinTeamForm);
+        setTeamMessage(data.message || 'Join request sent to the senior lawyer.');
+        return;
+      }
+
       if (data?.user) {
         dispatch(updateUser(data.user));
       }
@@ -732,6 +757,46 @@ export default function LawyerDashboard() {
       setTeamError(error.response?.data?.message || 'Failed to update case status');
     } finally {
       setUpdatingTeamCaseId('');
+    }
+  };
+
+  const handleTeamRequestDecision = async (request, decision) => {
+    try {
+      setUpdatingTeamRequestId(request.id);
+      setTeamError('');
+      setTeamMessage('');
+
+      const { data } = await api.patch(`/auth/lawyer/team/requests/${request.id}/${decision}`);
+      setTeamWorkspace(data?.team || null);
+      setTeamMessage(data?.message || (decision === 'accept' ? 'Join request accepted.' : 'Join request rejected.'));
+    } catch (error) {
+      console.error('Error updating team request:', error);
+      setTeamError(error.response?.data?.message || 'Failed to update team request');
+    } finally {
+      setUpdatingTeamRequestId('');
+    }
+  };
+
+  const handleRemoveTeamMember = async (member) => {
+    const memberId = member.lawyerId || member.id;
+    if (!memberId) return;
+
+    const confirmed = window.confirm(`Remove ${member.name || 'this lawyer'} from the team?`);
+    if (!confirmed) return;
+
+    try {
+      setRemovingTeamMemberId(String(memberId));
+      setTeamError('');
+      setTeamMessage('');
+
+      const { data } = await api.delete(`/auth/lawyer/team/members/${memberId}`);
+      setTeamWorkspace(data?.team || null);
+      setTeamMessage(data?.message || 'Team member removed.');
+    } catch (error) {
+      console.error('Error removing team member:', error);
+      setTeamError(error.response?.data?.message || 'Failed to remove team member');
+    } finally {
+      setRemovingTeamMemberId('');
     }
   };
 
@@ -1080,6 +1145,7 @@ export default function LawyerDashboard() {
   const displayTeamRole = teamWorkspace?.role || lawyerTeam?.role;
   const displayIsTeamOwner = displayTeamRole === 'owner';
   const teamMembers = Array.isArray(displayTeam?.members) ? displayTeam.members : [];
+  const teamPendingRequests = Array.isArray(displayTeam?.pendingRequests) ? displayTeam.pendingRequests : [];
   const teamCases = Array.isArray(displayTeam?.cases) ? displayTeam.cases : [];
   const teamSize = hasTeam ? teamMembers.length + 1 : 0;
 
@@ -1111,7 +1177,9 @@ export default function LawyerDashboard() {
     },
     {
       title: 'My Team',
-      badge: displayIsTeamOwner && teamMembers.length > 0 ? teamMembers.length : null,
+      badge: displayIsTeamOwner && (teamPendingRequests.length || teamMembers.length)
+        ? teamPendingRequests.length || teamMembers.length
+        : null,
       icon: <Users className="h-10 w-10 text-amber-300" />,
       desc: hasTeam
         ? `${displayIsTeamOwner ? 'Created' : 'Joined'} ${displayTeam.firmName || 'your team'}.`
@@ -1264,8 +1332,9 @@ export default function LawyerDashboard() {
 
       {showTeamModal && (
         <ModalShell title="My Team" icon={<Users className="h-6 w-6 text-amber-300" />} onClose={() => setShowTeamModal(false)}>
-          {hasTeam ? (
-            <div className="space-y-5">
+          <div className="lawyer-team-workspace">
+            {hasTeam ? (
+              <div className="space-y-5">
               <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div>
@@ -1480,24 +1549,75 @@ export default function LawyerDashboard() {
 
                 <div className="space-y-5">
                   {displayIsTeamOwner ? (
-                    <div>
-                      <h3 className="mb-3 text-lg font-bold text-white">Junior Lawyers</h3>
-                      {teamMembers.length === 0 ? (
-                        <EmptyBlock icon={<UserPlus size={24} />} message="No junior lawyers have joined yet." />
-                      ) : (
-                        <div className="grid grid-cols-1 gap-3">
-                          {teamMembers.map((member) => (
-                            <div key={member.lawyerId || member.phone} className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                              <h4 className="font-bold text-white">{member.name || 'Junior Lawyer'}</h4>
-                              <p className="mt-1 text-xs text-zinc-500">{member.email || member.phone || 'Contact not shared'}</p>
-                              <span className="mt-3 inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
-                                Joined {formatDate(member.joinedAt) || 'recently'}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    <>
+                      <div>
+                        <h3 className="mb-3 text-lg font-bold text-white">Join Requests</h3>
+                        {teamPendingRequests.length === 0 ? (
+                          <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-950 p-4 text-sm font-semibold text-zinc-500">
+                            No pending requests.
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 gap-3">
+                            {teamPendingRequests.map((request) => (
+                              <div key={request.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+                                <h4 className="font-bold text-white">{request.name || 'Lawyer'}</h4>
+                                <p className="mt-1 text-xs text-zinc-500">{request.email || request.phone || 'Contact not shared'}</p>
+                                <p className="mt-2 text-xs text-zinc-500">Requested {formatDate(request.requestedAt) || 'recently'}</p>
+                                <div className="mt-4 grid grid-cols-2 gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTeamRequestDecision(request, 'accept')}
+                                    disabled={updatingTeamRequestId === request.id}
+                                    className="rounded-lg bg-[#15a276] px-3 py-2 text-xs font-bold text-zinc-950 transition hover:bg-[#19b98d] disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    {updatingTeamRequestId === request.id ? 'Saving...' : 'Accept'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTeamRequestDecision(request, 'reject')}
+                                    disabled={updatingTeamRequestId === request.id}
+                                    className="rounded-lg border border-red-900/60 bg-red-950/50 px-3 py-2 text-xs font-bold text-red-100 transition hover:bg-red-900/70 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    Reject
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <h3 className="mb-3 text-lg font-bold text-white">Junior Lawyers</h3>
+                        {teamMembers.length === 0 ? (
+                          <EmptyBlock icon={<UserPlus size={24} />} message="No junior lawyers have joined yet." />
+                        ) : (
+                          <div className="grid grid-cols-1 gap-3">
+                            {teamMembers.map((member) => {
+                              const memberId = String(member.lawyerId || member.id || '');
+
+                              return (
+                                <div key={memberId || member.phone} className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+                                  <h4 className="font-bold text-white">{member.name || 'Junior Lawyer'}</h4>
+                                  <p className="mt-1 text-xs text-zinc-500">{member.email || member.phone || 'Contact not shared'}</p>
+                                  <span className="mt-3 inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
+                                    Joined {formatDate(member.joinedAt) || 'recently'}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveTeamMember(member)}
+                                    disabled={removingTeamMemberId === memberId}
+                                    className="mt-3 w-full rounded-lg border border-red-900/60 bg-red-950/50 px-3 py-2 text-xs font-bold text-red-100 transition hover:bg-red-900/70 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    {removingTeamMemberId === memberId ? 'Removing...' : 'Remove Member'}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </>
                   ) : (
                     <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
                       <p className="text-sm font-semibold text-zinc-300">You are a junior lawyer in this team.</p>
@@ -1508,9 +1628,9 @@ export default function LawyerDashboard() {
                   )}
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="space-y-5">
+              </div>
+            ) : (
+              <div className="space-y-5">
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -1608,19 +1728,20 @@ export default function LawyerDashboard() {
                     className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-300 px-5 py-3 font-bold text-zinc-950 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <UserPlus size={18} />
-                    {teamLoading ? 'Joining...' : 'Join Team'}
+                    {teamLoading ? 'Sending request...' : 'Request to Join'}
                   </button>
                 </form>
               )}
-            </div>
-          )}
+              </div>
+            )}
 
-          {teamError ? (
-            <p className="mt-5 rounded-xl border border-red-900/50 bg-red-950/50 px-4 py-3 text-sm text-red-100">{teamError}</p>
-          ) : null}
-          {teamMessage ? (
-            <p className="mt-5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-200">{teamMessage}</p>
-          ) : null}
+            {teamError ? (
+              <p className="mt-5 rounded-xl border border-red-900/50 bg-red-950/50 px-4 py-3 text-sm text-red-100">{teamError}</p>
+            ) : null}
+            {teamMessage ? (
+              <p className="mt-5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-200">{teamMessage}</p>
+            ) : null}
+          </div>
         </ModalShell>
       )}
 
