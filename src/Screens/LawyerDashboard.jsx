@@ -541,7 +541,10 @@ export default function LawyerDashboard() {
             role: 'user',
           };
 
-    navigate('/chat', { state: { selectedPartner } });
+    const partnerId = selectedPartner._id || selectedPartner.id;
+    navigate(`/chat?partnerId=${encodeURIComponent(partnerId)}`, {
+      state: { selectedPartner, returnTo: '/lawyer-dash' },
+    });
     setShowAppointmentsModal(false);
     setShowClientsModal(false);
   };
@@ -1237,7 +1240,7 @@ export default function LawyerDashboard() {
               {acceptedClients.slice().reverse().map((client) => (
                 <div key={client.id} className="bg-zinc-950 border border-zinc-800 hover:border-[#15a276]/30 rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all">
                   <div>
-                    <h3 className="font-bold text-lg text-white">{client.userName}</h3>
+                    <h3 className="font-bold text-lg text-zinc-950">{client.userName}</h3>
                     <p className="text-xs text-zinc-500 mb-2">Accepted on: {new Date(client.timestamp).toLocaleString()}</p>
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full border bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
                       <FaCircle className="text-[8px]" /> Accepted Client

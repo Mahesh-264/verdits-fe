@@ -245,6 +245,12 @@ textarea::placeholder {
   color: #302a1c;
 }
 
+/* Lawyer dashboard panels are rendered in a light theme, so white utility text
+   would otherwise blend into the panel until it is selected. */
+.lawyer-theme [class*="text-white"] {
+  color: var(--verdicts-ink) !important;
+}
+
 .lawyer-theme [class*="text-zinc-950"],
 .lawyer-theme h1,
 .lawyer-theme h2,
