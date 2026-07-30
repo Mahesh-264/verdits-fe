@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, MessageSquare, Lightbulb, MoreHorizontal, Send } from 'lucide-react';
+import { BookOpen, MessageSquare, Lightbulb, Scale, Send, X } from 'lucide-react';
 import api from '../api/axios';
 import AppHeader from '../components/AppHeader.jsx';
 
@@ -13,6 +13,10 @@ const UserHome = () => {
     const [showDocumentOptions, setShowDocumentOptions] = useState(false);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [showMyLawyers, setShowMyLawyers] = useState(false);
+    const [myLawyers, setMyLawyers] = useState([]);
+    const [isLoadingMyLawyers, setIsLoadingMyLawyers] = useState(false);
+    const [myLawyersError, setMyLawyersError] = useState('');
     const [messages, setMessages] = useState([
         {
             sender: 'ai',
@@ -86,6 +90,23 @@ const UserHome = () => {
         }
     };
 
+    const handleOpenMyLawyers = async () => {
+        setShowMyLawyers(true);
+        setIsLoadingMyLawyers(true);
+        setMyLawyersError('');
+
+        try {
+            const { data } = await api.get('/appointments/user/mine');
+            setMyLawyers(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error('Error loading connected lawyers:', error);
+            setMyLawyers([]);
+            setMyLawyersError(error.response?.data?.message || 'Unable to load your connected lawyers right now.');
+        } finally {
+            setIsLoadingMyLawyers(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-[#f3f8fb] pb-52">
             <AppHeader variant="user" profileTo="/profile" showBrandName />
@@ -135,13 +156,18 @@ const UserHome = () => {
                     </span>
                 </div>
 
-                {/* Other */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#d7e9ef] flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md hover:border-[#062552]/30 transition">
+                {/* My Lawyers */}
+                <button
+                    type="button"
+                    onClick={handleOpenMyLawyers}
+                    className="bg-white p-6 rounded-2xl shadow-sm border border-[#d7e9ef] flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-md hover:border-[#062552]/30 transition"
+                >
                     <div className="h-14 w-14 bg-[#0b3b70] rounded-full flex items-center justify-center text-white">
-                        <MoreHorizontal size={28} />
+                        <Scale size={28} />
                     </div>
-                    <span className="font-medium text-gray-800">Other</span>
-                </div>
+                    <span className="font-medium text-gray-800">My Lawyers</span>
+                    <span className="text-[10px] text-gray-500 font-medium">Your accepted appointments</span>
+                </button>
 
             </div>
 
@@ -244,6 +270,83 @@ const UserHome = () => {
                         >
                             Cancel
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {showMyLawyers && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-xl">
+                        <div className="flex items-center justify-between gap-4">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900">My Lawyers</h2>
+                                <p className="mt-1 text-sm text-gray-500">Lawyers who accepted your appointments.</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowMyLawyers(false)}
+                                className="rounded-full p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
+                                aria-label="Close My Lawyers"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="mt-6 max-h-[55vh] space-y-3 overflow-y-auto">
+                            {isLoadingMyLawyers ? (
+                                <p className="py-8 text-center text-sm text-gray-500">Loading your lawyers...</p>
+                            ) : myLawyersError ? (
+                                <div className="py-8 text-center">
+                                    <p className="text-sm text-red-600">{myLawyersError}</p>
+                                    <div className="mt-4 flex justify-center gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={handleOpenMyLawyers}
+                                            className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 transition hover:bg-gray-50"
+                                        >
+                                            Retry
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => navigate('/book-lawyer')}
+                                            className="rounded-xl bg-[#f1d15f] px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-[#d6a400]"
+                                        >
+                                            Connect with Lawyer
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : myLawyers.length === 0 ? (
+                                <div className="py-8 text-center">
+                                    <p className="text-base font-semibold text-gray-900">Please connect to a lawyer.</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate('/book-lawyer')}
+                                        className="mt-4 rounded-xl bg-[#f1d15f] px-5 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-[#d6a400]"
+                                    >
+                                        Connect with Lawyer
+                                    </button>
+                                </div>
+                            ) : (
+                                myLawyers.map((appointment) => {
+                                    const lawyer = appointment.lawyerId || {};
+                                    const lawyerName = `${lawyer.firstName || ''} ${lawyer.lastName || ''}`.trim() || lawyer.name || 'Lawyer';
+                                    const specialization = lawyer.lawyerProfile?.specialization || 'Legal professional';
+
+                                    return (
+                                        <button
+                                            key={appointment._id}
+                                            type="button"
+                                            onClick={() => navigate(`/lawyer-profile/${lawyer._id}`)}
+                                            className="w-full rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-[#15a276] hover:shadow-md"
+                                        >
+                                            <p className="font-semibold text-gray-900">{lawyerName}</p>
+                                            <p className="mt-1 text-sm text-gray-500">{specialization}</p>
+                                            <p className="mt-2 text-xs font-medium text-[#15a276]">Appointment accepted</p>
+                                        </button>
+                                    );
+                                })
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

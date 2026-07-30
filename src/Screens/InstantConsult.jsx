@@ -77,7 +77,12 @@ const InstantConsult = () => {
       localStorage.setItem('mockAppointments', JSON.stringify(appointments));
     }
 
-    navigate('/chat', { state: { selectedPartner: lawyer } });
+    const partnerId = lawyer?._id || lawyer?.id;
+    if (!partnerId) return;
+
+    navigate(`/chat?partnerId=${encodeURIComponent(partnerId)}`, {
+      state: { selectedPartner: lawyer, returnTo: '/instant-consult' },
+    });
   };
 
   return (

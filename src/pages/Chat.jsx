@@ -13,7 +13,7 @@ import useSessionLogout from '../hooks/useSessionLogout';
 import {
     FaEllipsisV, FaPaperPlane, FaTimes, FaPhone, FaVideo, FaCommentDots,
     FaPaperclip, FaSignOutAlt, FaSearch, FaCheckDouble,
-    FaTrash, FaMicrophone, FaCheckCircle, FaCircle, FaStop, FaExternalLinkAlt
+    FaTrash, FaMicrophone, FaCheckCircle, FaCircle, FaStop, FaExternalLinkAlt, FaArrowLeft
 } from 'react-icons/fa';
 
 const hasAcceptedAppointment = (appointments, lawyerId, clientId) =>
@@ -183,9 +183,14 @@ export default function Chat() {
             const selectedPartner = location.state.selectedPartner;
             setLockedPartnerId(selectedPartner._id || selectedPartner.id);
             dispatch(setActivePartner(selectedPartner));
-            navigate(location.pathname, { replace: true, state: {} });
+            // Keep the partner identifier in the address bar so direct-chat
+            // mode survives a browser refresh.
+            navigate(`${location.pathname}${location.search}`, {
+                replace: true,
+                state: { returnTo: location.state.returnTo },
+            });
         }
-    }, [location.pathname, location.state, dispatch, navigate]);
+    }, [location.pathname, location.search, location.state, dispatch, navigate]);
 
     useEffect(() => {
         const partnerId = searchParams.get('partnerId');
@@ -428,6 +433,15 @@ export default function Chat() {
         alert(`${type} calling is available only after accepted appointment. Call integration is not connected yet.`);
     };
 
+    const handleBackToPreviousPage = () => {
+        if (window.history.state?.idx > 0) {
+            navigate(-1);
+            return;
+        }
+
+        navigate(location.state?.returnTo || (user?.role === 'lawyer' ? '/lawyer-dash' : '/user-home'));
+    };
+
     return (
         <div className="flex h-screen bg-[#f3f8fb] text-[#0b1f44] overflow-hidden font-sans select-none">
             {/* SIDEBAR */}
@@ -488,19 +502,17 @@ export default function Chat() {
 
                         <div className="h-[60px] px-4 bg-[#062552] flex justify-between items-center border-l border-[#0b3b70] z-10 shadow-sm text-white">
                             <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => {
-                                        if (isDirectChatMode) {
-                                            setLockedPartnerId(null);
-                                            navigate(user?.role === 'lawyer' ? '/lawyer-dash' : '/user-home');
-                                            return;
-                                        }
-                                        dispatch(setActivePartner(null));
-                                    }}
-                                    className="hidden"
-                                >
-                                    ←
-                                </button>
+                                {isDirectChatMode && (
+                                    <button
+                                        type="button"
+                                        onClick={handleBackToPreviousPage}
+                                        className="flex h-9 w-9 items-center justify-center rounded-full text-[#b8c8dc] transition-colors hover:bg-white/10 hover:text-white"
+                                        aria-label="Back to previous page"
+                                        title="Back"
+                                    >
+                                        <FaArrowLeft size={17} />
+                                    </button>
+                                )}
                                 {renderAvatar(activePartner, "w-10 h-10", "text-xl")}
                                 <div className="flex flex-col justify-center">
                                     <h3 className="text-[16px] text-white font-medium leading-tight">{getParticipantName(activePartner)}</h3>
