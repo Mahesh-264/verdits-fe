@@ -47,7 +47,9 @@ const chatSlice = createSlice({
             console.log(`🛠️ [Redux] Parsed IDs -> Sender: ${senderId}, Receiver: ${receiverId}, Me: ${stringMyId}`);
 
             const partnerId = senderId === stringMyId ? receiverId : senderId;
-            const activePartnerId = state.activePartner ? String(state.activePartner._id) : null;
+            const activePartnerId = state.activePartner
+                ? String(state.activePartner._id || state.activePartner.id)
+                : null;
 
             console.log(`🛠️ [Redux] Partner Calculated: ${partnerId}, Active Open Chat: ${activePartnerId}`);
 

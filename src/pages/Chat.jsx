@@ -173,7 +173,9 @@ export default function Chat() {
     const userIdRef = useRef(null);
 
     // Keep Refs synced instantly without causing re-renders
-    useEffect(() => { activePartnerRef.current = activePartner?._id; }, [activePartner]);
+    useEffect(() => {
+        activePartnerRef.current = activePartner?._id || activePartner?.id;
+    }, [activePartner]);
     useEffect(() => { userIdRef.current = user?._id || user?.id; }, [user]);
 
     // 0. Handle incoming chat request from profiles
@@ -280,9 +282,10 @@ export default function Chat() {
 
     // 3. Chat Switching & History Fetching
     useEffect(() => {
-        if (activePartner?._id) {
-            dispatch(fetchHistory(activePartner._id));
-            dispatch(markMessagesAsRead(activePartner._id));
+        const partnerId = activePartner?._id || activePartner?.id;
+        if (partnerId) {
+            dispatch(fetchHistory(partnerId));
+            dispatch(markMessagesAsRead(partnerId));
             dispatch(clearSelection());
         }
     }, [activePartner, dispatch]);
@@ -374,7 +377,7 @@ export default function Chat() {
         setIsUploading(false);
     };
 
-    const handleSend = (e) => {
+    const handleSend = async (e) => {
         if (e) e.preventDefault();
         if (!text.trim() || !activePartner) return;
 
