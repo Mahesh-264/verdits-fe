@@ -1208,7 +1208,7 @@ export default function LawyerDashboard() {
   const activeDrawerFilters = drawer.type === 'participants' ? participantFilters : applicantFilters;
 
   return (
-    <div className="lawyer-theme min-h-screen bg-[#f3f8fb] text-[#062552] relative">
+    <div className="lawyer-theme lawyer-dashboard-workspace min-h-screen bg-[#f3f8fb] text-[#062552] relative">
       <AppHeader variant="lawyer" profileTo="/profile" showBrandName />
 
       <div className="max-w-6xl mx-auto p-6 md:p-8">

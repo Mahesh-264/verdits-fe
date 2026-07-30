@@ -338,7 +338,7 @@ export default function Chat() {
             mediaRecorderRef.current.onstop = async () => {
                 const file = new File([new Blob(audioChunksRef.current)], "voice.mp3", { type: 'audio/mpeg' });
                 const formData = new FormData();
-                formData.append("receiverId", activePartner._id);
+                formData.append("receiverId", activePartner._id || activePartner.id);
                 formData.append("messageType", 'audio');
                 formData.append("file", file);
                 setIsUploading(true);
@@ -369,7 +369,7 @@ export default function Chat() {
         if (!file || !activePartner) return;
         const type = file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image';
         const formData = new FormData();
-        formData.append("receiverId", activePartner._id);
+        formData.append("receiverId", activePartner._id || activePartner.id);
         formData.append("messageType", type);
         formData.append("file", file);
         setIsUploading(true);
@@ -381,6 +381,10 @@ export default function Chat() {
         if (e) e.preventDefault();
         if (!text.trim() || !activePartner) return;
 
+        const receiverId = activePartner._id || activePartner.id;
+        const content = text.trim();
+        setText("");
+
         if (!socketRef.current || !socketRef.current.connected) {
             console.error("🚨 Socket is offline! Forcing reconnect before sending...");
             globalSocket.connect();
@@ -388,8 +392,25 @@ export default function Chat() {
         }
 
         console.log(`🚀 [Component] Emitting 'sendMessage' -> Text: "${text}"`);
-        socketRef.current.emit("sendMessage", { receiverId: activePartner._id, content: text, messageType: "text" });
-        setText("");
+        if (socketRef.current?.connected) {
+            socketRef.current.emit("sendMessage", { receiverId, content, messageType: "text" });
+            return;
+        }
+
+        try {
+            const { data } = await api.post('/chat/send', {
+                receiverId,
+                content,
+                messageType: 'text',
+            });
+            if (data?.message) {
+                dispatch(receiveMessage({ msg: data.message, myId: user?._id || user?.id }));
+            }
+        } catch (error) {
+            console.error('HTTP fallback message send failed:', error);
+            setText(content);
+            alert(error.response?.data?.message || 'Message failed to send. Please try again.');
+        }
     };
 
     const handleDeleteSelected = () => {
@@ -455,7 +476,7 @@ export default function Chat() {
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                     {displayList.map((item) => (
-                        <div key={item._id || Math.random()} onClick={() => dispatch(setActivePartner(item))} className={`px-3 py-3 flex items-center gap-3 cursor-pointer transition-colors ${activePartner?._id === item._id ? 'bg-[#e8f7f2]' : 'hover:bg-[#f3f8fb]'}`}>
+                        <div key={item._id || Math.random()} onClick={() => dispatch(setActivePartner(item))} className={`px-3 py-3 flex items-center gap-3 cursor-pointer transition-colors ${String(activePartner?._id || activePartner?.id) === String(item._id || item.id) ? 'bg-[#e8f7f2]' : 'hover:bg-[#f3f8fb]'}`}>
                             <div className="relative shrink-0">
                                 {renderAvatar(item, "w-12 h-12", "text-2xl")}
                                 {item.unreadCount > 0 && <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#15a276] border-2 border-white rounded-full"></div>}

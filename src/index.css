@@ -282,6 +282,49 @@ textarea::placeholder {
   color: var(--verdicts-ink) !important;
 }
 
+.lawyer-theme.lawyer-dashboard-workspace,
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-white"] {
+  color: var(--verdicts-ink) !important;
+}
+
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-zinc-100"],
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-zinc-200"],
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-zinc-300"],
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-zinc-400"],
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-gray-100"],
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-gray-200"],
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-gray-300"],
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-slate-100"],
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-slate-200"],
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-slate-300"] {
+  color: #302a1c !important;
+}
+
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-emerald-100"],
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-emerald-200"],
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-emerald-300"],
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-emerald-400"],
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-emerald-500"] {
+  color: #14795d !important;
+}
+
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-red-100"],
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-red-200"],
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-red-300"],
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-red-400"],
+.lawyer-theme.lawyer-dashboard-workspace [class*="text-red-500"] {
+  color: #8a1f1f !important;
+}
+
+.lawyer-theme.lawyer-dashboard-workspace input,
+.lawyer-theme.lawyer-dashboard-workspace textarea,
+.lawyer-theme.lawyer-dashboard-workspace select {
+  background-color: rgba(255, 254, 245, 0.98) !important;
+  border-color: var(--verdicts-line) !important;
+  color: var(--verdicts-ink) !important;
+  -webkit-text-fill-color: var(--verdicts-ink);
+}
+
 .lawyer-theme .lawyer-team-workspace,
 .lawyer-theme .lawyer-team-workspace [class*="text-white"] {
   color: var(--verdicts-ink) !important;
@@ -324,6 +367,12 @@ textarea::placeholder {
 .lawyer-theme input::placeholder,
 .lawyer-theme textarea::placeholder {
   color: #8c7b4d;
+}
+
+.lawyer-theme.lawyer-dashboard-workspace input::placeholder,
+.lawyer-theme.lawyer-dashboard-workspace textarea::placeholder {
+  color: #8c7b4d !important;
+  -webkit-text-fill-color: #8c7b4d;
 }
 
 .lawyer-theme .lawyer-team-workspace input::placeholder,
