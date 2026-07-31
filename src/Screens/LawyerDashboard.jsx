@@ -348,6 +348,7 @@ export default function LawyerDashboard() {
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [showAppointmentsModal, setShowAppointmentsModal] = useState(false);
   const [showClientsModal, setShowClientsModal] = useState(false);
+  const [showHearingsModal, setShowHearingsModal] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [teamMode, setTeamMode] = useState('create');
   const [teamLoading, setTeamLoading] = useState(false);
@@ -642,6 +643,11 @@ export default function LawyerDashboard() {
   }, [loadTeamWorkspace, showTeamModal]);
 
   useEffect(() => {
+    if (user?.role !== 'lawyer') return;
+    loadTeamWorkspace();
+  }, [loadTeamWorkspace, user?.role]);
+
+  useEffect(() => {
     if (!selectedTeamId) return;
     const selectedTeam = teamWorkspaces.find((team) => String(team.id) === String(selectedTeamId));
     if (selectedTeam) {
@@ -760,6 +766,7 @@ export default function LawyerDashboard() {
       });
       setTeamWorkspace(data?.team || null);
       setTeamWorkspaces((current) => current.map((team) => String(team.id) === String(data?.team?.id) ? data.team : team));
+      setSelectedTeamMemberId(currentLawyerId);
       setTeamCaseForm(initialTeamCaseForm);
       setShowTeamCaseForm(false);
       setTeamMessage('Team case added.');
@@ -1189,6 +1196,17 @@ export default function LawyerDashboard() {
   const teamCases = Array.isArray(displayTeam?.cases) ? displayTeam.cases : [];
   const teamSize = hasTeam ? teamMembers.length + 1 : 0;
   const currentLawyerId = getEntityId(user);
+  const currentLawyerName = getLawyerDisplayName(user);
+  const ownerSelfProfile = {
+    id: currentLawyerId,
+    lawyerId: currentLawyerId,
+    name: `${currentLawyerName} (You)`,
+    email: user?.email || '',
+    phone: user?.phone || '',
+    joinedAt: displayTeam.createdAt,
+    roleLabel: 'Senior Lawyer',
+    isOwner: true,
+  };
   const normalizedTeamMembers = teamMembers.map((member) => {
     const memberId = getEntityId(member.lawyerId || member.id || member._id);
     return {
@@ -1200,12 +1218,12 @@ export default function LawyerDashboard() {
     };
   });
   const teamDirectory = displayIsTeamOwner
-    ? normalizedTeamMembers
+    ? [ownerSelfProfile, ...normalizedTeamMembers]
     : normalizedTeamMembers.filter((member) => getEntityId(member.lawyerId || member.id) === currentLawyerId);
   const memberSelfProfile = {
     id: currentLawyerId,
     lawyerId: currentLawyerId,
-    name: getLawyerDisplayName(user),
+    name: `${currentLawyerName} (You)`,
     email: user?.email || '',
     phone: user?.phone || '',
     joinedAt: displayTeam.joinedAt,
@@ -1223,7 +1241,7 @@ export default function LawyerDashboard() {
         const caseOwnerId = getEntityId(teamCase.addedBy);
         const memberId = getEntityId(activeTeamMember.lawyerId || activeTeamMember.id);
         const caseOwnerName = String(teamCase.addedByName || '').trim().toLowerCase();
-        const memberName = String(activeTeamMember.name || '').trim().toLowerCase();
+        const memberName = String(activeTeamMember.name || '').replace(/\s*\(you\)$/i, '').trim().toLowerCase();
         return (caseOwnerId && memberId && caseOwnerId === memberId)
           || (caseOwnerName && memberName && caseOwnerName === memberName);
       })
@@ -1233,6 +1251,17 @@ export default function LawyerDashboard() {
     && activeTeamMember
     && !activeTeamMember.isOwner
     && Boolean(activeTeamMember.lawyerId);
+  const ownTeamCases = teamWorkspaces
+    .flatMap((team) => (Array.isArray(team.cases) ? team.cases.map((teamCase) => ({ ...teamCase, teamName: team.firmName, teamCode: team.teamCode })) : []))
+    .filter((teamCase) => {
+      const caseOwnerId = getEntityId(teamCase.addedBy);
+      const caseOwnerName = String(teamCase.addedByName || '').trim().toLowerCase();
+      return (caseOwnerId && caseOwnerId === currentLawyerId)
+        || (!caseOwnerId && caseOwnerName && caseOwnerName === currentLawyerName.toLowerCase());
+    });
+  const ownHearings = ownTeamCases
+    .filter((teamCase) => teamCase.hearingDate)
+    .sort((first, second) => new Date(first.hearingDate || 0) - new Date(second.hearingDate || 0));
 
   const cards = [
     {
@@ -1244,8 +1273,10 @@ export default function LawyerDashboard() {
     },
     {
       title: 'Next Hearings',
+      badge: ownHearings.length > 0 ? ownHearings.length : null,
       icon: <FaGavel className="text-4xl text-emerald-500" />,
-      desc: 'Track your upcoming court dates and schedules.',
+      desc: 'Track hearing dates from your own team cases.',
+      onClick: () => setShowHearingsModal(true),
     },
     {
       title: 'Notice Generator',
@@ -1412,6 +1443,55 @@ export default function LawyerDashboard() {
               ))}
             </div>
           )}
+        </ModalShell>
+      )}
+
+      {showHearingsModal && (
+        <ModalShell title="Next Hearings" icon={<FaGavel className="text-[#062552]" />} onClose={() => setShowHearingsModal(false)} maxWidthClass="max-w-5xl">
+          <div className="lawyer-team-workspace">
+            <div className="mb-5 rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+              <h3 className="text-lg font-bold text-white">My Hearings</h3>
+              <p className="mt-1 text-sm text-zinc-500">
+                Hearing dates from cases added by you. Other team members' matters are not shown here.
+              </p>
+            </div>
+
+            {ownHearings.length === 0 ? (
+              <EmptyBlock icon={<FaGavel size={24} />} message="No hearings scheduled from your team cases yet." />
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                {ownHearings.map((hearing) => (
+                  <div key={`${hearing.id}-${hearing.teamCode || 'team'}`} className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold uppercase tracking-wide text-amber-300">{hearing.teamName || 'Team Case'}</p>
+                        <h3 className="mt-2 text-xl font-bold text-white">{hearing.caseTitle || 'Untitled Case'}</h3>
+                        <p className="mt-1 text-sm text-zinc-500">Client: {hearing.clientName || 'Not added'}</p>
+                      </div>
+                      <span className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-400">
+                        {formatDate(hearing.hearingDate)}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
+                      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+                        <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Court</p>
+                        <p className="mt-1 text-zinc-200">{hearing.courtName || 'Not added'}</p>
+                      </div>
+                      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+                        <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Status</p>
+                        <p className="mt-1 text-zinc-200">{getTeamCaseStatusLabel(hearing.status)}</p>
+                      </div>
+                      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+                        <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Team Code</p>
+                        <p className="mt-1 font-mono text-zinc-200">{hearing.teamCode || 'Not added'}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </ModalShell>
       )}
 
@@ -1664,7 +1744,7 @@ export default function LawyerDashboard() {
                           const memberCasesCount = teamCases.filter((teamCase) => {
                             const caseOwnerId = getEntityId(teamCase.addedBy);
                             const caseOwnerName = String(teamCase.addedByName || '').trim().toLowerCase();
-                            const memberName = String(member.name || '').trim().toLowerCase();
+                            const memberName = String(member.name || '').replace(/\s*\(you\)$/i, '').trim().toLowerCase();
                             return (caseOwnerId && memberId && caseOwnerId === memberId)
                               || (caseOwnerName && memberName && caseOwnerName === memberName);
                           }).length;
