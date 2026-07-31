@@ -98,6 +98,13 @@ const getTeamCaseStatusLabel = (status) => (
   teamCaseStatuses.find((item) => item.value === status)?.label || 'New'
 );
 
+const getEntityId = (value) => String(value?._id || value?.id || value || '');
+
+const getLawyerDisplayName = (lawyer) => {
+  const fullName = `${lawyer?.firstName || ''} ${lawyer?.lastName || ''}`.trim();
+  return fullName || lawyer?.name || lawyer?.phone || 'Lawyer';
+};
+
 const noticeDocumentTypes = [
   'Legal Notice for Recovery of Money',
   'Legal Notice for Breach of Contract',
@@ -349,6 +356,7 @@ export default function LawyerDashboard() {
   const [teamMessage, setTeamMessage] = useState('');
   const [teamWorkspace, setTeamWorkspace] = useState(null);
   const [showTeamCaseForm, setShowTeamCaseForm] = useState(false);
+  const [selectedTeamMemberId, setSelectedTeamMemberId] = useState('');
   const [savingTeamCase, setSavingTeamCase] = useState(false);
   const [updatingTeamCaseId, setUpdatingTeamCaseId] = useState('');
   const [updatingTeamRequestId, setUpdatingTeamRequestId] = useState('');
@@ -1148,6 +1156,49 @@ export default function LawyerDashboard() {
   const teamPendingRequests = Array.isArray(displayTeam?.pendingRequests) ? displayTeam.pendingRequests : [];
   const teamCases = Array.isArray(displayTeam?.cases) ? displayTeam.cases : [];
   const teamSize = hasTeam ? teamMembers.length + 1 : 0;
+  const currentLawyerId = getEntityId(user);
+  const seniorLawyerId = getEntityId(displayTeam?.seniorLawyer) || (displayIsTeamOwner ? currentLawyerId : '');
+  const seniorTeamProfile = {
+    id: seniorLawyerId || 'senior-lawyer',
+    lawyerId: seniorLawyerId,
+    name: displayTeam.seniorLawyerName || getLawyerDisplayName(user),
+    email: displayIsTeamOwner ? user?.email : '',
+    phone: displayIsTeamOwner ? user?.phone : '',
+    joinedAt: displayTeam.createdAt,
+    roleLabel: 'Senior Lawyer',
+    isOwner: true,
+  };
+  const normalizedTeamMembers = teamMembers.map((member) => {
+    const memberId = getEntityId(member.lawyerId || member.id || member._id);
+    return {
+      ...member,
+      id: memberId || member.email || member.phone || member.name,
+      lawyerId: memberId,
+      roleLabel: 'Junior Lawyer',
+      isOwner: false,
+    };
+  });
+  const teamDirectory = displayIsTeamOwner
+    ? normalizedTeamMembers
+    : [seniorTeamProfile, ...normalizedTeamMembers.filter((member) => member.id !== currentLawyerId)];
+  const activeTeamMember = teamDirectory.find((member) => String(member.id) === String(selectedTeamMemberId))
+    || teamDirectory[0]
+    || null;
+  const activeTeamMemberCases = activeTeamMember
+    ? teamCases.filter((teamCase) => {
+        const caseOwnerId = getEntityId(teamCase.addedBy);
+        const memberId = getEntityId(activeTeamMember.lawyerId || activeTeamMember.id);
+        const caseOwnerName = String(teamCase.addedByName || '').trim().toLowerCase();
+        const memberName = String(activeTeamMember.name || '').trim().toLowerCase();
+        return (caseOwnerId && memberId && caseOwnerId === memberId)
+          || (caseOwnerName && memberName && caseOwnerName === memberName);
+      })
+    : [];
+  const activeTeamMemberId = activeTeamMember ? getEntityId(activeTeamMember.lawyerId || activeTeamMember.id) : '';
+  const canRemoveActiveTeamMember = displayIsTeamOwner
+    && activeTeamMember
+    && !activeTeamMember.isOwner
+    && Boolean(activeTeamMember.lawyerId);
 
   const cards = [
     {
@@ -1331,7 +1382,12 @@ export default function LawyerDashboard() {
       )}
 
       {showTeamModal && (
-        <ModalShell title="My Team" icon={<Users className="h-6 w-6 text-amber-300" />} onClose={() => setShowTeamModal(false)}>
+        <ModalShell
+          title="My Team"
+          icon={<Users className="h-6 w-6 text-amber-300" />}
+          onClose={() => setShowTeamModal(false)}
+          maxWidthClass="max-w-6xl"
+        >
           <div className="lawyer-team-workspace">
             {hasTeam ? (
               <div className="space-y-5">
@@ -1376,12 +1432,118 @@ export default function LawyerDashboard() {
                 </p>
               ) : null}
 
-              <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-                <div className="space-y-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="grid grid-cols-1 gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
+                <aside className="space-y-5">
+                  {displayIsTeamOwner ? (
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="text-base font-bold text-white">Join Requests</h3>
+                        <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-xs font-bold text-zinc-400">
+                          {teamPendingRequests.length}
+                        </span>
+                      </div>
+                      {teamPendingRequests.length === 0 ? (
+                        <p className="mt-4 rounded-xl border border-dashed border-zinc-800 bg-zinc-900 p-4 text-sm font-semibold text-zinc-500">
+                          No pending requests.
+                        </p>
+                      ) : (
+                        <div className="mt-4 grid grid-cols-1 gap-3">
+                          {teamPendingRequests.map((request) => (
+                            <div key={request.id} className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+                              <h4 className="font-bold text-white">{request.name || 'Lawyer'}</h4>
+                              <p className="mt-1 text-xs text-zinc-500">{request.email || request.phone || 'Contact not shared'}</p>
+                              <p className="mt-2 text-xs text-zinc-500">Requested {formatDate(request.requestedAt) || 'recently'}</p>
+                              <div className="mt-4 grid grid-cols-2 gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleTeamRequestDecision(request, 'accept')}
+                                  disabled={updatingTeamRequestId === request.id}
+                                  className="rounded-lg bg-[#15a276] px-3 py-2 text-xs font-bold text-zinc-950 transition hover:bg-[#19b98d] disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  {updatingTeamRequestId === request.id ? 'Saving...' : 'Accept'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleTeamRequestDecision(request, 'reject')}
+                                  disabled={updatingTeamRequestId === request.id}
+                                  className="rounded-lg border border-red-900/60 bg-red-950/50 px-3 py-2 text-xs font-bold text-red-100 transition hover:bg-red-900/70 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-base font-bold text-white">Team Directory</h3>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          Select a lawyer to view profile and cases.
+                        </p>
+                      </div>
+                      <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-xs font-bold text-zinc-400">
+                        {teamDirectory.length}
+                      </span>
+                    </div>
+
+                    {teamDirectory.length === 0 ? (
+                      <EmptyBlock icon={<UserPlus size={24} />} message="No junior lawyers have joined yet." />
+                    ) : (
+                      <div className="mt-4 grid grid-cols-1 gap-3">
+                        {teamDirectory.map((member) => {
+                          const memberId = getEntityId(member.lawyerId || member.id);
+                          const memberCasesCount = teamCases.filter((teamCase) => {
+                            const caseOwnerId = getEntityId(teamCase.addedBy);
+                            const caseOwnerName = String(teamCase.addedByName || '').trim().toLowerCase();
+                            const memberName = String(member.name || '').trim().toLowerCase();
+                            return (caseOwnerId && memberId && caseOwnerId === memberId)
+                              || (caseOwnerName && memberName && caseOwnerName === memberName);
+                          }).length;
+                          const isActiveMember = activeTeamMember && String(activeTeamMember.id) === String(member.id);
+
+                          return (
+                            <button
+                              key={member.id || member.phone || member.email}
+                              type="button"
+                              onClick={() => setSelectedTeamMemberId(String(member.id))}
+                              className={`w-full rounded-xl border p-4 text-left transition ${
+                                isActiveMember
+                                  ? 'border-amber-300 bg-amber-100/70 shadow-lg'
+                                  : 'border-zinc-800 bg-zinc-900 hover:border-amber-300/50'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <h4 className="truncate font-bold text-white">{member.name || 'Lawyer'}</h4>
+                                  <p className="mt-1 truncate text-xs text-zinc-500">{member.email || member.phone || 'Contact not shared'}</p>
+                                </div>
+                                <span className="shrink-0 rounded-full border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-[11px] font-bold text-zinc-400">
+                                  {memberCasesCount} cases
+                                </span>
+                              </div>
+                              <span className="mt-3 inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
+                                {member.roleLabel}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </aside>
+
+                <section className="space-y-5">
+                  <div className="flex flex-col gap-3 rounded-xl border border-zinc-800 bg-zinc-950 p-5 md:flex-row md:items-center md:justify-between">
                     <div>
-                      <h3 className="text-lg font-bold text-white">Team Cases</h3>
-                      <p className="mt-1 text-sm text-zinc-500">Client matters added by senior or junior lawyers in this team.</p>
+                      <h3 className="text-lg font-bold text-white">Lawyer Workspace</h3>
+                      <p className="mt-1 text-sm text-zinc-500">
+                        Cases appear under the lawyer who added them. Select a teammate to inspect their work.
+                      </p>
                     </div>
                     <button
                       type="button"
@@ -1395,6 +1557,9 @@ export default function LawyerDashboard() {
 
                   {showTeamCaseForm ? (
                     <form onSubmit={handleAddTeamCase} className="grid grid-cols-1 gap-4 rounded-xl border border-zinc-800 bg-zinc-950 p-5 md:grid-cols-2">
+                      <p className="text-sm font-semibold text-zinc-400 md:col-span-2">
+                        This case will be saved under your lawyer profile in the team.
+                      </p>
                       <input
                         name="clientName"
                         value={teamCaseForm.clientName}
@@ -1473,160 +1638,130 @@ export default function LawyerDashboard() {
                     </form>
                   ) : null}
 
-                  {teamCases.length === 0 ? (
-                    <EmptyBlock icon={<FaBriefcase size={24} />} message="No team cases added yet." />
+                  {!activeTeamMember ? (
+                    <EmptyBlock icon={<UserPlus size={24} />} message="Select a team member to view their profile and cases." />
                   ) : (
-                    <div className="space-y-4">
-                      {teamCases.map((teamCase) => (
-                        <div key={teamCase.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
-                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                            <div>
-                              <h4 className="text-lg font-bold text-white">{teamCase.caseTitle || 'Untitled Case'}</h4>
-                              <p className="mt-1 text-sm text-zinc-400">Client: {teamCase.clientName || 'Not added'}</p>
-                              <p className="mt-1 text-xs text-zinc-500">Added by {teamCase.addedByName || 'Lawyer'} on {formatDate(teamCase.createdAt) || 'recently'}</p>
-                            </div>
-                            <select
-                              value={teamCase.status || 'new'}
-                              onChange={(event) => handleUpdateTeamCaseStatus(teamCase, event.target.value)}
-                              disabled={updatingTeamCaseId === teamCase.id}
-                              className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-amber-300 disabled:opacity-60"
+                    <>
+                      <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-wide text-amber-300">{activeTeamMember.roleLabel}</p>
+                            <h3 className="mt-2 text-2xl font-bold text-white">{activeTeamMember.name || 'Lawyer'}</h3>
+                            <p className="mt-2 text-sm text-zinc-500">{activeTeamMember.email || activeTeamMember.phone || 'Contact not shared'}</p>
+                          </div>
+                          {canRemoveActiveTeamMember ? (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveTeamMember(activeTeamMember)}
+                              disabled={removingTeamMemberId === activeTeamMemberId}
+                              className="inline-flex items-center justify-center rounded-xl border border-red-900/60 bg-red-950/50 px-4 py-3 text-sm font-bold text-red-100 transition hover:bg-red-900/70 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                              {teamCaseStatuses.map((status) => (
-                                <option key={status.value} value={status.value} className="text-zinc-950">
-                                  {status.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <p className="mt-4 text-sm leading-7 text-zinc-300">{teamCase.caseDetails || 'No case details added.'}</p>
-
-                          <div className="mt-4 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
-                            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                              <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Court</p>
-                              <p className="mt-1 text-zinc-200">{teamCase.courtName || 'Not added'}</p>
-                            </div>
-                            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                              <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Hearing Date</p>
-                              <p className="mt-1 text-zinc-200">{formatDate(teamCase.hearingDate) || 'Not scheduled'}</p>
-                            </div>
-                            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                              <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Status</p>
-                              <p className="mt-1 text-zinc-200">{getTeamCaseStatusLabel(teamCase.status)}</p>
-                            </div>
-                          </div>
-
-                          {teamCase.basicInfo ? (
-                            <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                              <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Basic Info</p>
-                              <p className="mt-2 text-sm leading-6 text-zinc-300">{teamCase.basicInfo}</p>
-                            </div>
-                          ) : null}
-
-                          {teamCase.documents?.length ? (
-                            <div className="mt-4">
-                              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-zinc-500">Documents</p>
-                              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                {teamCase.documents.map((document, index) => (
-                                  <a
-                                    key={`${teamCase.id}-doc-${index}`}
-                                    href={String(document.url || '').startsWith('http') ? document.url : undefined}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-bold text-blue-300 transition hover:border-blue-500/50"
-                                  >
-                                    {document.name || document.url || `Document ${index + 1}`}
-                                  </a>
-                                ))}
-                              </div>
-                            </div>
+                              {removingTeamMemberId === activeTeamMemberId ? 'Removing...' : 'Remove Member'}
+                            </button>
                           ) : null}
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
 
-                <div className="space-y-5">
-                  {displayIsTeamOwner ? (
-                    <>
-                      <div>
-                        <h3 className="mb-3 text-lg font-bold text-white">Join Requests</h3>
-                        {teamPendingRequests.length === 0 ? (
-                          <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-950 p-4 text-sm font-semibold text-zinc-500">
-                            No pending requests.
+                        <div className="mt-5 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
+                          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+                            <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Joined</p>
+                            <p className="mt-1 font-semibold text-zinc-200">{formatDate(activeTeamMember.joinedAt) || 'Recently'}</p>
                           </div>
+                          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+                            <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Cases Added</p>
+                            <p className="mt-1 font-semibold text-zinc-200">{activeTeamMemberCases.length}</p>
+                          </div>
+                          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+                            <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Team Role</p>
+                            <p className="mt-1 font-semibold text-zinc-200">{activeTeamMember.roleLabel}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                          <div>
+                            <h3 className="text-lg font-bold text-white">Cases by {activeTeamMember.name || 'this lawyer'}</h3>
+                            <p className="text-sm text-zinc-500">Only this lawyer's matters are shown here.</p>
+                          </div>
+                          <p className="text-sm font-bold text-zinc-400">{activeTeamMemberCases.length} total</p>
+                        </div>
+
+                        {activeTeamMemberCases.length === 0 ? (
+                          <EmptyBlock icon={<FaBriefcase size={24} />} message="No cases added by this lawyer yet." />
                         ) : (
-                          <div className="grid grid-cols-1 gap-3">
-                            {teamPendingRequests.map((request) => (
-                              <div key={request.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                                <h4 className="font-bold text-white">{request.name || 'Lawyer'}</h4>
-                                <p className="mt-1 text-xs text-zinc-500">{request.email || request.phone || 'Contact not shared'}</p>
-                                <p className="mt-2 text-xs text-zinc-500">Requested {formatDate(request.requestedAt) || 'recently'}</p>
-                                <div className="mt-4 grid grid-cols-2 gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleTeamRequestDecision(request, 'accept')}
-                                    disabled={updatingTeamRequestId === request.id}
-                                    className="rounded-lg bg-[#15a276] px-3 py-2 text-xs font-bold text-zinc-950 transition hover:bg-[#19b98d] disabled:cursor-not-allowed disabled:opacity-60"
+                          <div className="space-y-4">
+                            {activeTeamMemberCases.map((teamCase) => (
+                              <div key={teamCase.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+                                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                  <div>
+                                    <h4 className="text-lg font-bold text-white">{teamCase.caseTitle || 'Untitled Case'}</h4>
+                                    <p className="mt-1 text-sm text-zinc-400">Client: {teamCase.clientName || 'Not added'}</p>
+                                    <p className="mt-1 text-xs text-zinc-500">Added on {formatDate(teamCase.createdAt) || 'recently'}</p>
+                                  </div>
+                                  <select
+                                    value={teamCase.status || 'new'}
+                                    onChange={(event) => handleUpdateTeamCaseStatus(teamCase, event.target.value)}
+                                    disabled={updatingTeamCaseId === teamCase.id}
+                                    className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-amber-300 disabled:opacity-60"
                                   >
-                                    {updatingTeamRequestId === request.id ? 'Saving...' : 'Accept'}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleTeamRequestDecision(request, 'reject')}
-                                    disabled={updatingTeamRequestId === request.id}
-                                    className="rounded-lg border border-red-900/60 bg-red-950/50 px-3 py-2 text-xs font-bold text-red-100 transition hover:bg-red-900/70 disabled:cursor-not-allowed disabled:opacity-60"
-                                  >
-                                    Reject
-                                  </button>
+                                    {teamCaseStatuses.map((status) => (
+                                      <option key={status.value} value={status.value} className="text-zinc-950">
+                                        {status.label}
+                                      </option>
+                                    ))}
+                                  </select>
                                 </div>
+
+                                <p className="mt-4 text-sm leading-7 text-zinc-300">{teamCase.caseDetails || 'No case details added.'}</p>
+
+                                <div className="mt-4 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
+                                  <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+                                    <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Court</p>
+                                    <p className="mt-1 text-zinc-200">{teamCase.courtName || 'Not added'}</p>
+                                  </div>
+                                  <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+                                    <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Hearing Date</p>
+                                    <p className="mt-1 text-zinc-200">{formatDate(teamCase.hearingDate) || 'Not scheduled'}</p>
+                                  </div>
+                                  <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+                                    <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Status</p>
+                                    <p className="mt-1 text-zinc-200">{getTeamCaseStatusLabel(teamCase.status)}</p>
+                                  </div>
+                                </div>
+
+                                {teamCase.basicInfo ? (
+                                  <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+                                    <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Basic Info</p>
+                                    <p className="mt-2 text-sm leading-6 text-zinc-300">{teamCase.basicInfo}</p>
+                                  </div>
+                                ) : null}
+
+                                {teamCase.documents?.length ? (
+                                  <div className="mt-4">
+                                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-zinc-500">Documents</p>
+                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                      {teamCase.documents.map((document, index) => (
+                                        <a
+                                          key={`${teamCase.id}-doc-${index}`}
+                                          href={String(document.url || '').startsWith('http') ? document.url : undefined}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-bold text-blue-300 transition hover:border-blue-500/50"
+                                        >
+                                          {document.name || document.url || `Document ${index + 1}`}
+                                        </a>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ) : null}
                               </div>
                             ))}
                           </div>
                         )}
                       </div>
-
-                      <div>
-                        <h3 className="mb-3 text-lg font-bold text-white">Junior Lawyers</h3>
-                        {teamMembers.length === 0 ? (
-                          <EmptyBlock icon={<UserPlus size={24} />} message="No junior lawyers have joined yet." />
-                        ) : (
-                          <div className="grid grid-cols-1 gap-3">
-                            {teamMembers.map((member) => {
-                              const memberId = String(member.lawyerId || member.id || '');
-
-                              return (
-                                <div key={memberId || member.phone} className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-                                  <h4 className="font-bold text-white">{member.name || 'Junior Lawyer'}</h4>
-                                  <p className="mt-1 text-xs text-zinc-500">{member.email || member.phone || 'Contact not shared'}</p>
-                                  <span className="mt-3 inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
-                                    Joined {formatDate(member.joinedAt) || 'recently'}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveTeamMember(member)}
-                                    disabled={removingTeamMemberId === memberId}
-                                    className="mt-3 w-full rounded-lg border border-red-900/60 bg-red-950/50 px-3 py-2 text-xs font-bold text-red-100 transition hover:bg-red-900/70 disabled:cursor-not-allowed disabled:opacity-60"
-                                  >
-                                    {removingTeamMemberId === memberId ? 'Removing...' : 'Remove Member'}
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
                     </>
-                  ) : (
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
-                      <p className="text-sm font-semibold text-zinc-300">You are a junior lawyer in this team.</p>
-                      <p className="mt-2 text-sm text-zinc-500">
-                        Joined {formatDate(displayTeam.joinedAt) || 'recently'} with code {displayTeam.teamCode}.
-                      </p>
-                    </div>
                   )}
-                </div>
+                </section>
               </div>
               </div>
             ) : (
