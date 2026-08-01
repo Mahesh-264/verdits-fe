@@ -168,10 +168,10 @@ export default function StudentHome() {
   return (
     <StudentLayout>
       <div className="space-y-8">
-        <section className="overflow-hidden rounded-[32px] border border-[#dde6f4] bg-[linear-gradient(135deg,#0d1630_0%,#17386f_52%,#eff5ff_52%,#ffffff_100%)] p-6 text-white shadow-[0_20px_60px_rgba(16,33,68,0.12)] md:p-8">
+        <section className="overflow-hidden rounded-[32px] border border-[#ead79c] bg-[linear-gradient(135deg,#715318_0%,#b58526_52%,#fff6dc_52%,#fffdf7_100%)] p-6 text-white shadow-[0_20px_60px_rgba(91,65,17,0.16)] md:p-8">
           <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr] lg:items-end">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2 text-sm font-semibold backdrop-blur">
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#fff7de]/20 px-4 py-2 text-sm font-semibold backdrop-blur">
                 <Sparkles size={16} />
                 Personalized Feed
               </div>
@@ -188,7 +188,7 @@ export default function StudentHome() {
                 <p className="text-sm uppercase tracking-[0.16em] text-[#6d7a92]">Internships in Feed</p>
                 <p className="mt-3 text-[32px] font-semibold">{feedHighlights.internshipCount}</p>
               </div>
-              <div className="rounded-[28px] bg-[#102144] p-5">
+              <div className="rounded-[28px] bg-[#6b4d14] p-5">
                 <p className="text-sm uppercase tracking-[0.16em] text-white/65">Jam Sessions in Feed</p>
                 <p className="mt-3 text-[32px] font-semibold">{feedHighlights.jamCount}</p>
               </div>
