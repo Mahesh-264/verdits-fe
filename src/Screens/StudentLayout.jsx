@@ -21,6 +21,21 @@ export default function StudentLayout({ children }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
+  const mobileProfileRef = React.useRef(null);
+  const desktopProfileRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      const isInsideMobile = mobileProfileRef.current && mobileProfileRef.current.contains(event.target);
+      const isInsideDesktop = desktopProfileRef.current && desktopProfileRef.current.contains(event.target);
+      if (!isInsideMobile && !isInsideDesktop) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   React.useEffect(() => {
     const syncStudent = async () => {
@@ -107,7 +122,7 @@ export default function StudentLayout({ children }) {
 
               <div className="flex items-center gap-3 xl:hidden">
                 <NotificationBell buttonClassName="border-[#dbe2ef] bg-white text-[#062552] hover:bg-[#f3f8fb]" />
-                <div className="relative">
+                <div ref={mobileProfileRef} className="relative">
                   <button
                     type="button"
                     onClick={() => setShowProfileMenu((current) => !current)}
@@ -160,7 +175,7 @@ export default function StudentLayout({ children }) {
 
               <div className="hidden items-center gap-3 xl:flex">
                 <NotificationBell buttonClassName="border-[#dbe2ef] bg-white text-[#062552] hover:bg-[#f3f8fb]" />
-                <div className="relative">
+                <div ref={desktopProfileRef} className="relative">
                   <button
                     type="button"
                     onClick={() => setShowProfileMenu((current) => !current)}
