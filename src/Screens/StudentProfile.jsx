@@ -259,7 +259,7 @@ export default function StudentProfile() {
                 <button
                   type="button"
                   onClick={openEditor}
-                  className="rounded-2xl bg-[#062552] px-6 py-4 text-[18px] font-semibold text-white hover:bg-[#fff2bf] transition"
+                  className="rounded-2xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-6 py-4 text-[18px] font-bold transition shadow-sm border border-[#d6b85b]"
                 >
                   Edit Profile
                 </button>

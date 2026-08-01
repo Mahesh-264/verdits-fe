@@ -225,7 +225,7 @@ export function InternshipApplicationModal({
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-2xl bg-[#062552] px-6 py-3 font-semibold text-white transition hover:bg-[#0b3b70] disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-2xl bg-[#f1d15f] hover:bg-[#d6a400] px-6 py-3 font-bold text-zinc-950 transition border border-[#d6b85b] shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? 'Submitting...' : 'Submit Application'}
             </button>

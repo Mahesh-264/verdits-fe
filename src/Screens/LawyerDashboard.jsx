@@ -1559,7 +1559,7 @@ export default function LawyerDashboard() {
                         setTeamError('');
                         setTeamMessage('');
                       }}
-                      className="rounded-xl bg-[#062552] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#0b3b70]"
+                      className="rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-4 py-2.5 text-sm font-bold transition shadow-sm border border-[#d6b85b]"
                     >
                       Create Team
                     </button>
@@ -1791,7 +1791,7 @@ export default function LawyerDashboard() {
                     <button
                       type="button"
                       onClick={() => setShowTeamCaseForm((current) => !current)}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#062552] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#0b3b70]"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-4 py-3 text-sm font-bold transition shadow-sm border border-[#d6b85b]"
                     >
                       <FaPlus />
                       {showTeamCaseForm ? 'Close Form' : 'Add Case'}
@@ -2128,7 +2128,7 @@ export default function LawyerDashboard() {
                   }}
                   className={`w-full text-left rounded-xl px-4 py-4 font-semibold transition ${
                     studentInteractionTab === 'internships'
-                      ? 'bg-[#062552] text-white shadow'
+                      ? 'bg-[#f1d15f] text-zinc-950 font-bold border border-[#d6b85b] shadow-sm'
                       : 'bg-white text-[#43556a] hover:bg-[#e8f7f2] hover:text-[#15a276] border border-[#d7e9ef]'
                   }`}
                 >
@@ -2142,7 +2142,7 @@ export default function LawyerDashboard() {
                   }}
                   className={`mt-3 w-full text-left rounded-xl px-4 py-4 font-semibold transition ${
                     studentInteractionTab === 'jamSessions'
-                      ? 'bg-[#062552] text-white shadow'
+                      ? 'bg-[#f1d15f] text-zinc-950 font-bold border border-[#d6b85b] shadow-sm'
                       : 'bg-white text-[#43556a] hover:bg-[#e8f7f2] hover:text-[#15a276] border border-[#d7e9ef]'
                   }`}
                 >
@@ -2157,7 +2157,7 @@ export default function LawyerDashboard() {
                   }}
                   className={`mt-3 w-full text-left rounded-xl px-4 py-4 font-semibold transition ${
                     studentInteractionTab === 'posts'
-                      ? 'bg-[#062552] text-white shadow'
+                      ? 'bg-[#f1d15f] text-zinc-950 font-bold border border-[#d6b85b] shadow-sm'
                       : 'bg-white text-[#43556a] hover:bg-[#e8f7f2] hover:text-[#15a276] border border-[#d7e9ef]'
                   }`}
                 >
@@ -2739,7 +2739,7 @@ export default function LawyerDashboard() {
                   <button
                     type="submit"
                     disabled={noticeEditing || !noticeDraft.trim()}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#062552] px-5 py-3 font-bold text-white transition hover:bg-[#0b3b70] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-5 py-3 font-bold transition disabled:cursor-not-allowed disabled:opacity-60 border border-[#d6b85b] shadow-sm"
                   >
                     <FaMagic />
                     {noticeEditing ? 'Editing...' : 'Apply Edit'}
@@ -2887,7 +2887,7 @@ function FeaturePageShell({ title, icon, onClose, children }) {
           <button
             onClick={onClose}
             type="button"
-            className="flex items-center gap-2 rounded-xl bg-[#062552] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#0b3b70] shadow-sm cursor-pointer"
+            className="flex items-center gap-2 rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-4 py-2.5 text-sm font-bold transition shadow-sm cursor-pointer border border-[#d6b85b]"
           >
             <FaArrowLeft size={16} />
             <span>Back to Dashboard</span>

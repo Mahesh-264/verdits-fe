@@ -197,7 +197,7 @@ const UserHome = () => {
                                                     <button
                                                         type="button"
                                                         onClick={() => navigate(`/lawyer-profile/${lawyer._id}`)}
-                                                        className="mt-3 rounded-xl bg-[#062552] px-4 py-2 text-sm font-medium text-white hover:bg-[#0b3b70] transition"
+                                                        className="mt-3 rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-4 py-2 text-sm font-bold border border-[#d6b85b] shadow-sm transition"
                                                     >
                                                         Book Appointment
                                                     </button>
