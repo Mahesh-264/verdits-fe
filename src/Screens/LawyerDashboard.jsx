@@ -20,6 +20,7 @@ import FeedPostCard from '../components/feed/FeedPostCard.jsx';
 import PostComposerModal from '../components/feed/PostComposerModal.jsx';
 import ReactionBar from '../components/feed/ReactionBar.jsx';
 import { updateUser } from '../redux/authSlice.jsx';
+import socket from '../utils/socket.jsx';
 
 const normalizeStatus = (status) => {
   const formattedStatus = String(status || '').toLowerCase();
@@ -644,12 +645,12 @@ export default function LawyerDashboard() {
     try {
       setTeamWorkspaceLoading(true);
       const params = selectedTeamId ? { teamId: selectedTeamId } : undefined;
-      const { data } = await api.get('/auth/lawyer/team', { params });
+      const { data } = await api.get('/teams/workspace', { params });
       const teams = Array.isArray(data?.teams) ? data.teams : data?.team ? [data.team] : [];
       const activeId = data?.activeTeamId || data?.team?.id || selectedTeamId || teams[0]?.id || '';
       setTeamWorkspaces(teams);
       setSelectedTeamId(activeId ? String(activeId) : '');
-      setTeamWorkspace(teams.find((team) => String(team.id) === String(activeId)) || data?.team || teams[0] || null);
+      setTeamWorkspace(data?.team || null);
     } catch (error) {
       console.error('Error loading team workspace:', error);
       setTeamWorkspace(null);
@@ -670,18 +671,26 @@ export default function LawyerDashboard() {
   }, [loadTeamWorkspace, user?.role]);
 
   useEffect(() => {
-    if (!selectedTeamId) return;
-    const selectedTeam = teamWorkspaces.find((team) => String(team.id) === String(selectedTeamId));
-    if (selectedTeam) {
-      setTeamWorkspace(selectedTeam);
-      setSelectedTeamMemberId('');
-    }
-  }, [selectedTeamId, teamWorkspaces]);
+    if (!selectedTeamId || String(teamWorkspace?.id) === String(selectedTeamId)) return;
+    setSelectedTeamMemberId('');
+    loadTeamWorkspace();
+  }, [loadTeamWorkspace, selectedTeamId, teamWorkspace?.id]);
 
   useEffect(() => {
     if (!showTeamModal) return;
     refreshCurrentUser();
   }, [refreshCurrentUser, showTeamModal]);
+
+  useEffect(() => {
+    if (user?.role !== 'lawyer') return undefined;
+    const refreshTeamWorkspace = (event) => {
+      if (event?.teamId && selectedTeamId && String(event.teamId) !== String(selectedTeamId)) return;
+      loadTeamWorkspace();
+    };
+    const events = ['team:created', 'team:member-joined', 'team:member-left', 'team:join-request-created', 'team:join-request-rejected', 'case:created', 'case:updated', 'case:deleted', 'case:status-changed', 'hearing:created', 'hearing:updated', 'hearing:deleted'];
+    events.forEach((event) => socket.on(event, refreshTeamWorkspace));
+    return () => events.forEach((event) => socket.off(event, refreshTeamWorkspace));
+  }, [loadTeamWorkspace, selectedTeamId, user?.role]);
 
   const handleCreateTeam = async (event) => {
     event.preventDefault();
@@ -697,7 +706,7 @@ export default function LawyerDashboard() {
         maxTeamSize: Number(createTeamForm.maxTeamSize),
       };
 
-      const { data } = await api.post('/auth/lawyer/team', payload);
+      const { data } = await api.post('/teams', payload);
       if (data?.user) {
         dispatch(updateUser(data.user));
       }
@@ -723,7 +732,7 @@ export default function LawyerDashboard() {
       setTeamError('');
       setTeamMessage('');
 
-      const { data } = await api.post('/auth/lawyer/team/join', {
+      const { data } = await api.post('/teams/join-requests', {
         teamCode: joinTeamForm.teamCode.trim(),
       });
 
@@ -739,7 +748,7 @@ export default function LawyerDashboard() {
       setTeamMode('overview');
       setJoinTeamForm(initialJoinTeamForm);
       setTeamMessage('Team joined successfully.');
-      const workspaceResponse = await api.get('/auth/lawyer/team');
+      const workspaceResponse = await api.get('/teams/workspace');
       setTeamWorkspaces(Array.isArray(workspaceResponse.data?.teams) ? workspaceResponse.data.teams : []);
       setTeamWorkspace(workspaceResponse.data?.team || null);
     } catch (error) {
@@ -782,12 +791,8 @@ export default function LawyerDashboard() {
         status: teamCaseForm.status,
       };
 
-      const { data } = await api.post('/auth/lawyer/team/cases', {
-        ...payload,
-        teamId: displayTeam.id,
-      });
-      setTeamWorkspace(data?.team || null);
-      setTeamWorkspaces((current) => current.map((team) => String(team.id) === String(data?.team?.id) ? data.team : team));
+      await api.post(`/teams/${displayTeam.id}/cases`, payload);
+      await loadTeamWorkspace();
       setSelectedTeamMemberId(currentLawyerId);
       setTeamCaseForm(initialTeamCaseForm);
       setShowTeamCaseForm(false);
@@ -806,12 +811,8 @@ export default function LawyerDashboard() {
       setTeamError('');
       setTeamMessage('');
 
-      const { data } = await api.patch(`/auth/lawyer/team/cases/${teamCase.id}/status`, {
-        status,
-        teamId: displayTeam.id,
-      });
-      setTeamWorkspace(data?.team || null);
-      setTeamWorkspaces((current) => current.map((team) => String(team.id) === String(data?.team?.id) ? data.team : team));
+      await api.patch(`/teams/${displayTeam.id}/cases/${teamCase.id}`, { status });
+      await loadTeamWorkspace();
       setTeamMessage('Case status updated.');
     } catch (error) {
       console.error('Error updating team case status:', error);
@@ -827,11 +828,10 @@ export default function LawyerDashboard() {
       setTeamError('');
       setTeamMessage('');
 
-      const { data } = await api.patch(`/auth/lawyer/team/requests/${request.id}/${decision}`, {}, {
-        params: { teamId: displayTeam.id },
-      });
+      const normalizedDecision = decision === 'accept' ? 'approve' : 'reject';
+      const { data } = await api.patch(`/teams/${displayTeam.id}/join-requests/${request.id}/${normalizedDecision}`);
       setTeamWorkspace(data?.team || null);
-      setTeamWorkspaces((current) => current.map((team) => String(team.id) === String(data?.team?.id) ? data.team : team));
+      setTeamWorkspaces(Array.isArray(data?.teams) ? data.teams : []);
       setTeamMessage(data?.message || (decision === 'accept' ? 'Join request accepted.' : 'Join request rejected.'));
     } catch (error) {
       console.error('Error updating team request:', error);
@@ -854,11 +854,9 @@ export default function LawyerDashboard() {
       setTeamError('');
       setTeamMessage('');
 
-      const { data } = await api.delete(`/auth/lawyer/team/members/${memberId}`, {
-        params: { teamId: displayTeam.id },
-      });
+      const { data } = await api.delete(`/teams/${displayTeam.id}/members/${memberId}`);
       setTeamWorkspace(data?.team || null);
-      setTeamWorkspaces((current) => current.map((team) => String(team.id) === String(data?.team?.id) ? data.team : team));
+      setTeamWorkspaces(Array.isArray(data?.teams) ? data.teams : []);
       setTeamMessage(data?.message || 'Team member removed.');
     } catch (error) {
       console.error('Error removing team member:', error);
@@ -1226,7 +1224,7 @@ export default function LawyerDashboard() {
     email: user?.email || '',
     phone: user?.phone || '',
     joinedAt: displayTeam.createdAt,
-    roleLabel: 'Senior Lawyer',
+    roleLabel: 'Team Owner',
     isOwner: true,
   };
   const normalizedTeamMembers = teamMembers.map((member) => {
@@ -1235,7 +1233,7 @@ export default function LawyerDashboard() {
       ...member,
       id: memberId || member.email || member.phone || member.name,
       lawyerId: memberId,
-      roleLabel: 'Junior Lawyer',
+      roleLabel: 'Team Member',
       isOwner: false,
     };
   });
@@ -1249,7 +1247,7 @@ export default function LawyerDashboard() {
     email: user?.email || '',
     phone: user?.phone || '',
     joinedAt: displayTeam.joinedAt,
-    roleLabel: 'Junior Lawyer',
+    roleLabel: 'Team Member',
     isOwner: false,
   };
   const visibleTeamDirectory = displayIsTeamOwner
@@ -1273,8 +1271,8 @@ export default function LawyerDashboard() {
     && activeTeamMember
     && !activeTeamMember.isOwner
     && Boolean(activeTeamMember.lawyerId);
-  const ownTeamCases = teamWorkspaces
-    .flatMap((team) => (Array.isArray(team.cases) ? team.cases.map((teamCase) => ({ ...teamCase, teamName: team.firmName, teamCode: team.teamCode })) : []))
+  const ownTeamCases = teamCases
+    .map((teamCase) => ({ ...teamCase, teamName: displayTeam.firmName, teamCode: displayTeam.teamCode }))
     .filter((teamCase) => {
       const caseOwnerId = getEntityId(teamCase.addedBy);
       if (caseOwnerId) {
@@ -1591,10 +1589,10 @@ export default function LawyerDashboard() {
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wide text-amber-300">
-                      {displayIsTeamOwner ? 'Senior lawyer team' : 'Joined team'}
+                      {displayIsTeamOwner ? 'Team you own' : 'Joined team'}
                     </p>
                     <h3 className="mt-2 text-2xl font-bold text-white">{displayTeam.firmName || 'My Team'}</h3>
-                    <p className="mt-2 text-sm text-zinc-400">Senior lawyer: {displayTeam.seniorLawyerName || 'Not added'}</p>
+                    <p className="mt-2 text-sm text-zinc-400">Team Owner: {displayTeam.seniorLawyerName || 'Not added'}</p>
                   </div>
                   <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm">
                     <p className="text-zinc-500">Team size</p>
@@ -1709,7 +1707,7 @@ export default function LawyerDashboard() {
                       name="seniorLawyerName"
                       value={createTeamForm.seniorLawyerName}
                       onChange={handleCreateTeamInput}
-                      placeholder="Senior lawyer name"
+                      placeholder="Team Owner name"
                       className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
                       required
                     />
@@ -2001,7 +1999,7 @@ export default function LawyerDashboard() {
                                     <p className="mt-1 text-sm text-zinc-400">Client: {teamCase.clientName || 'Not added'}</p>
                                     <p className="mt-1 text-xs text-zinc-500">Added on {formatDate(teamCase.createdAt) || 'recently'}</p>
                                   </div>
-                                  {displayIsTeamOwner ? (
+                                  {teamCase.canEdit ? (
                                     <select
                                       value={teamCase.status || 'new'}
                                       onChange={(event) => handleUpdateTeamCaseStatus(teamCase, event.target.value)}
@@ -2122,12 +2120,12 @@ export default function LawyerDashboard() {
                     />
                   </div>
                   <div>
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Senior lawyer name</label>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Team Owner name</label>
                     <input
                       name="seniorLawyerName"
                       value={createTeamForm.seniorLawyerName}
                       onChange={handleCreateTeamInput}
-                      placeholder="Senior lawyer name"
+                      placeholder="Team Owner name"
                       className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
                       required
                     />
