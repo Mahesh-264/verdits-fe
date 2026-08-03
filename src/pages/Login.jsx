@@ -9,6 +9,24 @@ import socket from '../utils/socket.jsx';
 import BrandLogo from '../components/BrandLogo.jsx';
 import GoogleAuthButton from '../components/auth/GoogleAuthButton.jsx';
 
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+
+const getPasswordErrorMessage = (value) => {
+    const passwordStr = String(value || '');
+    if (!passwordStr) return '';
+    if (passwordStr.length < 8) {
+        return 'Password must be Minimum 8';
+    }
+    const hasUppercase = /[A-Z]/.test(passwordStr);
+    const hasLowercase = /[a-z]/.test(passwordStr);
+    const hasNumber = /[0-9]/.test(passwordStr);
+    const hasSpecial = /[^A-Za-z0-9]/.test(passwordStr);
+    if (!hasUppercase || !hasLowercase || !hasNumber || !hasSpecial) {
+        return 'Password must contain at least one uppercase letter, lowercase letter, number, and special character.';
+    }
+    return '';
+};
+
 export default function Login() {
     const [searchParams] = useSearchParams();
     const role = searchParams.get('role') || 'user';
@@ -21,6 +39,7 @@ export default function Login() {
     const [errorCode, setErrorCode] = useState('');
     const [errorField, setErrorField] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -49,6 +68,20 @@ export default function Login() {
         setErrorMessage('');
         setErrorCode('');
         setErrorField('');
+
+        if (!isValidEmail(email)) {
+            setErrorMessage('Enter a valid email address.');
+            setErrorField('email');
+            return;
+        }
+
+        const passwordError = getPasswordErrorMessage(password);
+        if (passwordError) {
+            setErrorMessage(passwordError);
+            setErrorField('password');
+            return;
+        }
+
         setIsSubmitting(true);
         dispatch(setLoading(true));
 
@@ -156,21 +189,37 @@ export default function Login() {
                             }
                         }}
                     />
-                    <input
-                        type="password"
-                        placeholder="Password"
-                        required
-                        value={password}
-                        aria-invalid={errorField === 'password'}
-                        className={`w-full bg-[#f7fbfc] p-4 rounded-xl outline-none border focus:border-[#15a276] transition ${errorField === 'password' ? 'border-red-500' : 'border-[#d7e9ef]'}`}
-                        onChange={e => {
-                            setPassword(e.target.value);
-                            if (errorMessage) {
-                                setErrorMessage('');
-                                setErrorCode(''); setErrorField('');
-                            }
-                        }}
-                    />
+                    <div className="relative">
+                        <input
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="Password"
+                            required
+                            minLength={8}
+                            value={password}
+                            aria-invalid={errorField === 'password'}
+                            className={`w-full bg-[#f7fbfc] p-4 pr-16 rounded-xl outline-none border focus:border-[#15a276] transition ${errorField === 'password' ? 'border-red-500' : 'border-[#d7e9ef]'}`}
+                            onChange={e => {
+                                setPassword(e.target.value);
+                                if (errorMessage) {
+                                    setErrorMessage('');
+                                    setErrorCode(''); setErrorField('');
+                                }
+                            }}
+                        />
+                        {password && (
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword((visible) => !visible)}
+                                className="absolute inset-y-0 right-0 px-4 text-sm font-semibold text-[#15a276] hover:text-[#0f8968]"
+                                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            >
+                                {showPassword ? 'Hide' : 'View'}
+                            </button>
+                        )}
+                    </div>
+                    {password && getPasswordErrorMessage(password) && (
+                        <p className="text-sm text-red-600">{getPasswordErrorMessage(password)}</p>
+                    )}
 
                     <div className="flex items-center justify-between gap-4 text-sm">
                         <label className="flex items-center gap-2 text-[#5f7488]">
