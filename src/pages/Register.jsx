@@ -82,6 +82,8 @@ const readGoogleSignup = () => {
 const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
 const normalizePhoneInput = (value) => String(value || '').replace(/[\s-]/g, '');
 const isValidMobile = (value) => /^\+?[0-9]{10,15}$/.test(normalizePhoneInput(value));
+const isValidPassword = (value) => /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(String(value || ''));
+const PASSWORD_REQUIREMENTS_MESSAGE = 'Password must include at least 1 capital letter, 1 special character, and 1 number.';
 
 export default function Register() {
     const [searchParams] = useSearchParams();
@@ -112,6 +114,8 @@ export default function Register() {
     const [phoneBusy, setPhoneBusy] = useState(false);
     const [phoneResendSeconds, setPhoneResendSeconds] = useState(0);
     const [googleSignup, setGoogleSignup] = useState(null);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -567,6 +571,14 @@ export default function Register() {
         setErrorMessage('');
 
         try {
+            if (!isValidEmail(formData.email)) {
+                throw new Error('Enter a valid email address.');
+            }
+
+            if (!isValidPassword(formData.password)) {
+                throw new Error(PASSWORD_REQUIREMENTS_MESSAGE);
+            }
+
             const payload = {
                 firstName: formData.firstName,
                 lastName: formData.lastName,
@@ -641,8 +653,8 @@ export default function Register() {
         && formData.lastName.trim()
         && isValidEmail(formData.email)
         && isValidMobile(formData.phone)
-        && formData.password.length >= 8
-        && formData.confirmPassword.length >= 8
+        && isValidPassword(formData.password)
+        && isValidPassword(formData.confirmPassword)
         && formData.password === formData.confirmPassword
     );
     const roleFieldsComplete = role === 'lawyer'
@@ -848,24 +860,39 @@ export default function Register() {
                         </div>
                     )}
 
-                    <input
-                        type="password"
-                        placeholder="Password"
-                        required
-                        minLength={8}
-                        value={formData.password}
-                        className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none w-full md:col-span-2"
-                        onChange={(event) => setFormData({ ...formData, password: event.target.value })}
-                    />
-                    <input
-                        type="password"
-                        placeholder="Confirm Password"
-                        required
-                        minLength={8}
-                        value={formData.confirmPassword}
-                        className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none w-full md:col-span-2"
-                        onChange={(event) => setFormData({ ...formData, confirmPassword: event.target.value })}
-                    />
+                    <div className="relative md:col-span-2">
+                        <input
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="Password"
+                            required
+                            minLength={8}
+                            value={formData.password}
+                            className="bg-[#f7fbfc] p-3 pr-16 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none w-full"
+                            onChange={(event) => setFormData({ ...formData, password: event.target.value })}
+                        />
+                        {formData.password && (
+                            <button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute inset-y-0 right-0 px-4 text-sm font-semibold text-[#15a276] hover:text-[#0f8968]" aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                                {showPassword ? 'Hide' : 'View'}
+                            </button>
+                        )}
+                        {formData.password && !isValidPassword(formData.password) && <p className="mt-2 text-sm text-red-600">{PASSWORD_REQUIREMENTS_MESSAGE}</p>}
+                    </div>
+                    <div className="relative md:col-span-2">
+                        <input
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            placeholder="Confirm Password"
+                            required
+                            minLength={8}
+                            value={formData.confirmPassword}
+                            className="bg-[#f7fbfc] p-3 pr-16 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none w-full"
+                            onChange={(event) => setFormData({ ...formData, confirmPassword: event.target.value })}
+                        />
+                        {formData.confirmPassword && (
+                            <button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} className="absolute inset-y-0 right-0 px-4 text-sm font-semibold text-[#15a276] hover:text-[#0f8968]" aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>
+                                {showConfirmPassword ? 'Hide' : 'View'}
+                            </button>
+                        )}
+                    </div>
 
                     {role === 'lawyer' && (
                         <>

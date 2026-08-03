@@ -7,30 +7,23 @@ import { updateUser } from '../redux/authSlice.jsx';
 import ReactionBar from '../components/feed/ReactionBar.jsx';
 import StudentLayout from './StudentLayout.jsx';
 
-const defaultSpecializations = ['Criminal Law', 'Constitutional Law'];
-const defaultSkills = ['Legal Research', 'Drafting', 'Moot Court', 'Legal Writing', 'Case Analysis'];
-const defaultInternships = [
-  {
-    role: 'Legal Intern',
-    org: 'Senior Advocate R.K. Mehta',
-    period: 'Jun 2025 - Aug 2025',
-    description:
-      'Assisted in criminal litigation cases, drafted legal documents, and conducted research on constitutional matters.',
-  },
-  {
-    role: 'Court Intern',
-    org: 'District Court, Delhi',
-    period: 'Jan 2025 - Mar 2025',
-    description:
-      'Observed court proceedings, assisted in case file management, and prepared case summaries.',
-  },
-];
-
 const getDisplayName = (user) => {
   if (!user) return 'Student';
   const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
   return fullName || user.name || 'Student';
 };
+
+const getStringList = (value) => (
+  Array.isArray(value)
+    ? value.map((item) => String(item || '').trim()).filter(Boolean)
+    : []
+);
+
+const getInternships = (value) => (
+  Array.isArray(value)
+    ? value.filter((item) => item && typeof item === 'object').map((item) => ({ ...item }))
+    : []
+);
 
 const getInitialFormState = (user) => ({
   firstName: user?.firstName || '',
@@ -42,11 +35,9 @@ const getInitialFormState = (user) => ({
   currentYear: user?.studentProfile?.currentYear || '',
   collegeName: user?.studentProfile?.collegeName || '',
   collegeEmail: user?.studentProfile?.collegeEmail || '',
-  specializations: (user?.studentProfile?.specializations || defaultSpecializations).join(', '),
-  skills: (user?.studentProfile?.skills || defaultSkills).join(', '),
-  internships: user?.studentProfile?.internships?.length
-    ? user.studentProfile.internships.map((item) => ({ ...item }))
-    : defaultInternships.map((item) => ({ ...item })),
+  specializations: getStringList(user?.studentProfile?.specializations).join(', '),
+  skills: getStringList(user?.studentProfile?.skills).join(', '),
+  internships: getInternships(user?.studentProfile?.internships),
 });
 
 export default function StudentProfile() {
@@ -66,9 +57,9 @@ export default function StudentProfile() {
   const collegeName = profileUser?.studentProfile?.collegeName || 'National Law School of India University, Bangalore';
   const cityLabel = profileUser?.address?.city || profileUser?.address?.district || 'Location not added';
   const studentBio = profileUser?.studentProfile?.bio || 'Build your student profile, update your academic details, and keep your VERDITS presence current.';
-  const specializations = profileUser?.studentProfile?.specializations?.length ? profileUser.studentProfile.specializations : defaultSpecializations;
-  const skills = profileUser?.studentProfile?.skills?.length ? profileUser.studentProfile.skills : defaultSkills;
-  const internships = profileUser?.studentProfile?.internships?.length ? profileUser.studentProfile.internships : defaultInternships;
+  const specializations = getStringList(profileUser?.studentProfile?.specializations);
+  const skills = getStringList(profileUser?.studentProfile?.skills);
+  const internships = getInternships(profileUser?.studentProfile?.internships);
   const currentYearLabel = profileUser?.studentProfile?.currentYear || 'Not added yet';
   const profileReactionItem = useMemo(() => ({
     id: profileUser?._id || profileUser?.id || 'student-profile',
@@ -138,6 +129,16 @@ export default function StudentProfile() {
   const openEditor = () => {
     if (!isOwnProfile) return;
     setFormData(getInitialFormState(user));
+    setIsEditing(true);
+  };
+
+  const openInternshipEditor = () => {
+    if (!isOwnProfile) return;
+    const nextFormData = getInitialFormState(user);
+    if (!nextFormData.internships.length) {
+      nextFormData.internships = [{ role: '', org: '', period: '', description: '' }];
+    }
+    setFormData(nextFormData);
     setIsEditing(true);
   };
 
@@ -277,22 +278,32 @@ export default function StudentProfile() {
             <section className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
               <h2 className="text-[22px] font-semibold">Specialization</h2>
               <div className="flex flex-wrap gap-3 mt-8">
-                {specializations.map((item) => (
+                {specializations.length ? specializations.map((item) => (
                   <span key={item} className="rounded-full bg-[#e8f7f2] px-4 py-2 text-[#15a276] font-medium">
                     {item}
                   </span>
-                ))}
+                )) : (
+                  <div>
+                    <p className="text-[#5e6c87]">No specializations added yet.</p>
+                    {isOwnProfile && <button type="button" onClick={openEditor} className="mt-3 text-sm font-semibold text-[#15a276] hover:underline">Add specializations</button>}
+                  </div>
+                )}
               </div>
             </section>
 
             <section className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
               <h2 className="text-[22px] font-semibold">Skills</h2>
               <div className="flex flex-wrap gap-3 mt-8">
-                {skills.map((item) => (
+                {skills.length ? skills.map((item) => (
                   <span key={item} className="rounded-full border border-[#dbe2ef] px-4 py-2 text-[16px] font-medium">
                     {item}
                   </span>
-                ))}
+                )) : (
+                  <div>
+                    <p className="text-[#5e6c87]">No skills added yet.</p>
+                    {isOwnProfile && <button type="button" onClick={openEditor} className="mt-3 text-sm font-semibold text-[#15a276] hover:underline">Add skills</button>}
+                  </div>
+                )}
               </div>
             </section>
 
@@ -328,19 +339,26 @@ export default function StudentProfile() {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <h2 className="text-[22px] font-semibold">Internship Experience</h2>
-                  <p className="text-[#5e6c87] text-[18px] mt-2">2 internships completed</p>
+                  <p className="text-[#5e6c87] text-[18px] mt-2">
+                    {internships.length
+                      ? `${internships.length} ${internships.length === 1 ? 'internship' : 'internships'} added`
+                      : 'Add your internship experience'}
+                  </p>
                 </div>
-                <button
-                  type="button"
-                  className="rounded-2xl border border-[#dbe2ef] px-5 py-3 text-[18px] font-semibold hover:bg-[#f8faff] transition"
-                >
-                  Add Internship
-                </button>
+                {isOwnProfile && (
+                  <button
+                    type="button"
+                    onClick={openInternshipEditor}
+                    className="rounded-2xl border border-[#dbe2ef] px-5 py-3 text-[18px] font-semibold hover:bg-[#f8faff] transition"
+                  >
+                    Add Internship
+                  </button>
+                )}
               </div>
 
               <div className="mt-8 space-y-10">
-                {internships.map((item) => (
-                  <div key={item.role} className="flex items-start gap-5">
+                {internships.length ? internships.map((item, index) => (
+                  <div key={`${item.role}-${item.org}-${index}`} className="flex items-start gap-5">
                     <div className="h-16 w-16 rounded-2xl bg-[#e8f7f2] text-[#15a276] flex items-center justify-center shrink-0">
                       <BriefcaseBusiness size={28} />
                     </div>
@@ -351,7 +369,12 @@ export default function StudentProfile() {
                       <p className="text-[18px] leading-9 text-[#243b67] mt-4">{item.description}</p>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div className="rounded-2xl border border-dashed border-[#dbe2ef] p-6 text-[#5e6c87]">
+                    <p>No internship experience added yet.</p>
+                    {isOwnProfile && <button type="button" onClick={openInternshipEditor} className="mt-3 text-sm font-semibold text-[#15a276] hover:underline">Add your first internship</button>}
+                  </div>
+                )}
               </div>
             </section>
           </div>
@@ -480,44 +503,49 @@ export default function StudentProfile() {
                 </div>
               </div>
 
-              <div className="rounded-2xl bg-[#f8faff] border border-[#dbe2ef] p-5 self-start">
-                <h3 className="text-lg font-semibold">Skills and Interests</h3>
-                <p className="text-sm text-[#5e6c87] mt-1">Use comma-separated values so your profile stays readable.</p>
-
-                <div className="grid grid-cols-1 gap-5 mt-5">
-                  <Field label="Specializations" fullWidth>
-                    <input
-                      name="specializations"
-                      value={formData.specializations}
-                      onChange={handleChange}
-                      placeholder="Example: Criminal Law, Constitutional Law"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
-                    />
-                  </Field>
-                  <Field label="Skills" fullWidth>
-                    <input
-                      name="skills"
-                      value={formData.skills}
-                      onChange={handleChange}
-                      placeholder="Example: Legal Research, Drafting, Moot Court"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
-                    />
-                  </Field>
-                </div>
-              </div>
-
               <div className="rounded-2xl bg-[#f8faff] border border-[#dbe2ef] p-5 xl:col-span-2">
+                <h3 className="text-lg font-semibold">Skills &amp; Experience</h3>
+                <p className="text-sm text-[#5e6c87] mt-1">Add the skills you want others to see, then include each internship below.</p>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-5">
+                  <div className="rounded-2xl border border-[#dbe2ef] bg-white p-4">
+                    <Field label="Specializations">
+                      <input
+                        name="specializations"
+                        value={formData.specializations}
+                        onChange={handleChange}
+                        placeholder="Criminal Law, Constitutional Law"
+                        className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none transition focus:border-[#15a276] focus:ring-2 focus:ring-[#15a276]/15"
+                      />
+                    </Field>
+                    <p className="mt-2 text-xs text-[#5e6c87]">Separate each specialization with a comma.</p>
+                  </div>
+                  <div className="rounded-2xl border border-[#dbe2ef] bg-white p-4">
+                    <Field label="Skills">
+                      <input
+                        name="skills"
+                        value={formData.skills}
+                        onChange={handleChange}
+                        placeholder="Legal Research, Drafting, Moot Court"
+                        className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none transition focus:border-[#15a276] focus:ring-2 focus:ring-[#15a276]/15"
+                      />
+                    </Field>
+                    <p className="mt-2 text-xs text-[#5e6c87]">Type a skill, add a comma, and continue with the next one.</p>
+                  </div>
+                </div>
+
+                <div className="mt-6 border-t border-[#dbe2ef] pt-5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <h3 className="text-lg font-semibold">Internship Experience</h3>
-                    <p className="text-sm text-[#5e6c87] mt-1">Add internships one by one with clear role, organization, and summary.</p>
+                    <h4 className="text-base font-semibold">Internship Experience</h4>
+                    <p className="text-sm text-[#5e6c87] mt-1">Use “Add internship” to create a new entry, then fill in its details.</p>
                   </div>
                   <button
                     type="button"
                     onClick={addInternshipField}
-                    className="rounded-xl border border-[#dbe2ef] px-4 py-2 text-sm font-semibold hover:bg-[#f8faff] transition"
+                    className="shrink-0 rounded-xl bg-[#15a276] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#10835e] focus:outline-none focus:ring-2 focus:ring-[#15a276] focus:ring-offset-2"
                   >
-                    Add Internship
+                    + Add Internship
                   </button>
                 </div>
 
@@ -572,6 +600,7 @@ export default function StudentProfile() {
                       </div>
                     </div>
                   ))}
+                </div>
                 </div>
               </div>
                 </div>
