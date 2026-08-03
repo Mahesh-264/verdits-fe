@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -29,7 +29,10 @@ const UserProfile = () => {
   const { user } = useSelector((state) => state.auth);
   const isLawyer = user?.role === 'lawyer';
   const dashboardHome = isLawyer ? '/lawyer-dash' : '/user-home';
-  const lawyerTeam = user?.lawyerProfile?.team || null;
+  const [teamWorkspace, setTeamWorkspace] = useState(null);
+  // Legacy profile data remains a fallback until every deployed account has
+  // been migrated. The normalized workspace API is authoritative.
+  const lawyerTeam = teamWorkspace || user?.lawyerProfile?.team || null;
   const hasTeam = Boolean(lawyerTeam?.teamCode);
   const isTeamOwner = lawyerTeam?.role === 'owner';
   const teamMembers = Array.isArray(lawyerTeam?.members) ? lawyerTeam.members : [];
@@ -58,6 +61,17 @@ const UserProfile = () => {
     about: user?.lawyerProfile?.about || '',
     isOnline: Boolean(user?.lawyerProfile?.isOnline),
   });
+
+  useEffect(() => {
+    if (!isLawyer) return undefined;
+    let active = true;
+    api.get('/teams/workspace')
+      .then(({ data }) => {
+        if (active && data?.team) setTeamWorkspace(data.team);
+      })
+      .catch((error) => console.error('Error loading normalized team workspace:', error));
+    return () => { active = false; };
+  }, [isLawyer]);
 
   const handleLogout = useSessionLogout(user?.role);
 
@@ -257,8 +271,8 @@ const UserProfile = () => {
                     <h2 className="text-xl font-semibold text-[#0b1f44]">My Team</h2>
                     <p className="mt-1 text-sm text-[#5e6c87]">
                       {hasTeam
-                        ? `${isTeamOwner ? 'Senior lawyer' : 'Junior lawyer'} at ${lawyerTeam.firmName || 'your team'}.`
-                        : 'Create a team as a senior lawyer or join one with a senior lawyer code.'}
+                        ? `${isTeamOwner ? 'Team Owner' : 'Team Member'} at ${lawyerTeam.firmName || 'your team'}.`
+                        : 'Create a team or join one with a Team Owner code.'}
                     </p>
                   </div>
                   {hasTeam ? (
