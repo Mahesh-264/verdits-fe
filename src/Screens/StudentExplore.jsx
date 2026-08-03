@@ -67,10 +67,43 @@ export default function StudentExplore() {
           api.get('/auth/lawyers'),
         ]);
 
+        const rawInternships = Array.isArray(internshipsResponse.data?.internships)
+          ? internshipsResponse.data.internships
+          : Array.isArray(internshipsResponse.data)
+            ? internshipsResponse.data
+            : [];
+
+        const rawJamSessions = Array.isArray(jamSessionsResponse.data?.jamSessions)
+          ? jamSessionsResponse.data.jamSessions
+          : Array.isArray(jamSessionsResponse.data)
+            ? jamSessionsResponse.data
+            : [];
+
+        const rawLawyers = Array.isArray(lawyersResponse.data?.lawyers)
+          ? lawyersResponse.data.lawyers
+          : Array.isArray(lawyersResponse.data)
+            ? lawyersResponse.data
+            : [];
+
+        const internshipsData = rawInternships.map((item) => ({
+          ...item,
+          lawyerName: item.lawyerName || item.creatorName || item.author || 'Lawyer',
+          specialization: Array.isArray(item.specialization)
+            ? item.specialization
+            : item.specialization
+              ? [String(item.specialization)]
+              : [],
+        }));
+
+        const jamSessionsData = rawJamSessions.map((item) => ({
+          ...item,
+          lawyerName: item.lawyerName || item.creatorName || item.author || 'Lawyer',
+        }));
+
         setDiscovery({
-          internships: Array.isArray(internshipsResponse.data) ? internshipsResponse.data : [],
-          jamSessions: Array.isArray(jamSessionsResponse.data) ? jamSessionsResponse.data : [],
-          lawyers: Array.isArray(lawyersResponse.data) ? lawyersResponse.data.map(normalizeLawyerCard) : [],
+          internships: internshipsData,
+          jamSessions: jamSessionsData,
+          lawyers: rawLawyers.map(normalizeLawyerCard),
         });
       } catch (error) {
         console.error('Error loading student discovery data:', error);

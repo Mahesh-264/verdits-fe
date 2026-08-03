@@ -13,7 +13,7 @@ export default function StudentJamSessions() {
       try {
         setLoading(true);
         const { data } = await api.get('/auth/published-jam-sessions');
-        setSessions(Array.isArray(data) ? data : []);
+        setSessions(Array.isArray(data) ? data : (Array.isArray(data?.jamSessions) ? data.jamSessions : []));
       } catch (error) {
         console.error('Error loading jam sessions:', error);
         setSessions([]);
@@ -52,7 +52,7 @@ export default function StudentJamSessions() {
 
           <button
             type="button"
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#062552] px-6 py-4 text-[18px] font-semibold text-white hover:bg-[#0b3b70] transition"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-6 py-4 text-[18px] font-bold border border-[#d6b85b] shadow-sm transition"
           >
             <Plus size={20} />
             Start New Session

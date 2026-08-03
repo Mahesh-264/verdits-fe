@@ -15,12 +15,12 @@ import { formatDistanceLabel } from '../../utils/lawyerDiscovery.js';
 const typeStyles = {
   internship: {
     badge: 'bg-[#e8f1ff] text-[#15a276]',
-    button: 'bg-[#062552] text-white hover:bg-[#0b3b70]',
+    button: 'bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 font-bold border border-[#d6b85b] shadow-sm',
     joined: 'bg-[#e9fff1] text-[#14804a]',
   },
   jam: {
     badge: 'bg-[#eafbf4] text-[#0e8f5b]',
-    button: 'bg-[#114a38] text-white hover:bg-[#176049]',
+    button: 'bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 font-bold border border-[#d6b85b] shadow-sm',
     joined: 'bg-[#e9fff1] text-[#14804a]',
   },
 };

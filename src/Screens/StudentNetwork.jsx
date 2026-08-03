@@ -45,7 +45,7 @@ export default function StudentNetwork() {
           setStudents(Array.isArray(studentsResult.value.data) ? studentsResult.value.data : []);
         }
         if (lawyersResult.status === 'fulfilled') {
-          setLawyers(Array.isArray(lawyersResult.value.data) ? lawyersResult.value.data : []);
+          setLawyers(Array.isArray(lawyersResult.value.data) ? lawyersResult.value.data : (Array.isArray(lawyersResult.value.data?.lawyers) ? lawyersResult.value.data.lawyers : []));
         }
         if (studentsResult.status === 'rejected' || lawyersResult.status === 'rejected') {
           const failure = studentsResult.status === 'rejected' ? studentsResult.reason : lawyersResult.reason;
