@@ -40,6 +40,14 @@ const getInitialFormState = (user) => ({
   internships: getInternships(user?.studentProfile?.internships),
 });
 
+// Helper Field component defined outside StudentProfile to preserve input focus during typing
+const Field = ({ label, children, fullWidth = false }) => (
+  <div className={fullWidth ? 'md:col-span-2' : ''}>
+    <span className="block text-sm font-semibold text-[#44516d] mb-2">{label}</span>
+    {children}
+  </div>
+);
+
 export default function StudentProfile() {
   const { user } = useSelector((state) => state.auth);
   const { id: profileId } = useParams();
@@ -47,7 +55,7 @@ export default function StudentProfile() {
   const navigate = useNavigate();
   const [viewedStudent, setViewedStudent] = useState(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(Boolean(profileId));
-  const [isEditing, setIsEditing] = useState(false);
+  const [activeEditModal, setActiveEditModal] = useState(null); // 'full' | 'specializations' | 'skills' | 'internships' | 'academic' | null
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState(() => getInitialFormState(user));
 
@@ -126,24 +134,18 @@ export default function StudentProfile() {
     }));
   };
 
-  const openEditor = () => {
-    if (!isOwnProfile) return;
-    setFormData(getInitialFormState(user));
-    setIsEditing(true);
-  };
-
-  const openInternshipEditor = () => {
+  const openEditor = (section = 'full') => {
     if (!isOwnProfile) return;
     const nextFormData = getInitialFormState(user);
-    if (!nextFormData.internships.length) {
+    if (section === 'internships' && !nextFormData.internships.length) {
       nextFormData.internships = [{ role: '', org: '', period: '', description: '' }];
     }
     setFormData(nextFormData);
-    setIsEditing(true);
+    setActiveEditModal(section);
   };
 
   const closeEditor = () => {
-    setIsEditing(false);
+    setActiveEditModal(null);
     setFormData(getInitialFormState(user));
   };
 
@@ -166,8 +168,8 @@ export default function StudentProfile() {
           currentYear: formData.currentYear,
           collegeName: formData.collegeName,
           collegeEmail: formData.collegeEmail,
-          specializations: formData.specializations.split(',').map((item) => item.trim()).filter(Boolean),
-          skills: formData.skills.split(',').map((item) => item.trim()).filter(Boolean),
+          specializations: String(formData.specializations || '').split(',').map((item) => item.trim()).filter(Boolean),
+          skills: String(formData.skills || '').split(',').map((item) => item.trim()).filter(Boolean),
           internships: formData.internships
             .map((item) => ({
               role: item.role?.trim(),
@@ -181,7 +183,7 @@ export default function StudentProfile() {
 
       const { data } = await api.put('/auth/update-profile', payload);
       dispatch(updateUser(data.user));
-      setIsEditing(false);
+      setActiveEditModal(null);
     } catch (error) {
       console.error('Error updating student profile:', error);
       alert(error.response?.data?.message || 'Failed to update profile');
@@ -189,13 +191,6 @@ export default function StudentProfile() {
       setIsSaving(false);
     }
   };
-
-  const Field = ({ label, children, fullWidth = false }) => (
-    <label className={fullWidth ? 'md:col-span-2' : ''}>
-      <span className="block text-sm font-semibold text-[#44516d] mb-2">{label}</span>
-      {children}
-    </label>
-  );
 
   if (isLoadingProfile) {
     return (
@@ -221,45 +216,52 @@ export default function StudentProfile() {
   return (
     <StudentLayout>
       <div className="space-y-8">
-        <button
-          type="button"
-          onClick={() => navigate('/student-home', { replace: true })}
-          className="inline-flex items-center gap-2 rounded-2xl border border-[#d7e9ef] bg-white px-4 py-3 text-sm font-bold text-[#062552] shadow-sm transition hover:border-[#15a276]"
-        >
-          <ArrowLeft size={18} />
-          Back to Dashboard
-        </button>
+        {!isOwnProfile && (
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-2 rounded-2xl border border-[#dbe2ef] bg-white px-4 py-3 text-[16px] font-semibold text-[#243b67] shadow-[0_2px_12px_rgba(11,31,68,0.04)] hover:bg-[#f8faff] transition"
+          >
+            <ArrowLeft size={18} />
+            Back to Network
+          </button>
+        )}
 
-        <section className="rounded-[28px] border border-[#dbe2ef] bg-white overflow-hidden shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
-          <div className="h-40 bg-gradient-to-r from-[#15a276] to-[#15a276]" />
-          <div className="p-6 md:p-8">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-              <div className="flex items-start gap-6">
-                <div className="-mt-20 h-36 w-36 rounded-full border-[6px] border-white bg-gradient-to-br from-[#ff8a80] to-[#b71c1c] text-white flex items-center justify-center text-4xl font-bold shrink-0">
-                  {studentName.charAt(0).toUpperCase()}
-                </div>
-                <div className="pt-2">
-                  <h1 className="text-4xl font-bold">{studentName}</h1>
-                  <p className="mt-3 text-[18px] leading-8 text-[#44516d] max-w-3xl">
-                    {studentBio}
-                  </p>
-                  <div className="mt-5 flex flex-wrap items-center gap-6 text-[#5e6c87] text-[18px]">
-                    <div className="inline-flex items-center gap-2">
-                      <GraduationCap size={18} />
-                      {collegeName}
+        <section className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 md:p-8 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+              <div className="flex items-start gap-5">
+                {profileUser?.profileImage ? (
+                  <img
+                    src={profileUser.profileImage}
+                    alt={studentName}
+                    className="h-24 w-24 rounded-full object-cover shrink-0"
+                  />
+                ) : (
+                  <div className="h-24 w-24 rounded-full bg-gradient-to-br from-[#779bf6] to-[#456be8] text-white font-bold text-3xl flex items-center justify-center shrink-0">
+                    {studentName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-[#0b1f44]">{studentName}</h1>
+                  <div className="mt-3 space-y-2 text-[17px] text-[#44516d]">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap size={20} className="text-[#15a276] shrink-0" />
+                      <span>{collegeName}</span>
                     </div>
-                    <div className="inline-flex items-center gap-2">
-                      <MapPin size={18} />
-                      {currentYearLabel}
+                    <div className="flex items-center gap-2">
+                      <MapPin size={20} className="text-[#5e6c87] shrink-0" />
+                      <span>{cityLabel}</span>
                     </div>
                   </div>
+                  <p className="mt-4 text-[17px] leading-8 text-[#243b67] max-w-3xl">{studentBio}</p>
                 </div>
               </div>
 
               {isOwnProfile ? (
                 <button
                   type="button"
-                  onClick={openEditor}
+                  onClick={() => openEditor('full')}
                   className="rounded-2xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-6 py-4 text-[18px] font-bold transition shadow-sm border border-[#d6b85b]"
                 >
                   Edit Profile
@@ -276,7 +278,18 @@ export default function StudentProfile() {
         <div className="grid grid-cols-1 xl:grid-cols-[340px_minmax(0,1fr)] gap-8">
           <div className="space-y-8">
             <section className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
-              <h2 className="text-[22px] font-semibold">Specialization</h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-[22px] font-semibold">Specialization</h2>
+                {isOwnProfile && (
+                  <button
+                    type="button"
+                    onClick={() => openEditor('specializations')}
+                    className="text-sm font-semibold text-[#15a276] hover:underline"
+                  >
+                    {specializations.length ? 'Edit' : 'Add Specialization'}
+                  </button>
+                )}
+              </div>
               <div className="flex flex-wrap gap-3 mt-8">
                 {specializations.length ? specializations.map((item) => (
                   <span key={item} className="rounded-full bg-[#e8f7f2] px-4 py-2 text-[#15a276] font-medium">
@@ -285,14 +298,29 @@ export default function StudentProfile() {
                 )) : (
                   <div>
                     <p className="text-[#5e6c87]">No specializations added yet.</p>
-                    {isOwnProfile && <button type="button" onClick={openEditor} className="mt-3 text-sm font-semibold text-[#15a276] hover:underline">Add specializations</button>}
+                    {isOwnProfile && (
+                      <button type="button" onClick={() => openEditor('specializations')} className="mt-3 text-sm font-semibold text-[#15a276] hover:underline">
+                        Add Specialization
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
             </section>
 
             <section className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
-              <h2 className="text-[22px] font-semibold">Skills</h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-[22px] font-semibold">Skills</h2>
+                {isOwnProfile && (
+                  <button
+                    type="button"
+                    onClick={() => openEditor('skills')}
+                    className="text-sm font-semibold text-[#15a276] hover:underline"
+                  >
+                    {skills.length ? 'Edit' : 'Add Skills'}
+                  </button>
+                )}
+              </div>
               <div className="flex flex-wrap gap-3 mt-8">
                 {skills.length ? skills.map((item) => (
                   <span key={item} className="rounded-full border border-[#dbe2ef] px-4 py-2 text-[16px] font-medium">
@@ -301,14 +329,29 @@ export default function StudentProfile() {
                 )) : (
                   <div>
                     <p className="text-[#5e6c87]">No skills added yet.</p>
-                    {isOwnProfile && <button type="button" onClick={openEditor} className="mt-3 text-sm font-semibold text-[#15a276] hover:underline">Add skills</button>}
+                    {isOwnProfile && (
+                      <button type="button" onClick={() => openEditor('skills')} className="mt-3 text-sm font-semibold text-[#15a276] hover:underline">
+                        Add Skills
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
             </section>
 
             <section className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
-              <h2 className="text-[22px] font-semibold">Academic Details</h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-[22px] font-semibold">Academic Details</h2>
+                {isOwnProfile && (
+                  <button
+                    type="button"
+                    onClick={() => openEditor('academic')}
+                    className="text-sm font-semibold text-[#15a276] hover:underline"
+                  >
+                    Edit
+                  </button>
+                )}
+              </div>
               <div className="mt-8 space-y-6 text-[18px] text-[#44516d]">
                 <div>
                   <p className="font-semibold text-[#0b1f44]">College</p>
@@ -348,10 +391,10 @@ export default function StudentProfile() {
                 {isOwnProfile && (
                   <button
                     type="button"
-                    onClick={openInternshipEditor}
-                    className="rounded-2xl border border-[#dbe2ef] px-5 py-3 text-[18px] font-semibold hover:bg-[#f8faff] transition"
+                    onClick={() => openEditor('internships')}
+                    className="rounded-2xl border border-[#dbe2ef] px-5 py-3 text-[18px] font-semibold text-[#15a276] hover:bg-[#f8faff] transition"
                   >
-                    Add Internship
+                    {internships.length ? 'Edit Internships' : 'Add Internship'}
                   </button>
                 )}
               </div>
@@ -372,7 +415,11 @@ export default function StudentProfile() {
                 )) : (
                   <div className="rounded-2xl border border-dashed border-[#dbe2ef] p-6 text-[#5e6c87]">
                     <p>No internship experience added yet.</p>
-                    {isOwnProfile && <button type="button" onClick={openInternshipEditor} className="mt-3 text-sm font-semibold text-[#15a276] hover:underline">Add your first internship</button>}
+                    {isOwnProfile && (
+                      <button type="button" onClick={() => openEditor('internships')} className="mt-3 text-sm font-semibold text-[#15a276] hover:underline">
+                        Add Internship Experience
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -381,13 +428,33 @@ export default function StudentProfile() {
         </div>
       </div>
 
-      {isEditing && (
+      {activeEditModal !== null && (
         <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-6xl max-h-[92vh] rounded-[28px] border border-[#dbe2ef] bg-white shadow-2xl overflow-hidden">
+          <div className="w-full max-w-4xl max-h-[92vh] rounded-[28px] border border-[#dbe2ef] bg-white shadow-2xl overflow-hidden flex flex-col">
             <div className="flex items-center justify-between gap-4 border-b border-[#e4ebf5] px-6 py-5 md:px-8">
               <div>
-                <h2 className="text-2xl font-semibold">Edit Student Profile</h2>
-                <p className="text-[#5e6c87] mt-2">Update your student details and save them to your account.</p>
+                <h2 className="text-2xl font-semibold">
+                  {activeEditModal === 'specializations'
+                    ? 'Add / Edit Specializations'
+                    : activeEditModal === 'skills'
+                      ? 'Add / Edit Skills'
+                      : activeEditModal === 'internships'
+                        ? 'Add / Edit Internship Experience'
+                        : activeEditModal === 'academic'
+                          ? 'Edit Academic Details'
+                          : 'Edit Student Profile'}
+                </h2>
+                <p className="text-[#5e6c87] mt-1 text-sm">
+                  {activeEditModal === 'specializations'
+                    ? 'Add or update the legal specializations you focus on.'
+                    : activeEditModal === 'skills'
+                      ? 'Add or update the legal and professional skills you possess.'
+                      : activeEditModal === 'internships'
+                        ? 'Add or update your internship experiences below.'
+                        : activeEditModal === 'academic'
+                          ? 'Keep your college and location details current.'
+                          : 'Update your student details and save them to your account.'}
+                </p>
               </div>
               <button
                 type="button"
@@ -398,231 +465,311 @@ export default function StudentProfile() {
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="flex flex-col max-h-[calc(92vh-88px)]">
+            <form onSubmit={handleSave} className="flex flex-col flex-1 overflow-hidden">
               <div className="flex-1 overflow-y-auto px-6 py-6 md:px-8">
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                  <div className="rounded-2xl bg-[#f8faff] border border-[#dbe2ef] p-5 self-start">
-                <h3 className="text-lg font-semibold">Basic Information</h3>
-                <p className="text-sm text-[#5e6c87] mt-1">Update how your profile appears across the student module.</p>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
-                  <Field label="First Name">
-                    <input
-                      name="firstName"
-                      value={formData.firstName}
-                      onChange={handleChange}
-                      placeholder="Enter first name"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
-                      required
-                    />
-                  </Field>
-                  <Field label="Last Name">
-                    <input
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleChange}
-                      placeholder="Enter last name"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
-                      required
-                    />
-                  </Field>
-                  <Field label="Email" fullWidth>
-                    <input
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      placeholder="Enter email"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
-                    />
-                  </Field>
-                  <Field label="Profile Bio" fullWidth>
-                    <textarea
-                      name="bio"
-                      value={formData.bio}
-                      onChange={handleChange}
-                      placeholder="Write a short profile summary"
-                      rows="4"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
-                    />
-                  </Field>
-                </div>
-              </div>
-
-              <div className="rounded-2xl bg-[#f8faff] border border-[#dbe2ef] p-5 self-start">
-                <h3 className="text-lg font-semibold">Academic Details</h3>
-                <p className="text-sm text-[#5e6c87] mt-1">Keep your college and year information current.</p>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
-                  <Field label="College Name">
-                    <input
-                      name="collegeName"
-                      value={formData.collegeName}
-                      onChange={handleChange}
-                      placeholder="Enter college name"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
-                    />
-                  </Field>
-                  <Field label="College Email">
-                    <input
-                      name="collegeEmail"
-                      type="email"
-                      value={formData.collegeEmail}
-                      onChange={handleChange}
-                      placeholder="Enter college email"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
-                    />
-                  </Field>
-                  <Field label="Current Year">
-                    <input
-                      name="currentYear"
-                      value={formData.currentYear}
-                      onChange={handleChange}
-                      placeholder="Example: 3rd Year B.A. LL.B"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
-                    />
-                  </Field>
-                  <Field label="City">
-                    <input
-                      name="city"
-                      value={formData.city}
-                      onChange={handleChange}
-                      placeholder="Enter city"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
-                    />
-                  </Field>
-                  <Field label="District">
-                    <input
-                      name="district"
-                      value={formData.district}
-                      onChange={handleChange}
-                      placeholder="Enter district"
-                      className="w-full rounded-2xl border border-[#dbe2ef] bg-white px-4 py-4 outline-none focus:border-[#15a276]"
-                    />
-                  </Field>
-                </div>
-              </div>
-
-              <div className="rounded-2xl bg-[#f8faff] border border-[#dbe2ef] p-5 xl:col-span-2">
-                <h3 className="text-lg font-semibold">Skills &amp; Experience</h3>
-                <p className="text-sm text-[#5e6c87] mt-1">Add the skills you want others to see, then include each internship below.</p>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-5">
-                  <div className="rounded-2xl border border-[#dbe2ef] bg-white p-4">
+                {activeEditModal === 'specializations' && (
+                  <div className="rounded-2xl bg-[#f8faff] border border-[#dbe2ef] p-6 space-y-4">
+                    <h3 className="text-lg font-semibold text-[#0b1f44]">Legal Specializations</h3>
                     <Field label="Specializations">
                       <input
                         name="specializations"
                         value={formData.specializations}
                         onChange={handleChange}
-                        placeholder="Criminal Law, Constitutional Law"
-                        className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none transition focus:border-[#15a276] focus:ring-2 focus:ring-[#15a276]/15"
+                        placeholder="Criminal Law, Constitutional Law, Corporate Law"
+                        className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none transition focus:border-[#15a276] focus:ring-2 focus:ring-[#15a276]/15 text-[#0b1f44]"
+                        autoFocus
                       />
                     </Field>
-                    <p className="mt-2 text-xs text-[#5e6c87]">Separate each specialization with a comma.</p>
+                    <p className="text-sm text-[#5e6c87]">Separate each specialization with a comma (e.g. Criminal Law, Corporate Law).</p>
                   </div>
-                  <div className="rounded-2xl border border-[#dbe2ef] bg-white p-4">
+                )}
+
+                {activeEditModal === 'skills' && (
+                  <div className="rounded-2xl bg-[#f8faff] border border-[#dbe2ef] p-6 space-y-4">
+                    <h3 className="text-lg font-semibold text-[#0b1f44]">Skills</h3>
                     <Field label="Skills">
                       <input
                         name="skills"
                         value={formData.skills}
                         onChange={handleChange}
-                        placeholder="Legal Research, Drafting, Moot Court"
-                        className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none transition focus:border-[#15a276] focus:ring-2 focus:ring-[#15a276]/15"
+                        placeholder="Legal Research, Drafting, Moot Court, Client Advocacy"
+                        className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none transition focus:border-[#15a276] focus:ring-2 focus:ring-[#15a276]/15 text-[#0b1f44]"
+                        autoFocus
                       />
                     </Field>
-                    <p className="mt-2 text-xs text-[#5e6c87]">Type a skill, add a comma, and continue with the next one.</p>
+                    <p className="text-sm text-[#5e6c87]">Type a skill, add a comma, and continue with the next one.</p>
                   </div>
-                </div>
+                )}
 
-                <div className="mt-6 border-t border-[#dbe2ef] pt-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h4 className="text-base font-semibold">Internship Experience</h4>
-                    <p className="text-sm text-[#5e6c87] mt-1">Use “Add internship” to create a new entry, then fill in its details.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={addInternshipField}
-                    className="shrink-0 rounded-xl bg-[#15a276] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#10835e] focus:outline-none focus:ring-2 focus:ring-[#15a276] focus:ring-offset-2"
-                  >
-                    + Add Internship
-                  </button>
-                </div>
-
-                <div className="mt-4 space-y-4">
-                  {formData.internships.map((item, index) => (
-                    <div key={`${item.role}-${index}`} className="rounded-2xl bg-white border border-[#dbe2ef] p-4">
-                      <div className="flex items-center justify-between gap-3 mb-4">
-                        <h4 className="font-semibold text-[#0b1f44]">Internship {index + 1}</h4>
-                        <button
-                          type="button"
-                          onClick={() => removeInternshipField(index)}
-                          className="rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 transition"
-                        >
-                          Remove
-                        </button>
+                {activeEditModal === 'internships' && (
+                  <div className="rounded-2xl bg-[#f8faff] border border-[#dbe2ef] p-6 space-y-6">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-lg font-semibold text-[#0b1f44]">Internship Experience</h3>
+                        <p className="text-sm text-[#5e6c87] mt-1">Use “Add Internship” to create a new entry, then fill in its details.</p>
                       </div>
+                      <button
+                        type="button"
+                        onClick={addInternshipField}
+                        className="shrink-0 rounded-xl bg-[#15a276] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#10835e]"
+                      >
+                        + Add Internship
+                      </button>
+                    </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Field label="Role">
+                    <div className="space-y-4">
+                      {formData.internships.map((item, index) => (
+                        <div key={`internship-${index}`} className="rounded-2xl bg-white border border-[#dbe2ef] p-5 space-y-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <h4 className="font-semibold text-[#0b1f44]">Internship {index + 1}</h4>
+                            <button
+                              type="button"
+                              onClick={() => removeInternshipField(index)}
+                              className="rounded-xl border border-red-200 px-3.5 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition"
+                            >
+                              Remove
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Field label="Role">
+                              <input
+                                value={item.role}
+                                onChange={(event) => handleInternshipChange(index, 'role', event.target.value)}
+                                placeholder="Example: Legal Intern"
+                                className="w-full rounded-xl border border-[#dbe2ef] px-4 py-3 outline-none focus:border-[#15a276]"
+                              />
+                            </Field>
+                            <Field label="Organization">
+                              <input
+                                value={item.org}
+                                onChange={(event) => handleInternshipChange(index, 'org', event.target.value)}
+                                placeholder="Example: High Court of Delhi"
+                                className="w-full rounded-xl border border-[#dbe2ef] px-4 py-3 outline-none focus:border-[#15a276]"
+                              />
+                            </Field>
+                            <Field label="Period" fullWidth>
+                              <input
+                                value={item.period}
+                                onChange={(event) => handleInternshipChange(index, 'period', event.target.value)}
+                                placeholder="Example: Jun 2025 - Aug 2025"
+                                className="w-full rounded-xl border border-[#dbe2ef] px-4 py-3 outline-none focus:border-[#15a276]"
+                              />
+                            </Field>
+                            <Field label="Description" fullWidth>
+                              <textarea
+                                value={item.description}
+                                onChange={(event) => handleInternshipChange(index, 'description', event.target.value)}
+                                placeholder="Describe your responsibilities and learnings"
+                                rows="3"
+                                className="w-full rounded-xl border border-[#dbe2ef] px-4 py-3 outline-none focus:border-[#15a276]"
+                              />
+                            </Field>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {activeEditModal === 'academic' && (
+                  <div className="rounded-2xl bg-[#f8faff] border border-[#dbe2ef] p-6 space-y-5">
+                    <h3 className="text-lg font-semibold text-[#0b1f44]">Academic & Contact Details</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <Field label="College Name">
+                        <input
+                          name="collegeName"
+                          value={formData.collegeName}
+                          onChange={handleChange}
+                          placeholder="Enter college name"
+                          className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none focus:border-[#15a276]"
+                        />
+                      </Field>
+                      <Field label="College Email">
+                        <input
+                          name="collegeEmail"
+                          type="email"
+                          value={formData.collegeEmail}
+                          onChange={handleChange}
+                          placeholder="Enter college email"
+                          className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none focus:border-[#15a276]"
+                        />
+                      </Field>
+                      <Field label="Current Year">
+                        <input
+                          name="currentYear"
+                          value={formData.currentYear}
+                          onChange={handleChange}
+                          placeholder="Example: 3rd Year B.A. LL.B"
+                          className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none focus:border-[#15a276]"
+                        />
+                      </Field>
+                      <Field label="City">
+                        <input
+                          name="city"
+                          value={formData.city}
+                          onChange={handleChange}
+                          placeholder="Enter city"
+                          className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none focus:border-[#15a276]"
+                        />
+                      </Field>
+                      <Field label="District">
+                        <input
+                          name="district"
+                          value={formData.district}
+                          onChange={handleChange}
+                          placeholder="Enter district"
+                          className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none focus:border-[#15a276]"
+                        />
+                      </Field>
+                    </div>
+                  </div>
+                )}
+
+                {activeEditModal === 'full' && (
+                  <div className="space-y-6">
+                    <div className="rounded-2xl bg-[#f8faff] border border-[#dbe2ef] p-5">
+                      <h3 className="text-lg font-semibold text-[#0b1f44]">Basic Information</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+                        <Field label="First Name">
                           <input
-                            value={item.role}
-                            onChange={(event) => handleInternshipChange(index, 'role', event.target.value)}
-                            placeholder="Example: Legal Intern"
-                            className="w-full rounded-2xl border border-[#dbe2ef] px-4 py-3 outline-none focus:border-[#15a276]"
+                            name="firstName"
+                            value={formData.firstName}
+                            onChange={handleChange}
+                            placeholder="Enter first name"
+                            className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none focus:border-[#15a276]"
+                            required
                           />
                         </Field>
-                        <Field label="Organization">
+                        <Field label="Last Name">
                           <input
-                            value={item.org}
-                            onChange={(event) => handleInternshipChange(index, 'org', event.target.value)}
-                            placeholder="Example: District Court, Delhi"
-                            className="w-full rounded-2xl border border-[#dbe2ef] px-4 py-3 outline-none focus:border-[#15a276]"
+                            name="lastName"
+                            value={formData.lastName}
+                            onChange={handleChange}
+                            placeholder="Enter last name"
+                            className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none focus:border-[#15a276]"
+                            required
                           />
                         </Field>
-                        <Field label="Period" fullWidth>
+                        <Field label="Email" fullWidth>
                           <input
-                            value={item.period}
-                            onChange={(event) => handleInternshipChange(index, 'period', event.target.value)}
-                            placeholder="Example: Jun 2025 - Aug 2025"
-                            className="w-full rounded-2xl border border-[#dbe2ef] px-4 py-3 outline-none focus:border-[#15a276]"
+                            name="email"
+                            type="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            placeholder="Enter email"
+                            className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none focus:border-[#15a276]"
                           />
                         </Field>
-                        <Field label="Description" fullWidth>
+                        <Field label="Profile Bio" fullWidth>
                           <textarea
-                            value={item.description}
-                            onChange={(event) => handleInternshipChange(index, 'description', event.target.value)}
-                            placeholder="Describe what you worked on"
+                            name="bio"
+                            value={formData.bio}
+                            onChange={handleChange}
+                            placeholder="Write a short profile summary"
                             rows="3"
-                            className="w-full rounded-2xl border border-[#dbe2ef] px-4 py-3 outline-none focus:border-[#15a276]"
+                            className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none focus:border-[#15a276]"
                           />
                         </Field>
                       </div>
                     </div>
-                  ))}
-                </div>
-                </div>
-              </div>
-                </div>
+
+                    <div className="rounded-2xl bg-[#f8faff] border border-[#dbe2ef] p-5">
+                      <h3 className="text-lg font-semibold text-[#0b1f44]">Academic Details</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+                        <Field label="College Name">
+                          <input
+                            name="collegeName"
+                            value={formData.collegeName}
+                            onChange={handleChange}
+                            placeholder="Enter college name"
+                            className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none focus:border-[#15a276]"
+                          />
+                        </Field>
+                        <Field label="College Email">
+                          <input
+                            name="collegeEmail"
+                            type="email"
+                            value={formData.collegeEmail}
+                            onChange={handleChange}
+                            placeholder="Enter college email"
+                            className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none focus:border-[#15a276]"
+                          />
+                        </Field>
+                        <Field label="Current Year">
+                          <input
+                            name="currentYear"
+                            value={formData.currentYear}
+                            onChange={handleChange}
+                            placeholder="Example: 3rd Year B.A. LL.B"
+                            className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none focus:border-[#15a276]"
+                          />
+                        </Field>
+                        <Field label="City">
+                          <input
+                            name="city"
+                            value={formData.city}
+                            onChange={handleChange}
+                            placeholder="Enter city"
+                            className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none focus:border-[#15a276]"
+                          />
+                        </Field>
+                        <Field label="District">
+                          <input
+                            name="district"
+                            value={formData.district}
+                            onChange={handleChange}
+                            placeholder="Enter district"
+                            className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none focus:border-[#15a276]"
+                          />
+                        </Field>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl bg-[#f8faff] border border-[#dbe2ef] p-5">
+                      <h3 className="text-lg font-semibold text-[#0b1f44]">Skills &amp; Specializations</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <Field label="Specializations">
+                          <input
+                            name="specializations"
+                            value={formData.specializations}
+                            onChange={handleChange}
+                            placeholder="Criminal Law, Constitutional Law"
+                            className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none focus:border-[#15a276]"
+                          />
+                        </Field>
+                        <Field label="Skills">
+                          <input
+                            name="skills"
+                            value={formData.skills}
+                            onChange={handleChange}
+                            placeholder="Legal Research, Drafting, Moot Court"
+                            className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none focus:border-[#15a276]"
+                          />
+                        </Field>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-[#e4ebf5] bg-white px-6 py-4 md:px-8">
                 <div className="flex flex-col sm:flex-row justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={closeEditor}
-                  className="rounded-2xl border border-[#dbe2ef] px-5 py-4 font-semibold text-[#0b1f44] hover:bg-[#f8faff] transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="rounded-2xl bg-[#15a276] px-8 py-4 font-semibold text-white hover:bg-[#fff2bf] transition disabled:opacity-60"
-                >
-                  {isSaving ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={closeEditor}
+                    className="rounded-2xl border border-[#dbe2ef] px-5 py-3 font-semibold text-[#0b1f44] hover:bg-[#f8faff] transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="rounded-2xl bg-[#15a276] px-8 py-3 font-semibold text-white hover:bg-[#10835e] transition disabled:opacity-60"
+                  >
+                    {isSaving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
