@@ -257,8 +257,6 @@ const UserProfile = () => {
           {renderField({ icon: MapPin, label: 'City', name: 'city', value: formData.city })}
           {renderField({ icon: MapPin, label: 'State', name: 'state', value: formData.state })}
           {renderField({ icon: MapPin, label: 'Country', name: 'country', value: formData.country })}
-          {renderField({ icon: Navigation, label: 'Latitude', name: 'latitude', value: formData.latitude })}
-          {renderField({ icon: Navigation, label: 'Longitude', name: 'longitude', value: formData.longitude })}
         </div>
 
         {isLawyer ? (

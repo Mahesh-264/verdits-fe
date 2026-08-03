@@ -983,7 +983,7 @@ export default function Register() {
                     <button
                         type="submit"
                         disabled={!canCreateAccount}
-                        className="md:col-span-2 w-full font-bold py-4 rounded-xl mt-6 transition-all shadow-lg text-white bg-[#062552] hover:bg-[#0b3b70] disabled:cursor-not-allowed disabled:opacity-60"
+                        className="md:col-span-2 w-full font-bold py-4 rounded-xl mt-6 transition-all shadow-lg text-zinc-950 bg-[#f1d15f] hover:bg-[#d6a400] border border-[#d6b85b] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         {submitting
                             ? 'Creating Account...'

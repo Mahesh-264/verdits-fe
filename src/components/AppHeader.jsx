@@ -42,6 +42,7 @@ export default function AppHeader({
   const { user } = useSelector((state) => state.auth);
   const navigate = useNavigate();
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
+  const profileContainerRef = React.useRef(null);
   const styles = variantStyles[variant] || variantStyles.user;
   const fallbackInitial = variant === 'lawyer' ? 'L' : variant === 'student' ? 'S' : 'U';
   const dashboardHome = variant === 'lawyer' ? '/lawyer-dash' : variant === 'student' ? '/student-home' : '/user-home';
@@ -49,6 +50,17 @@ export default function AppHeader({
   const displayName = user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Profile';
   const roleLabel = user?.role || variant;
   const locationLabel = user?.address?.city || user?.address?.district || user?.address?.state || '';
+
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileContainerRef.current && !profileContainerRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleProfileClick = () => {
     setShowProfileMenu((current) => !current);
@@ -81,7 +93,7 @@ export default function AppHeader({
 
         {children ? <div className="hidden min-w-0 flex-1 items-center justify-center lg:flex">{children}</div> : null}
 
-        <div className="relative flex shrink-0 items-center gap-3">
+        <div ref={profileContainerRef} className="relative flex shrink-0 items-center gap-3">
           <NotificationBell buttonClassName={styles.notificationButton} />
           <button
             type="button"

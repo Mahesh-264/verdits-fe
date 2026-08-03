@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+gimport React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
+  FaArrowLeft,
   FaBriefcase,
   FaCalendarPlus,
   FaCheck,
@@ -1349,149 +1350,66 @@ export default function LawyerDashboard() {
 
   const activeDrawerFilters = drawer.type === 'participants' ? participantFilters : applicantFilters;
 
+  const hasActiveFeature = Boolean(
+    showAppointmentsModal ||
+    showClientsModal ||
+    showHearingsModal ||
+    showTeamModal ||
+    showNoticeGenerator ||
+    showStudentInteractionModal
+  );
+
+  const closeAllFeatures = () => {
+    setShowAppointmentsModal(false);
+    setShowClientsModal(false);
+    setShowHearingsModal(false);
+    setShowTeamModal(false);
+    setShowNoticeGenerator(false);
+    setShowStudentInteractionModal(false);
+    setDrawer(emptyDrawerState);
+    setResumePreview(null);
+  };
+
   return (
     <div className="lawyer-theme lawyer-dashboard-workspace min-h-screen bg-[#f3f8fb] text-[#062552] relative">
       <AppHeader variant="lawyer" profileTo="/profile" showBrandName />
 
       <div className="max-w-6xl mx-auto p-6 md:p-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 relative z-20">
+        {hasActiveFeature ? (
           <div>
-            <h1 className="text-4xl font-bold mb-2">Lawyer Dashboard</h1>
-            <p className="text-zinc-400">Manage your appointments, hearings, and daily practice efficiently.</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-          {cards.map((card, idx) => (
-            <div
-              key={idx}
-              onClick={card.onClick}
-              className="relative bg-zinc-900 border border-zinc-800 p-6 rounded-2xl hover:border-[#15a276]/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer"
-            >
-              {card.badge > 0 && (
-                <div className="absolute top-4 right-4 bg-[#15a276] text-zinc-950 text-xs font-bold h-6 w-6 flex items-center justify-center rounded-full shadow-lg animate-pulse">
-                  {card.badge}
-                </div>
-              )}
-              <div className="bg-zinc-950 w-16 h-16 rounded-full flex items-center justify-center mb-6">
-                {card.icon}
-              </div>
-              <h2 className="text-xl font-bold mb-2">{card.title}</h2>
-              <p className="text-zinc-400 text-sm">{card.desc}</p>
-            </div>
-          ))}
-        </div>
-
-        <section className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-bold">Quick Stats</h2>
-              <p className="text-zinc-400 mt-2">A live view of your student engagement across internships and jam sessions.</p>
-            </div>
-            {interactionLoading ? <p className="text-sm text-zinc-500">Refreshing...</p> : null}
-          </div>
-
-          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-            {statCards.map((stat) => (
-              <div key={stat.key} className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5">
-                <p className="text-sm text-zinc-400">{stat.label}</p>
-                <p className={`mt-3 text-3xl font-bold ${stat.accent}`}>{quickStats[stat.key] || 0}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                <FaGavel size={20} />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white">My Upcoming Hearings</h2>
-                <p className="text-sm text-zinc-400 mt-1">Automatic hearing schedule for cases created by you in your team.</p>
-              </div>
-            </div>
-            {ownHearings.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowHearingsModal(true)}
-                className="text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors"
-              >
-                View All ({ownHearings.length})
-              </button>
-            )}
-          </div>
-
-          <div className="mt-6">
-            {ownHearings.length === 0 ? (
-              <EmptyBlock icon={<FaGavel size={24} />} message="No hearings scheduled for your cases yet. Add a new team case with a hearing date to automatically pull it here." />
-            ) : (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {ownHearings.slice(0, 3).map((hearing) => (
-                  <div key={`${hearing.id}-${hearing.teamCode || 'team'}`} className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 flex flex-col justify-between hover:border-amber-500/30 transition-all">
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="rounded-md bg-amber-500/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-amber-400 border border-amber-500/20">
-                          {hearing.teamName || 'Team Case'}
-                        </span>
-                        <span className="text-xs font-semibold text-zinc-400">{getTeamCaseStatusLabel(hearing.status)}</span>
+            {showAppointmentsModal && (
+              <ModalShell title="Incoming Appointments" icon={<FaCalendarPlus className="text-[#15a276]" />} onClose={closeAllFeatures}>
+                {loadingAppointments ? (
+                  <EmptyBlock icon={<FaCalendarPlus size={24} />} message="Loading appointment requests..." />
+                ) : pendingAppointments.length === 0 ? (
+                  <EmptyBlock icon={<FaCalendarPlus size={24} />} message="No pending or rejected appointment requests right now." />
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {pendingAppointments.slice().reverse().map((appt) => (
+                      <div key={appt.id} className="bg-white border border-[#d7e9ef] hover:border-[#15a276]/50 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm transition-all text-[#062552]">
+                        <div>
+                          <h3 className="font-bold text-lg text-[#062552]">{appt.userName}</h3>
+                          <p className="text-xs text-[#5f7488] mb-2">Requested on: {new Date(appt.timestamp).toLocaleString()}</p>
+                          <StatusPill status={appt.status} />
+                        </div>
+                        {appt.status === 'Pending' ? (
+                          <div className="flex gap-3 w-full sm:w-auto mt-3 sm:mt-0 shadow-sm">
+                            <button onClick={() => updateStatus(appt.id, 'Accepted')} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2 bg-[#15a276] hover:bg-[#118b66] text-white rounded-xl font-bold transition-transform active:scale-95">
+                              <FaCheck /> Accept
+                            </button>
+                            <button onClick={() => updateStatus(appt.id, 'Rejected')} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl font-bold transition-transform active:scale-95 border border-red-200">
+                              <FaTimes /> Reject
+                            </button>
+                          </div>
+                        ) : appt.status === 'Rejected' ? (
+                          <p className="text-xs text-red-600 font-medium">Request rejected</p>
+                        ) : null}
                       </div>
-                      <h3 className="mt-3 text-lg font-bold text-white truncate">{hearing.caseTitle || 'Untitled Case'}</h3>
-                      <p className="mt-1 text-sm text-zinc-400 truncate">Client: {hearing.clientName || 'Not specified'}</p>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs">
-                      <div>
-                        <p className="text-zinc-500 font-medium">Hearing Date</p>
-                        <p className="font-bold text-amber-300 mt-0.5">{formatDate(hearing.hearingDate)}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-zinc-500 font-medium">Court</p>
-                        <p className="font-medium text-zinc-300 mt-0.5 truncate max-w-[120px]">{hearing.courtName || 'N/A'}</p>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+              </ModalShell>
             )}
-          </div>
-        </section>
-      </div>
-
-      {showAppointmentsModal && (
-        <ModalShell title="Incoming Appointments" icon={<FaCalendarPlus className="text-[#15a276]" />} onClose={() => setShowAppointmentsModal(false)}>
-          {loadingAppointments ? (
-            <EmptyBlock icon={<FaCalendarPlus size={24} />} message="Loading appointment requests..." />
-          ) : pendingAppointments.length === 0 ? (
-            <EmptyBlock icon={<FaCalendarPlus size={24} />} message="No pending or rejected appointment requests right now." />
-          ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {pendingAppointments.slice().reverse().map((appt) => (
-                <div key={appt.id} className="bg-zinc-950 border border-zinc-800 hover:border-[#15a276]/30 rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all">
-                  <div>
-                    <h3 className="font-bold text-lg text-white">{appt.userName}</h3>
-                    <p className="text-xs text-zinc-500 mb-2">Requested on: {new Date(appt.timestamp).toLocaleString()}</p>
-                    <StatusPill status={appt.status} />
-                  </div>
-                  {appt.status === 'Pending' ? (
-                    <div className="flex gap-3 w-full sm:w-auto mt-3 sm:mt-0 shadow-lg">
-                      <button onClick={() => updateStatus(appt.id, 'Accepted')} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2 bg-[#005c4b] hover:bg-[#007b64] text-[#e9edef] rounded-lg font-bold shadow-lg transition-transform active:scale-95">
-                        <FaCheck /> Accept
-                      </button>
-                      <button onClick={() => updateStatus(appt.id, 'Rejected')} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2 bg-red-900/40 hover:bg-red-800 text-red-100 rounded-lg font-bold transition-transform active:scale-95 border border-red-900/50">
-                        <FaTimes /> Reject
-                      </button>
-                    </div>
-                  ) : appt.status === 'Rejected' ? (
-                    <p className="text-xs text-red-300 font-medium">Request rejected</p>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          )}
-        </ModalShell>
-      )}
 
       {showClientsModal && (
         <ModalShell title="My Clients" icon={<FaBriefcase className="text-[#062552]" />} onClose={() => setShowClientsModal(false)}>
@@ -1502,19 +1420,19 @@ export default function LawyerDashboard() {
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {acceptedClients.slice().reverse().map((client) => (
-                <div key={client.id} className="bg-zinc-950 border border-zinc-800 hover:border-[#15a276]/30 rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all">
+                <div key={client.id} className="bg-white border border-[#d7e9ef] hover:border-[#15a276]/50 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm transition-all text-[#062552]">
                   <div>
-                    <h3 className="font-bold text-lg text-zinc-950">{client.userName}</h3>
-                    <p className="text-xs text-zinc-500 mb-2">Accepted on: {new Date(client.timestamp).toLocaleString()}</p>
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full border bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+                    <h3 className="font-bold text-lg text-[#062552]">{client.userName}</h3>
+                    <p className="text-xs text-[#5f7488] mb-2">Accepted on: {new Date(client.timestamp).toLocaleString()}</p>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200">
                       <FaCircle className="text-[8px]" /> Accepted Client
                     </span>
                   </div>
                   <div className="flex flex-col items-stretch sm:items-end gap-2 w-full sm:w-auto">
-                    <p className="text-xs text-zinc-400 font-medium">Client communication unlocked</p>
+                    <p className="text-xs text-[#5f7488] font-medium">Client communication unlocked</p>
                     <button
                       onClick={() => handleOpenChat(client)}
-                      className="px-5 py-2 bg-[#15a276] hover:bg-[#19b98d] text-zinc-950 rounded-lg font-bold transition-transform active:scale-95"
+                      className="px-5 py-2 bg-[#15a276] hover:bg-[#118b66] text-white rounded-xl font-bold shadow transition-transform active:scale-95"
                     >
                       Go to Chat
                     </button>
@@ -1527,11 +1445,11 @@ export default function LawyerDashboard() {
       )}
 
       {showHearingsModal && (
-        <ModalShell title="Next Hearings" icon={<FaGavel className="text-[#062552]" />} onClose={() => setShowHearingsModal(false)} maxWidthClass="max-w-5xl">
-          <div className="lawyer-team-workspace">
-            <div className="mb-5 rounded-xl border border-zinc-800 bg-zinc-950 p-5">
-              <h3 className="text-lg font-bold text-white">My Hearings</h3>
-              <p className="mt-1 text-sm text-zinc-500">
+        <ModalShell title="Next Hearings" icon={<FaGavel className="text-[#062552]" />} onClose={() => setShowHearingsModal(false)}>
+          <div className="lawyer-team-workspace space-y-4">
+            <div className="rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
+              <h3 className="text-lg font-bold text-[#062552]">My Hearings</h3>
+              <p className="mt-1 text-sm text-[#5f7488]">
                 Hearing dates from cases added by you. Other team members' matters are not shown here.
               </p>
             </div>
@@ -1541,30 +1459,30 @@ export default function LawyerDashboard() {
             ) : (
               <div className="grid grid-cols-1 gap-4">
                 {ownHearings.map((hearing) => (
-                  <div key={`${hearing.id}-${hearing.teamCode || 'team'}`} className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+                  <div key={`${hearing.id}-${hearing.teamCode || 'team'}`} className="rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm hover:border-[#15a276]/50 transition-all text-[#062552]">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0">
-                        <p className="text-xs font-bold uppercase tracking-wide text-amber-300">{hearing.teamName || 'Team Case'}</p>
-                        <h3 className="mt-2 text-xl font-bold text-white">{hearing.caseTitle || 'Untitled Case'}</h3>
-                        <p className="mt-1 text-sm text-zinc-500">Client: {hearing.clientName || 'Not added'}</p>
+                        <p className="text-xs font-bold uppercase tracking-wide text-amber-700">{hearing.teamName || 'Team Case'}</p>
+                        <h3 className="mt-2 text-xl font-bold text-[#062552]">{hearing.caseTitle || 'Untitled Case'}</h3>
+                        <p className="mt-1 text-sm text-[#5f7488]">Client: {hearing.clientName || 'Not added'}</p>
                       </div>
-                      <span className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-400">
+                      <span className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
                         {formatDate(hearing.hearingDate)}
                       </span>
                     </div>
 
                     <div className="mt-4 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
-                      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                        <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Court</p>
-                        <p className="mt-1 text-zinc-200">{hearing.courtName || 'Not added'}</p>
+                      <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-3">
+                        <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Court</p>
+                        <p className="mt-1 font-semibold text-[#062552]">{hearing.courtName || 'Not added'}</p>
                       </div>
-                      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                        <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Status</p>
-                        <p className="mt-1 text-zinc-200">{getTeamCaseStatusLabel(hearing.status)}</p>
+                      <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-3">
+                        <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Status</p>
+                        <p className="mt-1 font-semibold text-[#062552]">{getTeamCaseStatusLabel(hearing.status)}</p>
                       </div>
-                      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                        <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Team Code</p>
-                        <p className="mt-1 font-mono text-zinc-200">{hearing.teamCode || 'Not added'}</p>
+                      <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-3">
+                        <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Team Code</p>
+                        <p className="mt-1 font-mono font-semibold text-[#062552]">{hearing.teamCode || 'Not added'}</p>
                       </div>
                     </div>
                   </div>
@@ -1578,14 +1496,13 @@ export default function LawyerDashboard() {
       {showTeamModal && (
         <ModalShell
           title="My Team"
-          icon={<Users className="h-6 w-6 text-amber-300" />}
+          icon={<Users className="h-6 w-6 text-[#15a276]" />}
           onClose={() => setShowTeamModal(false)}
-          maxWidthClass="max-w-6xl"
         >
-          <div className="lawyer-team-workspace">
+          <div className="lawyer-team-workspace text-[#062552]">
             {hasTeam ? (
               <div className="space-y-5">
-              <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+              <div className="rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wide text-amber-300">
@@ -1594,25 +1511,25 @@ export default function LawyerDashboard() {
                     <h3 className="mt-2 text-2xl font-bold text-white">{displayTeam.firmName || 'My Team'}</h3>
                     <p className="mt-2 text-sm text-zinc-400">Team Owner: {displayTeam.seniorLawyerName || 'Not added'}</p>
                   </div>
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm">
-                    <p className="text-zinc-500">Team size</p>
-                    <p className="mt-1 text-xl font-bold text-white">
+                  <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-3 text-sm">
+                    <p className="text-[#5f7488]">Team size</p>
+                    <p className="mt-1 text-xl font-bold text-[#062552]">
                       {teamSize}/{displayTeam.maxTeamSize || teamSize}
                     </p>
                   </div>
                 </div>
 
                 <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                  <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3">
-                    <KeyRound className="h-5 w-5 shrink-0 text-amber-300" />
-                    <span className="min-w-0 flex-1 font-mono text-lg font-bold tracking-wider text-white">
+                  <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-3">
+                    <KeyRound className="h-5 w-5 shrink-0 text-[#15a276]" />
+                    <span className="min-w-0 flex-1 font-mono text-lg font-bold tracking-wider text-[#062552]">
                       {displayTeam.teamCode}
                     </span>
                   </div>
                   <button
                     type="button"
                     onClick={handleCopyTeamCode}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-300 px-5 py-3 font-bold text-zinc-950 transition hover:bg-amber-200"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#15a276] px-5 py-3 font-bold text-white transition hover:bg-[#118b66]"
                   >
                     <Copy size={18} />
                     Copy Code
@@ -1621,16 +1538,16 @@ export default function LawyerDashboard() {
               </div>
 
               {teamWorkspaceLoading ? (
-                <p className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-semibold text-zinc-400">
+                <p className="rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-sm font-semibold text-[#5f7488]">
                   Refreshing team workspace...
                 </p>
               ) : null}
 
-              <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+              <div className="rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    <h3 className="text-base font-bold text-white">Your Teams</h3>
-                    <p className="mt-1 text-xs text-zinc-500">Switch between teams, create another team, or request to join a team.</p>
+                    <h3 className="text-base font-bold text-[#062552]">Your Teams</h3>
+                    <p className="mt-1 text-xs text-[#5f7488]">Switch between teams, create another team, or request to join a team.</p>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <button
@@ -1640,7 +1557,7 @@ export default function LawyerDashboard() {
                         setTeamError('');
                         setTeamMessage('');
                       }}
-                      className="rounded-xl bg-amber-300 px-4 py-2.5 text-sm font-bold text-zinc-950 transition hover:bg-amber-200"
+                      className="rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-4 py-2.5 text-sm font-bold transition shadow-sm border border-[#d6b85b]"
                     >
                       Create Team
                     </button>
@@ -1651,7 +1568,7 @@ export default function LawyerDashboard() {
                         setTeamError('');
                         setTeamMessage('');
                       }}
-                      className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm font-bold text-zinc-300 transition hover:border-amber-300/50"
+                      className="rounded-xl border border-[#d7e9ef] bg-white px-4 py-2.5 text-sm font-bold text-[#062552] transition hover:bg-[#f3f8fb]"
                     >
                       Join Team
                     </button>
@@ -1672,16 +1589,16 @@ export default function LawyerDashboard() {
                           }}
                           className={`rounded-xl border p-4 text-left transition ${
                             isSelectedTeam
-                              ? 'border-amber-300 bg-amber-100/70 shadow-lg'
-                              : 'border-zinc-800 bg-zinc-900 hover:border-amber-300/50'
+                              ? 'border-[#15a276] bg-[#e8f7f2] shadow-sm'
+                              : 'border-[#d7e9ef] bg-white hover:border-[#15a276]/50'
                           }`}
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <h4 className="truncate font-bold text-white">{team.firmName || 'Lawyer Team'}</h4>
-                              <p className="mt-1 text-xs font-semibold text-zinc-500">{team.role === 'owner' ? 'Created by you' : 'Joined team'}</p>
+                              <h4 className="truncate font-bold text-[#062552]">{team.firmName || 'Lawyer Team'}</h4>
+                              <p className="mt-1 text-xs font-semibold text-[#5f7488]">{team.role === 'owner' ? 'Created by you' : 'Joined team'}</p>
                             </div>
-                            <span className="rounded-full border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-[11px] font-bold text-zinc-400">
+                            <span className="rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-2.5 py-1 text-[11px] font-bold text-[#5f7488]">
                               {team.teamCode}
                             </span>
                           </div>
@@ -1693,14 +1610,14 @@ export default function LawyerDashboard() {
               </div>
 
               {teamMode === 'create' ? (
-                <form onSubmit={handleCreateTeam} className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+                <form onSubmit={handleCreateTeam} className="space-y-4 rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <input
                       name="firmName"
                       value={createTeamForm.firmName}
                       onChange={handleCreateTeamInput}
                       placeholder="Firm name"
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
+                      className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
                       required
                     />
                     <input
@@ -1717,14 +1634,14 @@ export default function LawyerDashboard() {
                       name="maxTeamSize"
                       value={createTeamForm.maxTeamSize}
                       onChange={handleCreateTeamInput}
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
+                      className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
                       required
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={teamLoading}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-300 px-5 py-3 font-bold text-zinc-950 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#15a276] px-5 py-3 font-bold text-white transition hover:bg-[#118b66] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Users size={18} />
                     {teamLoading ? 'Creating...' : 'Create Team'}
@@ -1733,22 +1650,22 @@ export default function LawyerDashboard() {
               ) : null}
 
               {teamMode === 'join' ? (
-                <form onSubmit={handleJoinTeam} className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+                <form onSubmit={handleJoinTeam} className="space-y-4 rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
                   <div>
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Team code</label>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#5f7488]">Team code</label>
                     <input
                       name="teamCode"
                       value={joinTeamForm.teamCode}
                       onChange={handleJoinTeamInput}
                       placeholder="Enter team code"
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
+                      className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
                       required
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={teamLoading}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-300 px-5 py-3 font-bold text-zinc-950 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#15a276] px-5 py-3 font-bold text-white transition hover:bg-[#118b66] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <UserPlus size={18} />
                     {teamLoading ? 'Sending...' : 'Request to Join'}
@@ -1759,30 +1676,30 @@ export default function LawyerDashboard() {
               <div className="grid grid-cols-1 gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
                 <aside className="space-y-5">
                   {displayIsTeamOwner ? (
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+                    <div className="rounded-2xl border border-[#d7e9ef] bg-white p-4 shadow-sm">
                       <div className="flex items-center justify-between gap-3">
-                        <h3 className="text-base font-bold text-white">Join Requests</h3>
-                        <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-xs font-bold text-zinc-400">
+                        <h3 className="text-base font-bold text-[#062552]">Join Requests</h3>
+                        <span className="rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-2.5 py-1 text-xs font-bold text-[#5f7488]">
                           {teamPendingRequests.length}
                         </span>
                       </div>
                       {teamPendingRequests.length === 0 ? (
-                        <p className="mt-4 rounded-xl border border-dashed border-zinc-800 bg-zinc-900 p-4 text-sm font-semibold text-zinc-500">
+                        <p className="mt-4 rounded-xl border border-dashed border-[#d7e9ef] bg-[#f8fbfc] p-4 text-sm font-semibold text-[#5f7488]">
                           No pending requests.
                         </p>
                       ) : (
                         <div className="mt-4 grid grid-cols-1 gap-3">
                           {teamPendingRequests.map((request) => (
-                            <div key={request.id} className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-                              <h4 className="font-bold text-white">{request.name || 'Lawyer'}</h4>
-                              <p className="mt-1 text-xs text-zinc-500">{request.email || request.phone || 'Contact not shared'}</p>
-                              <p className="mt-2 text-xs text-zinc-500">Requested {formatDate(request.requestedAt) || 'recently'}</p>
+                            <div key={request.id} className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-4">
+                              <h4 className="font-bold text-[#062552]">{request.name || 'Lawyer'}</h4>
+                              <p className="mt-1 text-xs text-[#5f7488]">{request.email || request.phone || 'Contact not shared'}</p>
+                              <p className="mt-2 text-xs text-[#5f7488]">Requested {formatDate(request.requestedAt) || 'recently'}</p>
                               <div className="mt-4 grid grid-cols-2 gap-2">
                                 <button
                                   type="button"
                                   onClick={() => handleTeamRequestDecision(request, 'accept')}
                                   disabled={updatingTeamRequestId === request.id}
-                                  className="rounded-lg bg-[#15a276] px-3 py-2 text-xs font-bold text-zinc-950 transition hover:bg-[#19b98d] disabled:cursor-not-allowed disabled:opacity-60"
+                                  className="rounded-lg bg-[#15a276] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#118b66] disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                   {updatingTeamRequestId === request.id ? 'Saving...' : 'Accept'}
                                 </button>
@@ -1790,7 +1707,7 @@ export default function LawyerDashboard() {
                                   type="button"
                                   onClick={() => handleTeamRequestDecision(request, 'reject')}
                                   disabled={updatingTeamRequestId === request.id}
-                                  className="rounded-lg border border-red-900/60 bg-red-950/50 px-3 py-2 text-xs font-bold text-red-100 transition hover:bg-red-900/70 disabled:cursor-not-allowed disabled:opacity-60"
+                                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                   Reject
                                 </button>
@@ -1802,15 +1719,15 @@ export default function LawyerDashboard() {
                     </div>
                   ) : null}
 
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+                  <div className="rounded-2xl border border-[#d7e9ef] bg-white p-4 shadow-sm">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <h3 className="text-base font-bold text-white">Team Directory</h3>
-                        <p className="mt-1 text-xs text-zinc-500">
+                        <h3 className="text-base font-bold text-[#062552]">Team Directory</h3>
+                        <p className="mt-1 text-xs text-[#5f7488]">
                           Select a lawyer to view profile and cases.
                         </p>
                       </div>
-                      <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-xs font-bold text-zinc-400">
+                      <span className="rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-2.5 py-1 text-xs font-bold text-[#5f7488]">
                         {visibleTeamDirectory.length}
                       </span>
                     </div>
@@ -1837,20 +1754,20 @@ export default function LawyerDashboard() {
                               onClick={() => setSelectedTeamMemberId(String(member.id))}
                               className={`w-full rounded-xl border p-4 text-left transition ${
                                 isActiveMember
-                                  ? 'border-amber-300 bg-amber-100/70 shadow-lg'
-                                  : 'border-zinc-800 bg-zinc-900 hover:border-amber-300/50'
+                                  ? 'border-[#15a276] bg-[#e8f7f2] shadow-sm'
+                                  : 'border-[#d7e9ef] bg-white hover:border-[#15a276]/50'
                               }`}
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
-                                  <h4 className="truncate font-bold text-white">{member.name || 'Lawyer'}</h4>
-                                  <p className="mt-1 truncate text-xs text-zinc-500">{member.email || member.phone || 'Contact not shared'}</p>
+                                  <h4 className="truncate font-bold text-[#062552]">{member.name || 'Lawyer'}</h4>
+                                  <p className="mt-1 truncate text-xs text-[#5f7488]">{member.email || member.phone || 'Contact not shared'}</p>
                                 </div>
-                                <span className="shrink-0 rounded-full border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-[11px] font-bold text-zinc-400">
+                                <span className="shrink-0 rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-2.5 py-1 text-[11px] font-bold text-[#5f7488]">
                                   {memberCasesCount} cases
                                 </span>
                               </div>
-                              <span className="mt-3 inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
+                              <span className="mt-3 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
                                 {member.roleLabel}
                               </span>
                             </button>
@@ -1862,17 +1779,17 @@ export default function LawyerDashboard() {
                 </aside>
 
                 <section className="space-y-5">
-                  <div className="flex flex-col gap-3 rounded-xl border border-zinc-800 bg-zinc-950 p-5 md:flex-row md:items-center md:justify-between">
+                  <div className="flex flex-col gap-3 rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
                     <div>
-                      <h3 className="text-lg font-bold text-white">Lawyer Workspace</h3>
-                      <p className="mt-1 text-sm text-zinc-500">
+                      <h3 className="text-lg font-bold text-[#062552]">Lawyer Workspace</h3>
+                      <p className="mt-1 text-sm text-[#5f7488]">
                         Cases appear under the lawyer who added them. Select a teammate to inspect their work.
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => setShowTeamCaseForm((current) => !current)}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-300 px-4 py-3 text-sm font-bold text-zinc-950 transition hover:bg-amber-200"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-4 py-3 text-sm font-bold transition shadow-sm border border-[#d6b85b]"
                     >
                       <FaPlus />
                       {showTeamCaseForm ? 'Close Form' : 'Add Case'}
@@ -2188,29 +2105,19 @@ export default function LawyerDashboard() {
       )}
 
       {showStudentInteractionModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-7xl flex flex-col max-h-[90vh] shadow-2xl relative z-[101] overflow-hidden">
-            <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/50 rounded-t-2xl">
-              <div>
-                <h2 className="text-2xl font-bold flex items-center gap-3">
-                  <FaUserGraduate className="text-cyan-400" /> Student Interaction
-                </h2>
-                <p className="text-sm text-zinc-400 mt-2">Create, manage, and track all student engagement from one dashboard module.</p>
-              </div>
-              <button
-                onClick={() => {
-                  setShowStudentInteractionModal(false);
-                  setDrawer(emptyDrawerState);
-                  setResumePreview(null);
-                }}
-                className="text-zinc-400 hover:text-red-500 bg-zinc-800/50 hover:bg-zinc-800 rounded-full transition p-2"
-              >
-                <FaTimes size={20} />
-              </button>
-            </div>
-
-            <div className="flex flex-1 min-h-0">
-              <div className="w-full xl:w-64 border-b xl:border-b-0 xl:border-r border-zinc-800 bg-zinc-950/40 p-4">
+        <ModalShell
+          title="Student Interaction"
+          icon={<FaUserGraduate className="text-cyan-400" />}
+          onClose={() => {
+            setShowStudentInteractionModal(false);
+            setDrawer(emptyDrawerState);
+            setResumePreview(null);
+          }}
+        >
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-[#5f7488]">Create, manage, and track all student engagement from one dashboard module.</p>
+            <div className="flex flex-col xl:flex-row min-h-[600px] border border-[#d7e9ef] rounded-2xl overflow-hidden bg-white shadow-sm text-[#062552]">
+              <div className="w-full xl:w-64 border-b xl:border-b-0 xl:border-r border-[#d7e9ef] bg-[#f8fbfc] p-4">
                 <button
                   type="button"
                   onClick={() => {
@@ -2219,8 +2126,8 @@ export default function LawyerDashboard() {
                   }}
                   className={`w-full text-left rounded-xl px-4 py-4 font-semibold transition ${
                     studentInteractionTab === 'internships'
-                      ? 'bg-[#15a276] text-zinc-950'
-                      : 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
+                      ? 'bg-[#f1d15f] text-zinc-950 font-bold border border-[#d6b85b] shadow-sm'
+                      : 'bg-white text-[#43556a] hover:bg-[#e8f7f2] hover:text-[#15a276] border border-[#d7e9ef]'
                   }`}
                 >
                   Internships
@@ -2233,8 +2140,8 @@ export default function LawyerDashboard() {
                   }}
                   className={`mt-3 w-full text-left rounded-xl px-4 py-4 font-semibold transition ${
                     studentInteractionTab === 'jamSessions'
-                      ? 'bg-cyan-400 text-zinc-950'
-                      : 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
+                      ? 'bg-[#f1d15f] text-zinc-950 font-bold border border-[#d6b85b] shadow-sm'
+                      : 'bg-white text-[#43556a] hover:bg-[#e8f7f2] hover:text-[#15a276] border border-[#d7e9ef]'
                   }`}
                 >
                   Jam Sessions
@@ -2248,8 +2155,8 @@ export default function LawyerDashboard() {
                   }}
                   className={`mt-3 w-full text-left rounded-xl px-4 py-4 font-semibold transition ${
                     studentInteractionTab === 'posts'
-                      ? 'bg-white text-zinc-950'
-                      : 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
+                      ? 'bg-[#f1d15f] text-zinc-950 font-bold border border-[#d6b85b] shadow-sm'
+                      : 'bg-white text-[#43556a] hover:bg-[#e8f7f2] hover:text-[#15a276] border border-[#d7e9ef]'
                   }`}
                 >
                   Posts
@@ -2654,7 +2561,7 @@ export default function LawyerDashboard() {
               ) : null}
             </div>
           </div>
-        </div>
+        </ModalShell>
       )}
 
       {resumePreview ? (
@@ -2669,26 +2576,25 @@ export default function LawyerDashboard() {
           title="AI Notice Generator"
           icon={<FaFileSignature className="text-[#15a276]" />}
           onClose={() => setShowNoticeGenerator(false)}
-          maxWidthClass="max-w-6xl"
         >
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
             <form onSubmit={handleGenerateNotice} className="space-y-5">
               <div>
-                <label className="block text-sm font-bold text-zinc-200 mb-2">Document Type</label>
+                <label className="block text-sm font-bold text-[#062552] mb-2">Document Type</label>
                 <select
                   name="documentType"
                   value={noticeForm.documentType}
                   onChange={handleNoticeInput}
-                  className="w-full rounded-xl border border-zinc-700 bg-white px-4 py-3 text-zinc-950 outline-none focus:border-[#15a276]"
+                  className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
                 >
                   {noticeDocumentTypes.map((type) => (
-                    <option key={type} value={type} className="text-zinc-950">{type}</option>
+                    <option key={type} value={type} className="text-[#062552]">{type}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-zinc-200 mb-2">Basic Information</label>
+                <label className="block text-sm font-bold text-[#062552] mb-2">Basic Information</label>
                 <div className="max-h-[48vh] space-y-4 overflow-y-auto pr-2">
                   {selectedNoticeFields.map((field) => {
                     if (field.dependsOn && !noticeForm[field.dependsOn]) return null;
@@ -2697,14 +2603,14 @@ export default function LawyerDashboard() {
                       return (
                         <label
                           key={field.id}
-                          className="flex items-start gap-3 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm font-semibold text-zinc-100"
+                          className="flex items-start gap-3 rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-sm font-semibold text-[#062552]"
                         >
                           <input
                             type="checkbox"
                             name={field.id}
                             checked={Boolean(noticeForm[field.id])}
                             onChange={handleNoticeInput}
-                            className="mt-1 h-4 w-4 rounded border-zinc-600 accent-[#15a276]"
+                            className="mt-1 h-4 w-4 rounded border-gray-300 accent-[#15a276]"
                           />
                           {field.label}
                         </label>
@@ -2716,7 +2622,7 @@ export default function LawyerDashboard() {
 
                       return (
                         <div key={field.id}>
-                          <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">
+                          <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#5f7488]">
                             {field.label}{field.required ? ' *' : ''}
                           </label>
                           <div className="space-y-2">
@@ -2726,13 +2632,13 @@ export default function LawyerDashboard() {
                                   value={name}
                                   onChange={(event) => handleNoticeNameInput(field.id, index, event.target.value)}
                                   placeholder={`${field.label} ${index + 1}`}
-                                  className="min-w-0 flex-1 rounded-xl border border-zinc-700 bg-white px-4 py-3 text-zinc-950 outline-none focus:border-[#15a276]"
+                                  className="min-w-0 flex-1 rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
                                 />
                                 {names.length > 1 ? (
                                   <button
                                     type="button"
                                     onClick={() => removeNoticeName(field.id, index)}
-                                    className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-zinc-300 bg-white text-zinc-950 transition hover:border-red-700 hover:bg-red-50 hover:text-red-800"
+                                    className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#d7e9ef] bg-white text-[#062552] transition hover:border-red-600 hover:bg-red-50 hover:text-red-700"
                                     aria-label={`Remove ${field.label.toLowerCase()}`}
                                   >
                                     <FaTimes />
@@ -2744,7 +2650,7 @@ export default function LawyerDashboard() {
                           <button
                             type="button"
                             onClick={() => addNoticeName(field.id)}
-                            className="mt-2 inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-bold text-zinc-950 transition hover:border-[#15a276] hover:bg-emerald-50"
+                            className="mt-2 inline-flex items-center gap-2 rounded-lg border border-[#d7e9ef] bg-white px-3 py-2 text-xs font-bold text-[#062552] transition hover:border-[#15a276] hover:bg-[#e8f7f2]"
                           >
                             <FaPlus />
                             {field.addLabel || 'Add another name'}
@@ -2755,7 +2661,7 @@ export default function LawyerDashboard() {
 
                     return (
                       <div key={field.id}>
-                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#5f7488]">
                           {field.label}{field.required ? ' *' : ''}
                         </label>
                         {field.type === 'textarea' ? (
@@ -2765,7 +2671,7 @@ export default function LawyerDashboard() {
                             onChange={handleNoticeInput}
                             rows={field.rows || 3}
                             placeholder={field.placeholder || field.label}
-                            className="w-full resize-none rounded-xl border border-zinc-700 bg-white px-4 py-3 text-zinc-950 outline-none focus:border-[#15a276]"
+                            className="w-full resize-none rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
                           />
                         ) : (
                           <input
@@ -2774,7 +2680,7 @@ export default function LawyerDashboard() {
                             value={noticeForm[field.id] || ''}
                             onChange={handleNoticeInput}
                             placeholder={field.placeholder || field.label}
-                            className="w-full rounded-xl border border-zinc-700 bg-white px-4 py-3 text-zinc-950 outline-none focus:border-[#15a276]"
+                            className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
                           />
                         )}
                       </div>
@@ -2784,7 +2690,7 @@ export default function LawyerDashboard() {
               </div>
 
               {noticeError ? (
-                <p className="rounded-xl border border-red-900/50 bg-red-950/50 px-4 py-3 text-sm text-red-100">{noticeError}</p>
+                <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{noticeError}</p>
               ) : null}
 
               <button
@@ -2800,12 +2706,12 @@ export default function LawyerDashboard() {
             <div className="min-w-0 space-y-5">
               <div>
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <label className="block text-sm font-bold text-zinc-200">Generated Draft</label>
+                  <label className="block text-sm font-bold text-[#062552]">Generated Draft</label>
                   <button
                     type="button"
                     onClick={handleCopyNotice}
                     disabled={!noticeDraft.trim()}
-                    className="rounded-lg border border-zinc-700 px-3 py-2 text-xs font-bold text-zinc-200 transition hover:border-[#15a276] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-lg border border-[#d7e9ef] px-3 py-2 text-xs font-bold text-[#062552] transition hover:border-[#15a276] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Copy
                   </button>
@@ -2815,23 +2721,23 @@ export default function LawyerDashboard() {
                   onChange={(event) => setNoticeDraft(event.target.value)}
                   rows="18"
                   placeholder="Your generated notice will appear here."
-                  className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-4 font-mono text-sm leading-7 text-zinc-100 outline-none focus:border-[#15a276]"
+                  className="w-full resize-none rounded-xl border border-[#d7e9ef] bg-white px-4 py-4 font-mono text-sm leading-7 text-[#062552] outline-none focus:border-[#15a276]"
                 />
               </div>
 
               <form onSubmit={handleEditNotice} className="space-y-3">
-                <label className="block text-sm font-bold text-zinc-200">Edit With AI</label>
+                <label className="block text-sm font-bold text-[#062552]">Edit With AI</label>
                 <div className="flex flex-col gap-3 lg:flex-row">
                   <input
                     value={noticeEditPrompt}
                     onChange={(event) => setNoticeEditPrompt(event.target.value)}
                     placeholder="Example: make it stronger, add 15-day compliance deadline, simplify paragraph 3"
-                    className="min-w-0 flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-[#15a276]"
+                    className="min-w-0 flex-1 rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
                   />
                   <button
                     type="submit"
                     disabled={noticeEditing || !noticeDraft.trim()}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 font-bold text-zinc-950 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-5 py-3 font-bold transition disabled:cursor-not-allowed disabled:opacity-60 border border-[#d6b85b] shadow-sm"
                   >
                     <FaMagic />
                     {noticeEditing ? 'Editing...' : 'Apply Edit'}
@@ -2839,11 +2745,120 @@ export default function LawyerDashboard() {
                 </div>
               </form>
 
-              {noticeMessage ? <p className="text-sm font-semibold text-blue-300">{noticeMessage}</p> : null}
+              {noticeMessage ? <p className="text-sm font-semibold text-[#15a276]">{noticeMessage}</p> : null}
             </div>
           </div>
         </ModalShell>
       ) : null}
+          </div>
+        ) : (
+          <div>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 relative z-20">
+              <div>
+                <h1 className="text-4xl font-bold mb-2 text-[#062552]">Lawyer Dashboard</h1>
+                <p className="text-[#5f7488]">Manage your appointments, hearings, and daily practice efficiently.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+              {cards.map((card, idx) => (
+                <div
+                  key={idx}
+                  onClick={card.onClick}
+                  className="relative bg-white border border-[#d7e9ef] p-6 rounded-2xl hover:border-[#15a276]/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-md cursor-pointer shadow-sm text-[#062552]"
+                >
+                  {card.badge > 0 && (
+                    <div className="absolute top-4 right-4 bg-[#15a276] text-white text-xs font-bold h-6 w-6 flex items-center justify-center rounded-full shadow animate-pulse">
+                      {card.badge}
+                    </div>
+                  )}
+                  <div className="bg-[#e8f7f2] w-16 h-16 rounded-full flex items-center justify-center mb-6 text-[#15a276]">
+                    {card.icon}
+                  </div>
+                  <h2 className="text-xl font-bold mb-2 text-[#062552]">{card.title}</h2>
+                  <p className="text-[#5f7488] text-sm">{card.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <section className="mt-8 rounded-2xl border border-[#d7e9ef] bg-white p-6 shadow-sm">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-[#062552]">Quick Stats</h2>
+                  <p className="text-[#5f7488] mt-2">A live view of your student engagement across internships and jam sessions.</p>
+                </div>
+                {interactionLoading ? <p className="text-sm text-[#5f7488]">Refreshing...</p> : null}
+              </div>
+
+              <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+                {statCards.map((stat) => (
+                  <div key={stat.key} className="rounded-2xl border border-[#d7e9ef] bg-[#f8fbfc] p-5">
+                    <p className="text-sm text-[#5f7488]">{stat.label}</p>
+                    <p className={`mt-3 text-3xl font-bold ${stat.accent}`}>{quickStats[stat.key] || 0}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="mt-8 rounded-2xl border border-[#d7e9ef] bg-white p-6 shadow-sm">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e8f7f2] text-[#15a276] border border-[#15a276]/20">
+                    <FaGavel size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-[#062552]">My Upcoming Hearings</h2>
+                    <p className="text-sm text-[#5f7488] mt-1">Automatic hearing schedule for cases created by you in your team.</p>
+                  </div>
+                </div>
+                {ownHearings.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowHearingsModal(true)}
+                    className="text-xs font-bold text-[#15a276] hover:text-[#118b66] transition-colors cursor-pointer"
+                  >
+                    View All ({ownHearings.length})
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-6">
+                {ownHearings.length === 0 ? (
+                  <EmptyBlock icon={<FaGavel size={24} />} message="No hearings scheduled for your cases yet. Add a new team case with a hearing date to automatically pull it here." />
+                ) : (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {ownHearings.slice(0, 3).map((hearing) => (
+                      <div key={`${hearing.id}-${hearing.teamCode || 'team'}`} className="rounded-2xl border border-[#d7e9ef] bg-white p-5 flex flex-col justify-between hover:border-[#15a276]/50 shadow-sm transition-all text-[#062552]">
+                        <div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="rounded-md bg-amber-50 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-amber-700 border border-amber-200">
+                              {hearing.teamName || 'Team Case'}
+                            </span>
+                            <span className="text-xs font-semibold text-[#5f7488]">{getTeamCaseStatusLabel(hearing.status)}</span>
+                          </div>
+                          <h3 className="mt-3 text-lg font-bold text-[#062552] truncate">{hearing.caseTitle || 'Untitled Case'}</h3>
+                          <p className="mt-1 text-sm text-[#5f7488] truncate">Client: {hearing.clientName || 'Not specified'}</p>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-[#d7e9ef] flex items-center justify-between text-xs">
+                          <div>
+                            <p className="text-[#5f7488] font-medium">Hearing Date</p>
+                            <p className="font-bold text-[#15a276] mt-0.5">{formatDate(hearing.hearingDate)}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[#5f7488] font-medium">Court</p>
+                            <p className="font-medium text-[#062552] mt-0.5 truncate max-w-[120px]">{hearing.courtName || 'N/A'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+        )}
+      </div>
 
       <PostComposerModal
         key={showPostComposer ? 'lawyer-post-open' : 'lawyer-post-closed'}
@@ -2862,34 +2877,48 @@ export default function LawyerDashboard() {
   );
 }
 
-function ModalShell({ title, icon, onClose, children, maxWidthClass = 'max-w-3xl' }) {
+function FeaturePageShell({ title, icon, onClose, children }) {
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4 backdrop-blur-sm animate-in fade-in">
-      <div className={`bg-zinc-900 border border-zinc-800 rounded-2xl w-full ${maxWidthClass} flex flex-col max-h-[85vh] shadow-2xl relative z-[101]`}>
-        <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/50 rounded-t-2xl">
-          <h2 className="text-2xl font-bold flex items-center gap-3">
-            {icon} {title}
-          </h2>
+    <div className="w-full animate-in fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-4 border-b border-[#dbe2ef]">
+        <div className="flex items-center gap-4">
           <button
             onClick={onClose}
-            className="text-zinc-400 hover:text-red-500 bg-zinc-800/50 hover:bg-zinc-800 rounded-full transition p-2"
+            type="button"
+            className="flex items-center gap-2 rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-4 py-2.5 text-sm font-bold transition shadow-sm cursor-pointer border border-[#d6b85b]"
           >
-            <FaTimes size={20} />
+            <FaArrowLeft size={16} />
+            <span>Back to Dashboard</span>
           </button>
+          <div className="h-6 w-px bg-[#dbe2ef] hidden sm:block" />
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3 text-[#062552]">
+            {icon} {title}
+          </h1>
         </div>
-        <div className="overflow-y-auto p-6 flex-1 custom-scrollbar">{children}</div>
+        <button
+          onClick={onClose}
+          type="button"
+          className="self-end sm:self-auto text-[#5f7488] hover:text-[#062552] bg-white border border-[#d7e9ef] hover:bg-gray-100 rounded-full transition p-2.5 shadow-sm cursor-pointer"
+          aria-label="Close feature page"
+        >
+          <FaTimes size={18} />
+        </button>
       </div>
+
+      <div className="w-full">{children}</div>
     </div>
   );
 }
 
+const ModalShell = FeaturePageShell;
+
 function EmptyBlock({ icon, message }) {
   return (
-    <div className="text-center py-16 border border-dashed border-zinc-800 rounded-xl bg-zinc-950/50">
-      <div className="w-16 h-16 bg-zinc-900 text-zinc-700 rounded-full flex items-center justify-center mx-auto mb-4">
+    <div className="text-center py-16 border border-dashed border-[#d7e9ef] rounded-2xl bg-white shadow-sm">
+      <div className="w-16 h-16 bg-[#e8f7f2] text-[#15a276] rounded-full flex items-center justify-center mx-auto mb-4">
         {icon}
       </div>
-      <p className="text-zinc-400 font-medium">{message}</p>
+      <p className="text-[#5f7488] font-medium">{message}</p>
     </div>
   );
 }
