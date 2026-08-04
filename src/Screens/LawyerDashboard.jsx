@@ -80,12 +80,13 @@ const initialJoinTeamForm = {
 
 const initialTeamCaseForm = {
   clientName: '',
-  caseTitle: '',
-  caseDetails: '',
-  basicInfo: '',
+  clientPhone: '',
+  clientAddress: '',
+  caseName: '',
   courtName: '',
-  hearingDate: '',
-  documents: '',
+  startingDate: '',
+  nextHearingDate: '',
+  briefInfo: '',
   status: 'new',
 };
 
@@ -416,6 +417,7 @@ export default function LawyerDashboard() {
   const [updatingApplicantId, setUpdatingApplicantId] = useState('');
   const [togglingInternshipId, setTogglingInternshipId] = useState('');
   const [deletingInternshipId, setDeletingInternshipId] = useState('');
+  const [selectedCaseForDetailsId, setSelectedCaseForDetailsId] = useState('');
   const [createTeamForm, setCreateTeamForm] = useState(initialCreateTeamForm);
   const [joinTeamForm, setJoinTeamForm] = useState(initialJoinTeamForm);
   const [teamCaseForm, setTeamCaseForm] = useState(initialTeamCaseForm);
@@ -784,12 +786,16 @@ export default function LawyerDashboard() {
 
       const payload = {
         clientName: teamCaseForm.clientName.trim(),
-        caseTitle: teamCaseForm.caseTitle.trim(),
-        caseDetails: teamCaseForm.caseDetails.trim(),
-        basicInfo: teamCaseForm.basicInfo.trim(),
+        clientPhone: teamCaseForm.clientPhone.trim(),
+        clientAddress: teamCaseForm.clientAddress.trim(),
+        caseName: (teamCaseForm.caseName || teamCaseForm.caseTitle || '').trim(),
+        caseTitle: (teamCaseForm.caseName || teamCaseForm.caseTitle || '').trim(),
+        briefInfo: (teamCaseForm.briefInfo || teamCaseForm.caseDetails || '').trim(),
+        caseDetails: (teamCaseForm.briefInfo || teamCaseForm.caseDetails || '').trim(),
         courtName: teamCaseForm.courtName.trim(),
-        hearingDate: teamCaseForm.hearingDate,
-        documents: teamCaseForm.documents,
+        startingDate: teamCaseForm.startingDate || teamCaseForm.hearingDate || '',
+        nextHearingDate: teamCaseForm.nextHearingDate || '',
+        hearingDate: teamCaseForm.startingDate || teamCaseForm.hearingDate || '',
         status: teamCaseForm.status,
       };
 
@@ -819,6 +825,23 @@ export default function LawyerDashboard() {
     } catch (error) {
       console.error('Error updating team case status:', error);
       setTeamError(error.response?.data?.message || 'Failed to update case status');
+    } finally {
+      setUpdatingTeamCaseId('');
+    }
+  };
+
+  const handleUpdateNextHearingDate = async (teamCase, nextHearingDate) => {
+    try {
+      setUpdatingTeamCaseId(teamCase.id);
+      setTeamError('');
+      setTeamMessage('');
+
+      await api.patch(`/teams/${displayTeam.id}/cases/${teamCase.id}`, { nextHearingDate });
+      await loadTeamWorkspace();
+      setTeamMessage('Next hearing date updated.');
+    } catch (error) {
+      console.error('Error updating next hearing date:', error);
+      setTeamError(error.response?.data?.message || 'Failed to update next hearing date');
     } finally {
       setUpdatingTeamCaseId('');
     }
@@ -1239,25 +1262,16 @@ export default function LawyerDashboard() {
       isOwner: false,
     };
   });
-  const currentActiveTeamTab = displayIsTeamOwner ? activeTeamTab : 'my_team';
+  const currentActiveTeamTab = displayIsTeamOwner ? activeTeamTab : 'my_cases';
 
-  const seniorLawyerProfile = {
-    id: displayTeam.seniorLawyerId || displayTeam.ownerId || 'senior-owner',
-    lawyerId: displayTeam.seniorLawyerId || displayTeam.ownerId || 'senior-owner',
-    name: displayIsTeamOwner
-      ? `${currentLawyerName} (You)`
-      : (displayTeam.seniorLawyerName || 'Senior Lawyer (Owner)'),
-    email: displayIsTeamOwner ? (user?.email || '') : (displayTeam.seniorLawyerEmail || 'Contact not shared'),
-    phone: displayIsTeamOwner ? (user?.phone || '') : (displayTeam.seniorLawyerPhone || ''),
-    joinedAt: displayTeam.createdAt,
-    roleLabel: 'Team Owner',
-    isOwner: true,
-  };
+  // For Team Owners, visibleTeamDirectory contains ONLY junior/joined members (excluding owner self profile to eliminate duplication).
+  // For Team Members, visibleTeamDirectory is empty (no team directory displayed).
+  const visibleTeamDirectory = displayIsTeamOwner ? normalizedTeamMembers : [];
 
-  const visibleTeamDirectory = [seniorLawyerProfile, ...normalizedTeamMembers];
-  const activeTeamMember = selectedTeamMemberId
+  const targetMember = (displayIsTeamOwner && selectedTeamMemberId)
     ? (visibleTeamDirectory.find((member) => String(member.id) === String(selectedTeamMemberId)) || null)
     : null;
+  const activeTeamMember = displayIsTeamOwner ? targetMember : null;
   const activeTeamMemberCases = activeTeamMember
     ? teamCases.filter((teamCase) => {
         const memberId = getEntityId(activeTeamMember.lawyerId || activeTeamMember.id);
@@ -1273,6 +1287,7 @@ export default function LawyerDashboard() {
     && activeTeamMember
     && !activeTeamMember.isOwner
     && Boolean(activeTeamMember.lawyerId);
+
   const leaderId = getEntityId(
     displayTeam.seniorLawyer
     || displayTeam.seniorLawyerId
@@ -1291,13 +1306,25 @@ export default function LawyerDashboard() {
       const caseOwnerId = getEntityId(teamCase.addedBy);
       const normCaseOwnerName = normalizeLawyerName(teamCase.addedByName);
 
-      if (caseOwnerId && leaderId) {
-        return isSameId(caseOwnerId, leaderId);
+      if (displayIsTeamOwner) {
+        if (caseOwnerId && leaderId) {
+          return isSameId(caseOwnerId, leaderId);
+        }
+        if (normCaseOwnerName && normLeaderName) {
+          return normCaseOwnerName === normLeaderName;
+        }
+        return !caseOwnerId && !normCaseOwnerName;
       }
-      if (normCaseOwnerName && normLeaderName) {
-        return normCaseOwnerName === normLeaderName;
+
+      // Joined Team Member view: display all cases belonging/assigned to logged-in lawyer
+      const normCurrentName = normalizeLawyerName(currentLawyerName);
+      if (caseOwnerId && currentLawyerId) {
+        return isSameId(caseOwnerId, currentLawyerId);
       }
-      return Boolean(displayIsTeamOwner && !caseOwnerId && !normCaseOwnerName);
+      if (normCaseOwnerName && normCurrentName) {
+        return normCaseOwnerName === normCurrentName;
+      }
+      return false;
     });
   const ownHearings = ownTeamCases
     .filter((teamCase) => teamCase.hearingDate)
@@ -1691,54 +1718,54 @@ export default function LawyerDashboard() {
 
               {/* Sub-workspace Navigation Tabs */}
               <div className="rounded-2xl border border-[#d7e9ef] bg-white p-2 shadow-sm flex flex-wrap items-center gap-2">
-                {displayIsTeamOwner ? (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTeamTab('my_cases')}
-                    className={`rounded-xl px-5 py-3 text-sm font-bold transition ${
-                      activeTeamTab === 'my_cases'
-                        ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
-                        : 'bg-transparent text-[#5f7488] hover:bg-[#f8fbfc] hover:text-[#062552]'
-                    }`}
-                  >
-                    My Cases ({ownTeamCases.length})
-                  </button>
-                ) : null}
-
                 <button
                   type="button"
-                  onClick={() => setActiveTeamTab('my_team')}
+                  onClick={() => setActiveTeamTab('my_cases')}
                   className={`rounded-xl px-5 py-3 text-sm font-bold transition ${
-                    activeTeamTab === 'my_team'
+                    currentActiveTeamTab === 'my_cases'
                       ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
                       : 'bg-transparent text-[#5f7488] hover:bg-[#f8fbfc] hover:text-[#062552]'
                   }`}
                 >
-                  My Team ({visibleTeamDirectory.length})
+                  My Cases ({ownTeamCases.length})
                 </button>
 
                 {displayIsTeamOwner ? (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTeamTab('join_requests')}
-                    className={`relative rounded-xl px-5 py-3 text-sm font-bold transition ${
-                      activeTeamTab === 'join_requests'
-                        ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
-                        : 'bg-transparent text-[#5f7488] hover:bg-[#f8fbfc] hover:text-[#062552]'
-                    }`}
-                  >
-                    Join Requests
-                    {teamPendingRequests.length > 0 ? (
-                      <span className="ml-2 rounded-full bg-red-500 px-2 py-0.5 text-xs text-white">
-                        {teamPendingRequests.length}
-                      </span>
-                    ) : null}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTeamTab('my_team')}
+                      className={`rounded-xl px-5 py-3 text-sm font-bold transition ${
+                        currentActiveTeamTab === 'my_team'
+                          ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
+                          : 'bg-transparent text-[#5f7488] hover:bg-[#f8fbfc] hover:text-[#062552]'
+                      }`}
+                    >
+                      My Team ({visibleTeamDirectory.length})
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveTeamTab('join_requests')}
+                      className={`relative rounded-xl px-5 py-3 text-sm font-bold transition ${
+                        currentActiveTeamTab === 'join_requests'
+                          ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
+                          : 'bg-transparent text-[#5f7488] hover:bg-[#f8fbfc] hover:text-[#062552]'
+                      }`}
+                    >
+                      Join Requests
+                      {teamPendingRequests.length > 0 ? (
+                        <span className="ml-2 rounded-full bg-red-500 px-2 py-0.5 text-xs text-white">
+                          {teamPendingRequests.length}
+                        </span>
+                      ) : null}
+                    </button>
+                  </>
                 ) : null}
               </div>
 
-              {/* Tab 1: My Cases (Owner Tab) */}
-              {activeTeamTab === 'my_cases' && displayIsTeamOwner ? (
+              {/* My Cases Tab View (Shown when currentActiveTeamTab === 'my_cases') */}
+              {currentActiveTeamTab === 'my_cases' ? (
                 <div className="space-y-5">
                   <div className="flex flex-col gap-3 rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
                     <div>
@@ -1762,152 +1789,255 @@ export default function LawyerDashboard() {
                       <p className="text-sm font-semibold text-zinc-400 md:col-span-2">
                         This case will be saved under your lawyer profile in the team.
                       </p>
-                      <input
-                        name="clientName"
-                        value={teamCaseForm.clientName}
-                        onChange={handleTeamCaseInput}
-                        placeholder="Client name"
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
-                        required
-                      />
-                      <input
-                        name="caseTitle"
-                        value={teamCaseForm.caseTitle}
-                        onChange={handleTeamCaseInput}
-                        placeholder="Case title"
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
-                        required
-                      />
-                      <input
-                        name="courtName"
-                        value={teamCaseForm.courtName}
-                        onChange={handleTeamCaseInput}
-                        placeholder="Court name"
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
-                      />
-                      <input
-                        type="date"
-                        name="hearingDate"
-                        value={teamCaseForm.hearingDate}
-                        onChange={handleTeamCaseInput}
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
-                      />
-                      <textarea
-                        name="caseDetails"
-                        value={teamCaseForm.caseDetails}
-                        onChange={handleTeamCaseInput}
-                        placeholder="Case details"
-                        rows="4"
-                        className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300 md:col-span-2"
-                        required
-                      />
-                      <textarea
-                        name="basicInfo"
-                        value={teamCaseForm.basicInfo}
-                        onChange={handleTeamCaseInput}
-                        placeholder="Basic info"
-                        rows="3"
-                        className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
-                      />
-                      <textarea
-                        name="documents"
-                        value={teamCaseForm.documents}
-                        onChange={handleTeamCaseInput}
-                        placeholder="Documents, links, or file names. Add one per line."
-                        rows="3"
-                        className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
-                      />
-                      <select
-                        name="status"
-                        value={teamCaseForm.status}
-                        onChange={handleTeamCaseInput}
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
-                      >
-                        {teamCaseStatuses.map((status) => (
-                          <option key={status.value} value={status.value} className="text-zinc-950">
-                            {status.label}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="submit"
-                        disabled={savingTeamCase}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-5 py-3 font-bold transition border border-[#d6b85b] shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <FaCheck />
-                        {savingTeamCase ? 'Saving...' : 'Save Case'}
-                      </button>
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Client Name</label>
+                        <input
+                          name="clientName"
+                          value={teamCaseForm.clientName}
+                          onChange={handleTeamCaseInput}
+                          placeholder="Client name"
+                          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Client Phone</label>
+                        <input
+                          name="clientPhone"
+                          value={teamCaseForm.clientPhone}
+                          onChange={handleTeamCaseInput}
+                          placeholder="Client phone number"
+                          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Client Address</label>
+                        <input
+                          name="clientAddress"
+                          value={teamCaseForm.clientAddress}
+                          onChange={handleTeamCaseInput}
+                          placeholder="Client address"
+                          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Case Name</label>
+                        <input
+                          name="caseName"
+                          value={teamCaseForm.caseName}
+                          onChange={handleTeamCaseInput}
+                          placeholder="Case name"
+                          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Court Name</label>
+                        <input
+                          name="courtName"
+                          value={teamCaseForm.courtName}
+                          onChange={handleTeamCaseInput}
+                          placeholder="Court name"
+                          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Starting Date</label>
+                        <input
+                          type="date"
+                          name="startingDate"
+                          value={teamCaseForm.startingDate}
+                          onChange={handleTeamCaseInput}
+                          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Next Hearing Date</label>
+                        <input
+                          type="date"
+                          name="nextHearingDate"
+                          value={teamCaseForm.nextHearingDate}
+                          onChange={handleTeamCaseInput}
+                          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Brief Info About the Case</label>
+                        <textarea
+                          name="briefInfo"
+                          value={teamCaseForm.briefInfo}
+                          onChange={handleTeamCaseInput}
+                          placeholder="Brief info about the case"
+                          rows="4"
+                          className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
+                          required
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Status</label>
+                        <select
+                          name="status"
+                          value={teamCaseForm.status}
+                          onChange={handleTeamCaseInput}
+                          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
+                        >
+                          {teamCaseStatuses.map((status) => (
+                            <option key={status.value} value={status.value} className="text-zinc-950">
+                              {status.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="md:col-span-2 flex justify-end">
+                        <button
+                          type="submit"
+                          disabled={savingTeamCase}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-5 py-3 font-bold transition border border-[#d6b85b] shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <FaCheck />
+                          {savingTeamCase ? 'Saving...' : 'Save Case'}
+                        </button>
+                      </div>
                     </form>
                   ) : null}
 
-                  {ownTeamCases.length === 0 ? (
-                    <EmptyBlock icon={<FaBriefcase size={24} />} message="No personal cases added by you yet." />
-                  ) : (
-                    <div className="space-y-4">
-                      {ownTeamCases.map((teamCase) => (
-                        <div key={teamCase.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
-                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                            <div>
-                              <h4 className="text-lg font-bold text-white">{teamCase.caseTitle || 'Untitled Case'}</h4>
-                              <p className="mt-1 text-sm text-zinc-400">Client: {teamCase.clientName || 'Not added'}</p>
-                              <p className="mt-1 text-xs text-zinc-500">Added on {formatDate(teamCase.createdAt) || 'recently'}</p>
-                            </div>
+                  {selectedCaseForDetailsId && ownTeamCases.some((item) => String(item.id) === String(selectedCaseForDetailsId)) ? (() => {
+                    const selectedCase = ownTeamCases.find((item) => String(item.id) === String(selectedCaseForDetailsId));
+                    return (
+                      <div className="space-y-6 rounded-2xl border border-[#d7e9ef] bg-white p-6 shadow-sm">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[#eef5f8] pb-5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCaseForDetailsId('')}
+                            className="inline-flex items-center gap-2 rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-2 text-sm font-bold text-[#062552] transition hover:border-[#15a276] hover:text-[#15a276]"
+                          >
+                            <FaArrowLeft /> Back to Cases
+                          </button>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-bold text-[#5f7488]">Status:</span>
                             <select
-                              value={teamCase.status || 'new'}
-                              onChange={(event) => handleUpdateTeamCaseStatus(teamCase, event.target.value)}
-                              disabled={updatingTeamCaseId === teamCase.id}
-                              className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-amber-300 disabled:opacity-60"
+                              value={selectedCase.status || 'new'}
+                              onChange={(event) => handleUpdateTeamCaseStatus(selectedCase, event.target.value)}
+                              disabled={updatingTeamCaseId === selectedCase.id}
+                              className="rounded-xl border border-[#d7e9ef] bg-white px-3 py-1.5 text-xs font-bold text-[#062552] outline-none focus:border-[#15a276]"
                             >
                               {teamCaseStatuses.map((status) => (
-                                <option key={status.value} value={status.value} className="text-zinc-950">
+                                <option key={status.value} value={status.value}>
                                   {status.label}
                                 </option>
                               ))}
                             </select>
                           </div>
+                        </div>
 
-                          <p className="mt-4 text-sm leading-7 text-zinc-300">{teamCase.caseDetails || 'No case details added.'}</p>
+                        {/* Section 1: Case Details */}
+                        <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-5">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-[#15a276]">Case Details</h4>
+                          <div className="mt-3 space-y-2">
+                            <h3 className="text-xl font-bold text-[#062552]">
+                              {selectedCase.caseName || selectedCase.caseTitle || 'Untitled Case'}
+                            </h3>
+                            <p className="text-xs font-semibold text-[#5f7488]">Brief Description</p>
+                            <p className="text-sm leading-relaxed text-[#2c3e50]">
+                              {selectedCase.briefInfo || selectedCase.caseDetails || 'No brief description added.'}
+                            </p>
+                          </div>
+                        </div>
 
-                          <div className="mt-4 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
-                            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                              <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Court</p>
-                              <p className="mt-1 text-zinc-200">{teamCase.courtName || 'Not added'}</p>
+                        {/* Section 2: Client Details */}
+                        <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-5">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-[#15a276]">Client Details</h4>
+                          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                            <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
+                              <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Client Name</p>
+                              <p className="mt-1 text-sm font-bold text-[#062552]">{selectedCase.clientName || 'Not provided'}</p>
                             </div>
-                            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                              <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Hearing Date</p>
-                              <p className="mt-1 text-zinc-200">{formatDate(teamCase.hearingDate) || 'Not scheduled'}</p>
+                            <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
+                              <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Phone Number</p>
+                              <p className="mt-1 text-sm font-bold text-[#062552]">{selectedCase.clientPhone || 'Not provided'}</p>
                             </div>
-                            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                              <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Status</p>
-                              <p className="mt-1 text-zinc-200">{getTeamCaseStatusLabel(teamCase.status)}</p>
+                            <div className="rounded-lg border border-[#d7e9ef] bg-white p-3 sm:col-span-3 lg:col-span-1">
+                              <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Address</p>
+                              <p className="mt-1 text-sm font-bold text-[#062552]">{selectedCase.clientAddress || 'Not provided'}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Section 3: Case Information */}
+                        <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-5">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-[#15a276]">Case Information</h4>
+                          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                            <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
+                              <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Starting Date</p>
+                              <p className="mt-1 text-sm font-bold text-[#062552]">
+                                {formatDate(selectedCase.startingDate || selectedCase.hearingDate) || 'Not provided'}
+                              </p>
+                            </div>
+                            <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
+                              <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Court Name</p>
+                              <p className="mt-1 text-sm font-bold text-[#062552]">{selectedCase.courtName || 'Not added'}</p>
+                            </div>
+                            <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
+                              <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Next Hearing Date</p>
+                              <input
+                                type="date"
+                                value={selectedCase.nextHearingDate ? new Date(selectedCase.nextHearingDate).toISOString().split('T')[0] : ''}
+                                onChange={(event) => handleUpdateNextHearingDate(selectedCase, event.target.value)}
+                                disabled={updatingTeamCaseId === selectedCase.id}
+                                className="mt-1 w-full rounded-lg border border-[#d7e9ef] bg-white px-3 py-1.5 text-xs font-bold text-[#062552] outline-none focus:border-[#15a276]"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })() : ownTeamCases.length === 0 ? (
+                    <EmptyBlock icon={<FaBriefcase size={24} />} message="No cases added by you yet." />
+                  ) : (
+                    <div className="space-y-4">
+                      {ownTeamCases.map((teamCase) => (
+                        <div
+                          key={teamCase.id}
+                          onClick={() => setSelectedCaseForDetailsId(String(teamCase.id))}
+                          className="group cursor-pointer rounded-xl border border-zinc-800 bg-zinc-950 p-5 transition hover:border-[#15a276]"
+                        >
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                            <div>
+                              <h4 className="text-lg font-bold text-white group-hover:text-[#15a276] transition">
+                                {teamCase.caseName || teamCase.caseTitle || 'Untitled Case'}
+                              </h4>
+                              <p className="mt-1 text-sm text-zinc-400">
+                                Client: <span className="font-semibold text-blue-300 underline">{teamCase.clientName || 'Not added'}</span>
+                              </p>
+                              <p className="mt-1 text-xs text-zinc-500">Added on {formatDate(teamCase.createdAt) || 'recently'}</p>
+                            </div>
+                            <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                              <select
+                                value={teamCase.status || 'new'}
+                                onChange={(event) => handleUpdateTeamCaseStatus(teamCase, event.target.value)}
+                                disabled={updatingTeamCaseId === teamCase.id}
+                                className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-amber-300 disabled:opacity-60"
+                              >
+                                {teamCaseStatuses.map((status) => (
+                                  <option key={status.value} value={status.value} className="text-zinc-950">
+                                    {status.label}
+                                  </option>
+                                ))}
+                              </select>
                             </div>
                           </div>
 
-                          {teamCase.basicInfo ? (
-                            <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                              <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Basic Info</p>
-                              <p className="mt-2 text-sm leading-6 text-zinc-300">{teamCase.basicInfo}</p>
-                            </div>
-                          ) : null}
+                          <p className="mt-4 text-sm leading-7 text-zinc-300">{teamCase.briefInfo || teamCase.caseDetails || 'No brief info added.'}</p>
 
-                          {teamCase.documents?.length ? (
-                            <div className="mt-4">
-                              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-zinc-500">Documents</p>
-                              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                {teamCase.documents.map((document, index) => (
-                                  <a
-                                    key={`${teamCase.id}-doc-${index}`}
-                                    href={String(document.url || '').startsWith('http') ? document.url : undefined}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-bold text-blue-300 transition hover:border-blue-500/50"
-                                  >
-                                    {document.name || document.url || `Document ${index + 1}`}
-                                  </a>
-                                ))}
-                              </div>
+                          <div className="mt-4 flex items-center justify-between border-t border-zinc-900 pt-3 text-sm">
+                            <div className="flex items-center gap-4 text-xs text-zinc-400">
+                              <span>Court: <strong className="text-zinc-200">{teamCase.courtName || 'Not added'}</strong></span>
+                              <span>Starting: <strong className="text-zinc-200">{formatDate(teamCase.startingDate || teamCase.hearingDate) || 'Not added'}</strong></span>
                             </div>
-                          ) : null}
+                            <span className="text-xs font-bold text-[#15a276] group-hover:underline flex items-center gap-1">
+                              View Case Details &rarr;
+                            </span>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1915,8 +2045,8 @@ export default function LawyerDashboard() {
                 </div>
               ) : null}
 
-              {/* Tab 2: My Team (Owner & Member Tab) */}
-              {activeTeamTab === 'my_team' ? (
+              {/* Tab 3: My Team (Owner Only Tab) */}
+              {currentActiveTeamTab === 'my_team' && displayIsTeamOwner ? (
                 !activeTeamMember ? (
                   /* Step 1: Full-Width Team Directory View */
                   <div className="space-y-5">
@@ -1939,6 +2069,8 @@ export default function LawyerDashboard() {
                         <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                           {visibleTeamDirectory.map((member) => {
                             const memberId = getEntityId(member.lawyerId || member.id);
+                            const isSelfMember = isSameId(memberId, currentLawyerId);
+                            const canViewMemberDetails = displayIsTeamOwner || isSelfMember;
                             const memberCasesCount = teamCases.filter((teamCase) => {
                               const caseOwnerId = getEntityId(teamCase.addedBy);
                               const caseOwnerName = String(teamCase.addedByName || '').trim().toLowerCase();
@@ -1950,30 +2082,44 @@ export default function LawyerDashboard() {
                             return (
                               <div
                                 key={member.id || member.phone || member.email}
-                                onClick={() => setSelectedTeamMemberId(String(member.id))}
-                                className="group cursor-pointer rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm transition hover:border-[#15a276] hover:shadow-md"
+                                onClick={canViewMemberDetails ? () => setSelectedTeamMemberId(String(member.id)) : undefined}
+                                className={`rounded-2xl border p-5 shadow-sm transition ${
+                                  canViewMemberDetails
+                                    ? 'group cursor-pointer border-[#d7e9ef] bg-white hover:border-[#15a276] hover:shadow-md'
+                                    : 'cursor-default border-[#e2edf1] bg-[#f8fbfc] opacity-90'
+                                }`}
                               >
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="min-w-0">
-                                    <h4 className="truncate text-base font-bold text-[#062552] group-hover:text-[#15a276] transition">
+                                    <h4 className={`truncate text-base font-bold transition ${
+                                      canViewMemberDetails ? 'text-[#062552] group-hover:text-[#15a276]' : 'text-[#5f7488]'
+                                    }`}>
                                       {member.name || 'Lawyer'}
                                     </h4>
                                     <p className="mt-1 truncate text-xs text-[#5f7488]">
                                       {member.email || member.phone || 'Contact not shared'}
                                     </p>
                                   </div>
-                                  <span className="shrink-0 rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-2.5 py-1 text-xs font-bold text-[#5f7488]">
-                                    {memberCasesCount} {memberCasesCount === 1 ? 'case' : 'cases'}
-                                  </span>
+                                  {canViewMemberDetails ? (
+                                    <span className="shrink-0 rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-2.5 py-1 text-xs font-bold text-[#5f7488]">
+                                      {memberCasesCount} {memberCasesCount === 1 ? 'case' : 'cases'}
+                                    </span>
+                                  ) : (
+                                    <span className="shrink-0 rounded-full border border-gray-200 bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-500">
+                                      Private
+                                    </span>
+                                  )}
                                 </div>
 
                                 <div className="mt-4 flex items-center justify-between border-t border-[#f0f6f8] pt-3">
                                   <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
                                     {member.roleLabel}
                                   </span>
-                                  <span className="text-xs font-bold text-[#15a276] group-hover:underline flex items-center gap-1">
-                                    View Cases &rarr;
-                                  </span>
+                                  {canViewMemberDetails ? (
+                                    <span className="text-xs font-bold text-[#15a276] group-hover:underline flex items-center gap-1">
+                                      View Cases &rarr;
+                                    </span>
+                                  ) : null}
                                 </div>
                               </div>
                             );
@@ -2041,7 +2187,7 @@ export default function LawyerDashboard() {
                             <div key={teamCase.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
                               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                                 <div>
-                                  <h4 className="text-lg font-bold text-white">{teamCase.caseTitle || 'Untitled Case'}</h4>
+                                  <h4 className="text-lg font-bold text-white">{teamCase.caseName || teamCase.caseTitle || 'Untitled Case'}</h4>
                                   <p className="mt-1 text-sm text-zinc-400">Client: {teamCase.clientName || 'Not added'}</p>
                                   <p className="mt-1 text-xs text-zinc-500">Added on {formatDate(teamCase.createdAt) || 'recently'}</p>
                                 </div>
@@ -2065,7 +2211,7 @@ export default function LawyerDashboard() {
                                 )}
                               </div>
 
-                              <p className="mt-4 text-sm leading-7 text-zinc-300">{teamCase.caseDetails || 'No case details added.'}</p>
+                              <p className="mt-4 text-sm leading-7 text-zinc-300">{teamCase.briefInfo || teamCase.caseDetails || 'No brief info added.'}</p>
 
                               <div className="mt-4 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
                                 <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
@@ -2073,40 +2219,14 @@ export default function LawyerDashboard() {
                                   <p className="mt-1 text-zinc-200">{teamCase.courtName || 'Not added'}</p>
                                 </div>
                                 <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                                  <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Hearing Date</p>
-                                  <p className="mt-1 text-zinc-200">{formatDate(teamCase.hearingDate) || 'Not scheduled'}</p>
+                                  <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Starting Date</p>
+                                  <p className="mt-1 text-zinc-200">{formatDate(teamCase.startingDate || teamCase.hearingDate) || 'Not added'}</p>
                                 </div>
                                 <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
                                   <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Status</p>
                                   <p className="mt-1 text-zinc-200">{getTeamCaseStatusLabel(teamCase.status)}</p>
                                 </div>
                               </div>
-
-                              {teamCase.basicInfo ? (
-                                <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                                  <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Basic Info</p>
-                                  <p className="mt-2 text-sm leading-6 text-zinc-300">{teamCase.basicInfo}</p>
-                                </div>
-                              ) : null}
-
-                              {teamCase.documents?.length ? (
-                                <div className="mt-4">
-                                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-zinc-500">Documents</p>
-                                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                    {teamCase.documents.map((document, index) => (
-                                      <a
-                                        key={`${teamCase.id}-doc-${index}`}
-                                        href={String(document.url || '').startsWith('http') ? document.url : undefined}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-bold text-blue-300 transition hover:border-blue-500/50"
-                                      >
-                                        {document.name || document.url || `Document ${index + 1}`}
-                                      </a>
-                                    ))}
-                                  </div>
-                                </div>
-                              ) : null}
                             </div>
                           ))}
                         </div>
