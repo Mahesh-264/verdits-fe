@@ -382,6 +382,7 @@ export default function LawyerDashboard() {
   const [teamWorkspace, setTeamWorkspace] = useState(null);
   const [teamWorkspaces, setTeamWorkspaces] = useState([]);
   const [selectedTeamId, setSelectedTeamId] = useState('');
+  const [activeTeamTab, setActiveTeamTab] = useState('my_team');
   const [showTeamCaseForm, setShowTeamCaseForm] = useState(false);
   const [selectedTeamMemberId, setSelectedTeamMemberId] = useState('');
   const [savingTeamCase, setSavingTeamCase] = useState(false);
@@ -1238,25 +1239,25 @@ export default function LawyerDashboard() {
       isOwner: false,
     };
   });
-  const teamDirectory = displayIsTeamOwner
-    ? [ownerSelfProfile, ...normalizedTeamMembers]
-    : normalizedTeamMembers.filter((member) => getEntityId(member.lawyerId || member.id) === currentLawyerId);
-  const memberSelfProfile = {
-    id: currentLawyerId,
-    lawyerId: currentLawyerId,
-    name: `${currentLawyerName} (You)`,
-    email: user?.email || '',
-    phone: user?.phone || '',
-    joinedAt: displayTeam.joinedAt,
-    roleLabel: 'Team Member',
-    isOwner: false,
+  const currentActiveTeamTab = displayIsTeamOwner ? activeTeamTab : 'my_team';
+
+  const seniorLawyerProfile = {
+    id: displayTeam.seniorLawyerId || displayTeam.ownerId || 'senior-owner',
+    lawyerId: displayTeam.seniorLawyerId || displayTeam.ownerId || 'senior-owner',
+    name: displayIsTeamOwner
+      ? `${currentLawyerName} (You)`
+      : (displayTeam.seniorLawyerName || 'Senior Lawyer (Owner)'),
+    email: displayIsTeamOwner ? (user?.email || '') : (displayTeam.seniorLawyerEmail || 'Contact not shared'),
+    phone: displayIsTeamOwner ? (user?.phone || '') : (displayTeam.seniorLawyerPhone || ''),
+    joinedAt: displayTeam.createdAt,
+    roleLabel: 'Team Owner',
+    isOwner: true,
   };
-  const visibleTeamDirectory = displayIsTeamOwner
-    ? teamDirectory
-    : (teamDirectory.length ? teamDirectory : [memberSelfProfile]);
-  const activeTeamMember = visibleTeamDirectory.find((member) => String(member.id) === String(selectedTeamMemberId))
-    || visibleTeamDirectory[0]
-    || null;
+
+  const visibleTeamDirectory = [seniorLawyerProfile, ...normalizedTeamMembers];
+  const activeTeamMember = selectedTeamMemberId
+    ? (visibleTeamDirectory.find((member) => String(member.id) === String(selectedTeamMemberId)) || null)
+    : null;
   const activeTeamMemberCases = activeTeamMember
     ? teamCases.filter((teamCase) => {
         const memberId = getEntityId(activeTeamMember.lawyerId || activeTeamMember.id);
@@ -1272,16 +1273,31 @@ export default function LawyerDashboard() {
     && activeTeamMember
     && !activeTeamMember.isOwner
     && Boolean(activeTeamMember.lawyerId);
+  const leaderId = getEntityId(
+    displayTeam.seniorLawyer
+    || displayTeam.seniorLawyerId
+    || displayTeam.owner
+    || displayTeam.ownerId
+    || (displayIsTeamOwner ? currentLawyerId : '')
+  );
+  const normLeaderName = normalizeLawyerName(
+    displayTeam.seniorLawyerName
+    || (displayIsTeamOwner ? currentLawyerName : '')
+  );
+
   const ownTeamCases = teamCases
     .map((teamCase) => ({ ...teamCase, teamName: displayTeam.firmName, teamCode: displayTeam.teamCode }))
     .filter((teamCase) => {
       const caseOwnerId = getEntityId(teamCase.addedBy);
-      if (caseOwnerId) {
-        return isSameId(caseOwnerId, currentLawyerId);
-      }
       const normCaseOwnerName = normalizeLawyerName(teamCase.addedByName);
-      const normCurrentName = normalizeLawyerName(currentLawyerName);
-      return Boolean(normCaseOwnerName && normCurrentName && normCaseOwnerName === normCurrentName);
+
+      if (caseOwnerId && leaderId) {
+        return isSameId(caseOwnerId, leaderId);
+      }
+      if (normCaseOwnerName && normLeaderName) {
+        return normCaseOwnerName === normLeaderName;
+      }
+      return Boolean(displayIsTeamOwner && !caseOwnerId && !normCaseOwnerName);
     });
   const ownHearings = ownTeamCases
     .filter((teamCase) => teamCase.hearingDate)
@@ -1668,122 +1684,67 @@ export default function LawyerDashboard() {
                     className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#15a276] px-5 py-3 font-bold text-white transition hover:bg-[#118b66] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <UserPlus size={18} />
-                    {teamLoading ? 'Sending...' : 'Request to Join'}
+                        {teamLoading ? 'Sending...' : 'Request to Join'}
                   </button>
                 </form>
               ) : null}
 
-              <div className="grid grid-cols-1 gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
-                <aside className="space-y-5">
-                  {displayIsTeamOwner ? (
-                    <div className="rounded-2xl border border-[#d7e9ef] bg-white p-4 shadow-sm">
-                      <div className="flex items-center justify-between gap-3">
-                        <h3 className="text-base font-bold text-[#062552]">Join Requests</h3>
-                        <span className="rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-2.5 py-1 text-xs font-bold text-[#5f7488]">
-                          {teamPendingRequests.length}
-                        </span>
-                      </div>
-                      {teamPendingRequests.length === 0 ? (
-                        <p className="mt-4 rounded-xl border border-dashed border-[#d7e9ef] bg-[#f8fbfc] p-4 text-sm font-semibold text-[#5f7488]">
-                          No pending requests.
-                        </p>
-                      ) : (
-                        <div className="mt-4 grid grid-cols-1 gap-3">
-                          {teamPendingRequests.map((request) => (
-                            <div key={request.id} className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-4">
-                              <h4 className="font-bold text-[#062552]">{request.name || 'Lawyer'}</h4>
-                              <p className="mt-1 text-xs text-[#5f7488]">{request.email || request.phone || 'Contact not shared'}</p>
-                              <p className="mt-2 text-xs text-[#5f7488]">Requested {formatDate(request.requestedAt) || 'recently'}</p>
-                              <div className="mt-4 grid grid-cols-2 gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => handleTeamRequestDecision(request, 'accept')}
-                                  disabled={updatingTeamRequestId === request.id}
-                                  className="rounded-lg bg-[#15a276] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#118b66] disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                  {updatingTeamRequestId === request.id ? 'Saving...' : 'Accept'}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleTeamRequestDecision(request, 'reject')}
-                                  disabled={updatingTeamRequestId === request.id}
-                                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                  Reject
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : null}
+              {/* Sub-workspace Navigation Tabs */}
+              <div className="rounded-2xl border border-[#d7e9ef] bg-white p-2 shadow-sm flex flex-wrap items-center gap-2">
+                {displayIsTeamOwner ? (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTeamTab('my_cases')}
+                    className={`rounded-xl px-5 py-3 text-sm font-bold transition ${
+                      activeTeamTab === 'my_cases'
+                        ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
+                        : 'bg-transparent text-[#5f7488] hover:bg-[#f8fbfc] hover:text-[#062552]'
+                    }`}
+                  >
+                    My Cases ({ownTeamCases.length})
+                  </button>
+                ) : null}
 
-                  <div className="rounded-2xl border border-[#d7e9ef] bg-white p-4 shadow-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <h3 className="text-base font-bold text-[#062552]">Team Directory</h3>
-                        <p className="mt-1 text-xs text-[#5f7488]">
-                          Select a lawyer to view profile and cases.
-                        </p>
-                      </div>
-                      <span className="rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-2.5 py-1 text-xs font-bold text-[#5f7488]">
-                        {visibleTeamDirectory.length}
+                <button
+                  type="button"
+                  onClick={() => setActiveTeamTab('my_team')}
+                  className={`rounded-xl px-5 py-3 text-sm font-bold transition ${
+                    activeTeamTab === 'my_team'
+                      ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
+                      : 'bg-transparent text-[#5f7488] hover:bg-[#f8fbfc] hover:text-[#062552]'
+                  }`}
+                >
+                  My Team ({visibleTeamDirectory.length})
+                </button>
+
+                {displayIsTeamOwner ? (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTeamTab('join_requests')}
+                    className={`relative rounded-xl px-5 py-3 text-sm font-bold transition ${
+                      activeTeamTab === 'join_requests'
+                        ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
+                        : 'bg-transparent text-[#5f7488] hover:bg-[#f8fbfc] hover:text-[#062552]'
+                    }`}
+                  >
+                    Join Requests
+                    {teamPendingRequests.length > 0 ? (
+                      <span className="ml-2 rounded-full bg-red-500 px-2 py-0.5 text-xs text-white">
+                        {teamPendingRequests.length}
                       </span>
-                    </div>
+                    ) : null}
+                  </button>
+                ) : null}
+              </div>
 
-                    {visibleTeamDirectory.length === 0 ? (
-                      <EmptyBlock icon={<UserPlus size={24} />} message="No junior lawyers have joined yet." />
-                    ) : (
-                      <div className="mt-4 grid grid-cols-1 gap-3">
-                        {visibleTeamDirectory.map((member) => {
-                          const memberId = getEntityId(member.lawyerId || member.id);
-                          const memberCasesCount = teamCases.filter((teamCase) => {
-                            const caseOwnerId = getEntityId(teamCase.addedBy);
-                            const caseOwnerName = String(teamCase.addedByName || '').trim().toLowerCase();
-                            const memberName = String(member.name || '').replace(/\s*\(you\)$/i, '').trim().toLowerCase();
-                            return (caseOwnerId && memberId && caseOwnerId === memberId)
-                              || (caseOwnerName && memberName && caseOwnerName === memberName);
-                          }).length;
-                          const isActiveMember = activeTeamMember && String(activeTeamMember.id) === String(member.id);
-
-                          return (
-                            <button
-                              key={member.id || member.phone || member.email}
-                              type="button"
-                              onClick={() => setSelectedTeamMemberId(String(member.id))}
-                              className={`w-full rounded-xl border p-4 text-left transition ${
-                                isActiveMember
-                                  ? 'border-[#15a276] bg-[#e8f7f2] shadow-sm'
-                                  : 'border-[#d7e9ef] bg-white hover:border-[#15a276]/50'
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <h4 className="truncate font-bold text-[#062552]">{member.name || 'Lawyer'}</h4>
-                                  <p className="mt-1 truncate text-xs text-[#5f7488]">{member.email || member.phone || 'Contact not shared'}</p>
-                                </div>
-                                <span className="shrink-0 rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-2.5 py-1 text-[11px] font-bold text-[#5f7488]">
-                                  {memberCasesCount} cases
-                                </span>
-                              </div>
-                              <span className="mt-3 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                                {member.roleLabel}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </aside>
-
-                <section className="space-y-5">
+              {/* Tab 1: My Cases (Owner Tab) */}
+              {activeTeamTab === 'my_cases' && displayIsTeamOwner ? (
+                <div className="space-y-5">
                   <div className="flex flex-col gap-3 rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
                     <div>
-                      <h3 className="text-lg font-bold text-[#062552]">Lawyer Workspace</h3>
+                      <h3 className="text-lg font-bold text-[#062552]">My Personal Cases</h3>
                       <p className="mt-1 text-sm text-[#5f7488]">
-                        Cases appear under the lawyer who added them. Select a teammate to inspect their work.
+                        Cases added by you for this team.
                       </p>
                     </div>
                     <button
@@ -1879,116 +1840,331 @@ export default function LawyerDashboard() {
                     </form>
                   ) : null}
 
-                  {!activeTeamMember ? (
-                    <EmptyBlock icon={<UserPlus size={24} />} message="Select a team member to view their profile and cases." />
+                  {ownTeamCases.length === 0 ? (
+                    <EmptyBlock icon={<FaBriefcase size={24} />} message="No personal cases added by you yet." />
                   ) : (
-                    <>
-                      <div>
-                        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <h3 className="text-lg font-bold text-white">Cases by {activeTeamMember.name || 'this lawyer'}</h3>
-                            <p className="text-sm text-zinc-500">Only this lawyer's matters are shown here.</p>
+                    <div className="space-y-4">
+                      {ownTeamCases.map((teamCase) => (
+                        <div key={teamCase.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                            <div>
+                              <h4 className="text-lg font-bold text-white">{teamCase.caseTitle || 'Untitled Case'}</h4>
+                              <p className="mt-1 text-sm text-zinc-400">Client: {teamCase.clientName || 'Not added'}</p>
+                              <p className="mt-1 text-xs text-zinc-500">Added on {formatDate(teamCase.createdAt) || 'recently'}</p>
+                            </div>
+                            <select
+                              value={teamCase.status || 'new'}
+                              onChange={(event) => handleUpdateTeamCaseStatus(teamCase, event.target.value)}
+                              disabled={updatingTeamCaseId === teamCase.id}
+                              className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-amber-300 disabled:opacity-60"
+                            >
+                              {teamCaseStatuses.map((status) => (
+                                <option key={status.value} value={status.value} className="text-zinc-950">
+                                  {status.label}
+                                </option>
+                              ))}
+                            </select>
                           </div>
-                          <div className="flex items-center gap-3">
-                            {canRemoveActiveTeamMember ? (
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveTeamMember(activeTeamMember)}
-                                disabled={removingTeamMemberId === activeTeamMemberId}
-                                className="inline-flex items-center justify-center rounded-xl border border-red-900/60 bg-red-950/50 px-3 py-1.5 text-xs font-bold text-red-100 transition hover:bg-red-900/70 disabled:cursor-not-allowed disabled:opacity-60"
+
+                          <p className="mt-4 text-sm leading-7 text-zinc-300">{teamCase.caseDetails || 'No case details added.'}</p>
+
+                          <div className="mt-4 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
+                            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+                              <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Court</p>
+                              <p className="mt-1 text-zinc-200">{teamCase.courtName || 'Not added'}</p>
+                            </div>
+                            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+                              <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Hearing Date</p>
+                              <p className="mt-1 text-zinc-200">{formatDate(teamCase.hearingDate) || 'Not scheduled'}</p>
+                            </div>
+                            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+                              <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Status</p>
+                              <p className="mt-1 text-zinc-200">{getTeamCaseStatusLabel(teamCase.status)}</p>
+                            </div>
+                          </div>
+
+                          {teamCase.basicInfo ? (
+                            <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+                              <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Basic Info</p>
+                              <p className="mt-2 text-sm leading-6 text-zinc-300">{teamCase.basicInfo}</p>
+                            </div>
+                          ) : null}
+
+                          {teamCase.documents?.length ? (
+                            <div className="mt-4">
+                              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-zinc-500">Documents</p>
+                              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                {teamCase.documents.map((document, index) => (
+                                  <a
+                                    key={`${teamCase.id}-doc-${index}`}
+                                    href={String(document.url || '').startsWith('http') ? document.url : undefined}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-bold text-blue-300 transition hover:border-blue-500/50"
+                                  >
+                                    {document.name || document.url || `Document ${index + 1}`}
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              {/* Tab 2: My Team (Owner & Member Tab) */}
+              {activeTeamTab === 'my_team' ? (
+                !activeTeamMember ? (
+                  /* Step 1: Full-Width Team Directory View */
+                  <div className="space-y-5">
+                    <div className="rounded-2xl border border-[#d7e9ef] bg-white p-6 shadow-sm">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-[#eef5f8] pb-4">
+                        <div>
+                          <h3 className="text-xl font-bold text-[#062552]">Team Directory</h3>
+                          <p className="mt-1 text-sm text-[#5f7488]">
+                            Select a lawyer to view their profile and assigned cases.
+                          </p>
+                        </div>
+                        <span className="shrink-0 self-start sm:self-auto rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-1.5 text-sm font-bold text-[#5f7488]">
+                          {visibleTeamDirectory.length} {visibleTeamDirectory.length === 1 ? 'Lawyer' : 'Lawyers'}
+                        </span>
+                      </div>
+
+                      {visibleTeamDirectory.length === 0 ? (
+                        <EmptyBlock icon={<UserPlus size={24} />} message="No team members in directory." />
+                      ) : (
+                        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                          {visibleTeamDirectory.map((member) => {
+                            const memberId = getEntityId(member.lawyerId || member.id);
+                            const memberCasesCount = teamCases.filter((teamCase) => {
+                              const caseOwnerId = getEntityId(teamCase.addedBy);
+                              const caseOwnerName = String(teamCase.addedByName || '').trim().toLowerCase();
+                              const memberName = String(member.name || '').replace(/\s*\(you\)$/i, '').trim().toLowerCase();
+                              return (caseOwnerId && memberId && caseOwnerId === memberId)
+                                || (caseOwnerName && memberName && caseOwnerName === memberName);
+                            }).length;
+
+                            return (
+                              <div
+                                key={member.id || member.phone || member.email}
+                                onClick={() => setSelectedTeamMemberId(String(member.id))}
+                                className="group cursor-pointer rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm transition hover:border-[#15a276] hover:shadow-md"
                               >
-                                {removingTeamMemberId === activeTeamMemberId ? 'Removing...' : 'Remove Member'}
-                              </button>
-                            ) : null}
-                            <p className="text-sm font-bold text-zinc-400">{activeTeamMemberCases.length} total</p>
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <h4 className="truncate text-base font-bold text-[#062552] group-hover:text-[#15a276] transition">
+                                      {member.name || 'Lawyer'}
+                                    </h4>
+                                    <p className="mt-1 truncate text-xs text-[#5f7488]">
+                                      {member.email || member.phone || 'Contact not shared'}
+                                    </p>
+                                  </div>
+                                  <span className="shrink-0 rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-2.5 py-1 text-xs font-bold text-[#5f7488]">
+                                    {memberCasesCount} {memberCasesCount === 1 ? 'case' : 'cases'}
+                                  </span>
+                                </div>
+
+                                <div className="mt-4 flex items-center justify-between border-t border-[#f0f6f8] pt-3">
+                                  <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                                    {member.roleLabel}
+                                  </span>
+                                  <span className="text-xs font-bold text-[#15a276] group-hover:underline flex items-center gap-1">
+                                    View Cases &rarr;
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* Step 2: Dedicated Member Details View */
+                  <div className="space-y-5">
+                    {/* Navigation Header with Back Button */}
+                    <div className="flex flex-col gap-3 rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTeamMemberId('')}
+                        className="inline-flex items-center gap-2 rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-2 text-xs font-bold text-[#062552] transition hover:bg-[#eef5f8] self-start sm:self-auto"
+                      >
+                        <FaArrowLeft />
+                        Back to Team Directory
+                      </button>
+
+                      <div className="flex items-center gap-3">
+                        {canRemoveActiveTeamMember ? (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTeamMember(activeTeamMember)}
+                            disabled={removingTeamMemberId === activeTeamMemberId}
+                            className="inline-flex items-center justify-center rounded-xl border border-red-200 bg-red-50 px-3.5 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {removingTeamMemberId === activeTeamMemberId ? 'Removing...' : 'Remove Member'}
+                          </button>
+                        ) : null}
+                        <span className="rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-3 py-1 text-xs font-bold text-[#5f7488]">
+                          {activeTeamMemberCases.length} {activeTeamMemberCases.length === 1 ? 'case assigned' : 'cases assigned'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Member Profile Header */}
+                    <div className="rounded-2xl border border-[#d7e9ef] bg-white p-6 shadow-sm">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <div className="flex items-center gap-3">
+                            <h3 className="text-xl font-bold text-[#062552]">{activeTeamMember.name || 'Lawyer'}</h3>
+                            <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                              {activeTeamMember.roleLabel}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-sm text-[#5f7488]">
+                            Email: {activeTeamMember.email || 'Not shared'} | Phone: {activeTeamMember.phone || 'Not shared'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Assigned Cases List */}
+                    <div className="space-y-4">
+                      <h4 className="text-base font-bold text-[#062552]">Assigned Cases</h4>
+                      {activeTeamMemberCases.length === 0 ? (
+                        <EmptyBlock icon={<FaBriefcase size={24} />} message="No cases added by this lawyer yet." />
+                      ) : (
+                        <div className="space-y-4">
+                          {activeTeamMemberCases.map((teamCase) => (
+                            <div key={teamCase.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+                              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                <div>
+                                  <h4 className="text-lg font-bold text-white">{teamCase.caseTitle || 'Untitled Case'}</h4>
+                                  <p className="mt-1 text-sm text-zinc-400">Client: {teamCase.clientName || 'Not added'}</p>
+                                  <p className="mt-1 text-xs text-zinc-500">Added on {formatDate(teamCase.createdAt) || 'recently'}</p>
+                                </div>
+                                {teamCase.canEdit ? (
+                                  <select
+                                    value={teamCase.status || 'new'}
+                                    onChange={(event) => handleUpdateTeamCaseStatus(teamCase, event.target.value)}
+                                    disabled={updatingTeamCaseId === teamCase.id}
+                                    className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-amber-300 disabled:opacity-60"
+                                  >
+                                    {teamCaseStatuses.map((status) => (
+                                      <option key={status.value} value={status.value} className="text-zinc-950">
+                                        {status.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <span className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-400">
+                                    {getTeamCaseStatusLabel(teamCase.status)}
+                                  </span>
+                                )}
+                              </div>
+
+                              <p className="mt-4 text-sm leading-7 text-zinc-300">{teamCase.caseDetails || 'No case details added.'}</p>
+
+                              <div className="mt-4 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
+                                <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+                                  <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Court</p>
+                                  <p className="mt-1 text-zinc-200">{teamCase.courtName || 'Not added'}</p>
+                                </div>
+                                <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+                                  <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Hearing Date</p>
+                                  <p className="mt-1 text-zinc-200">{formatDate(teamCase.hearingDate) || 'Not scheduled'}</p>
+                                </div>
+                                <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+                                  <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Status</p>
+                                  <p className="mt-1 text-zinc-200">{getTeamCaseStatusLabel(teamCase.status)}</p>
+                                </div>
+                              </div>
+
+                              {teamCase.basicInfo ? (
+                                <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+                                  <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Basic Info</p>
+                                  <p className="mt-2 text-sm leading-6 text-zinc-300">{teamCase.basicInfo}</p>
+                                </div>
+                              ) : null}
+
+                              {teamCase.documents?.length ? (
+                                <div className="mt-4">
+                                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-zinc-500">Documents</p>
+                                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                    {teamCase.documents.map((document, index) => (
+                                      <a
+                                        key={`${teamCase.id}-doc-${index}`}
+                                        href={String(document.url || '').startsWith('http') ? document.url : undefined}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-bold text-blue-300 transition hover:border-blue-500/50"
+                                      >
+                                        {document.name || document.url || `Document ${index + 1}`}
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              ) : null}
+
+              {/* Tab 3: Join Requests (Owner Tab) */}
+              {currentActiveTeamTab === 'join_requests' && displayIsTeamOwner ? (
+                <div className="rounded-2xl border border-[#d7e9ef] bg-white p-6 shadow-sm max-w-3xl">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-bold text-[#062552]">Join Requests</h3>
+                      <p className="mt-1 text-sm text-[#5f7488]">Review requests from lawyers wanting to join your team.</p>
+                    </div>
+                    <span className="rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-3 py-1 text-sm font-bold text-[#5f7488]">
+                      {teamPendingRequests.length} pending
+                    </span>
+                  </div>
+                  {teamPendingRequests.length === 0 ? (
+                    <p className="mt-5 rounded-xl border border-dashed border-[#d7e9ef] bg-[#f8fbfc] p-6 text-center text-sm font-semibold text-[#5f7488]">
+                      No pending join requests.
+                    </p>
+                  ) : (
+                    <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+                      {teamPendingRequests.map((request) => (
+                        <div key={request.id} className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-5">
+                          <h4 className="font-bold text-[#062552] text-base">{request.name || 'Lawyer'}</h4>
+                          <p className="mt-1 text-xs text-[#5f7488]">{request.email || request.phone || 'Contact not shared'}</p>
+                          <p className="mt-2 text-xs text-[#5f7488]">Requested {formatDate(request.requestedAt) || 'recently'}</p>
+                          <div className="mt-4 grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleTeamRequestDecision(request, 'accept')}
+                              disabled={updatingTeamRequestId === request.id}
+                              className="rounded-lg bg-[#15a276] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#118b66] disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {updatingTeamRequestId === request.id ? 'Saving...' : 'Accept'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleTeamRequestDecision(request, 'reject')}
+                              disabled={updatingTeamRequestId === request.id}
+                              className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              Reject
+                            </button>
                           </div>
                         </div>
-
-                        {activeTeamMemberCases.length === 0 ? (
-                          <EmptyBlock icon={<FaBriefcase size={24} />} message="No cases added by this lawyer yet." />
-                        ) : (
-                          <div className="space-y-4">
-                            {activeTeamMemberCases.map((teamCase) => (
-                              <div key={teamCase.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
-                                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                                  <div>
-                                    <h4 className="text-lg font-bold text-white">{teamCase.caseTitle || 'Untitled Case'}</h4>
-                                    <p className="mt-1 text-sm text-zinc-400">Client: {teamCase.clientName || 'Not added'}</p>
-                                    <p className="mt-1 text-xs text-zinc-500">Added on {formatDate(teamCase.createdAt) || 'recently'}</p>
-                                  </div>
-                                  {teamCase.canEdit ? (
-                                    <select
-                                      value={teamCase.status || 'new'}
-                                      onChange={(event) => handleUpdateTeamCaseStatus(teamCase, event.target.value)}
-                                      disabled={updatingTeamCaseId === teamCase.id}
-                                      className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-amber-300 disabled:opacity-60"
-                                    >
-                                      {teamCaseStatuses.map((status) => (
-                                        <option key={status.value} value={status.value} className="text-zinc-950">
-                                          {status.label}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  ) : (
-                                    <span className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-400">
-                                      {getTeamCaseStatusLabel(teamCase.status)}
-                                    </span>
-                                  )}
-                                </div>
-
-                                <p className="mt-4 text-sm leading-7 text-zinc-300">{teamCase.caseDetails || 'No case details added.'}</p>
-
-                                <div className="mt-4 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
-                                  <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                                    <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Court</p>
-                                    <p className="mt-1 text-zinc-200">{teamCase.courtName || 'Not added'}</p>
-                                  </div>
-                                  <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                                    <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Hearing Date</p>
-                                    <p className="mt-1 text-zinc-200">{formatDate(teamCase.hearingDate) || 'Not scheduled'}</p>
-                                  </div>
-                                  <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                                    <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Status</p>
-                                    <p className="mt-1 text-zinc-200">{getTeamCaseStatusLabel(teamCase.status)}</p>
-                                  </div>
-                                </div>
-
-                                {teamCase.basicInfo ? (
-                                  <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                                    <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Basic Info</p>
-                                    <p className="mt-2 text-sm leading-6 text-zinc-300">{teamCase.basicInfo}</p>
-                                  </div>
-                                ) : null}
-
-                                {teamCase.documents?.length ? (
-                                  <div className="mt-4">
-                                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-zinc-500">Documents</p>
-                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                      {teamCase.documents.map((document, index) => (
-                                        <a
-                                          key={`${teamCase.id}-doc-${index}`}
-                                          href={String(document.url || '').startsWith('http') ? document.url : undefined}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-bold text-blue-300 transition hover:border-blue-500/50"
-                                        >
-                                          {document.name || document.url || `Document ${index + 1}`}
-                                        </a>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ) : null}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </>
+                      ))}
+                    </div>
                   )}
-                </section>
-              </div>
-              </div>
-            ) : (
+                </div>
+              ) : null}
+            </div>
+          ) : (
               <div className="space-y-5">
               <div className="grid grid-cols-2 gap-3">
                 <button
