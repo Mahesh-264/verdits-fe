@@ -1,0 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+.landing-theme {
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.landing-theme .section-shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 80rem;
+  padding-inline: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .landing-theme .section-shell { padding-inline: 1.5rem; }
+}
+
+@media (min-width: 1024px) {
+  .landing-theme .section-shell { padding-inline: 2rem; }
+}
+
+.landing-theme .glass-panel {
+  border: 1px solid var(--color-verdits-line);
+  background-color: rgb(255 255 255 / 85%);
+  box-shadow: 0 25px 50px rgb(0 0 0 / 10%);
+  backdrop-filter: blur(24px);
+}
+
+.landing-theme .premium-card {
+  border: 1px solid var(--color-verdits-line);
+  background-color: var(--color-verdits-card);
+  box-shadow: 0 20px 25px rgb(0 0 0 / 10%);
+  backdrop-filter: blur(8px);
+}
+
+.landing-theme .gradient-text {
+  background-image: linear-gradient(to right, var(--color-verdits-navy), var(--color-verdits-ink), var(--color-verdits-teal));
+  background-clip: text;
+  color: transparent !important;
+}
+
+.landing-theme .button-gradient {
+  border: 1px solid rgb(247 222 99 / 60%);
+  background-image: var(--background-image-brand-gradient);
+  color: var(--color-verdits-gold) !important;
+  box-shadow: var(--shadow-glow);
+  transition: 300ms;
+}
+
+.landing-theme .button-gradient:hover {
+  transform: translateY(-0.125rem) scale(1.02);
+  border-color: var(--color-verdits-gold);
+  background-color: var(--color-verdits-navy);
+}
+
+/* Keep the existing app-wide palette overrides from changing the isolated marketing site. */
+.landing-theme .bg-white { background-color: #fff !important; }
+.landing-theme .text-white { color: #fff !important; }
+.landing-theme .text-verdits-navy { color: var(--color-verdits-navy) !important; }
+.landing-theme .text-verdits-text { color: var(--color-verdits-text) !important; }
+.landing-theme .text-verdits-teal { color: var(--color-verdits-teal) !important; }
+.landing-theme .bg-verdits-bg { background-color: var(--color-verdits-bg) !important; }
+.landing-theme .bg-verdits-section { background-color: var(--color-verdits-section) !important; }
+.landing-theme .bg-verdits-mint { background-color: var(--color-verdits-mint) !important; }
+.landing-theme .border-verdits-line { border-color: var(--color-verdits-line) !important; }

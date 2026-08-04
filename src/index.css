@@ -1,5 +1,25 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: Inter, Poppins, ui-sans-serif, system-ui, sans-serif;
+  --color-verdits-navy: #050505;
+  --color-verdits-ink: #1c1b17;
+  --color-verdits-teal: #e8ce57;
+  --color-verdits-gold: #f7de63;
+  --color-verdits-goldSoft: #fff4b8;
+  --color-verdits-mint: #fff8da;
+  --color-verdits-bg: #f9f5e8;
+  --color-verdits-section: #fffdf3;
+  --color-verdits-card: #ffffff;
+  --color-verdits-line: #e9d889;
+  --color-verdits-accent: #f7de63;
+  --color-verdits-text: #494536;
+  --shadow-glow: 0 18px 40px rgba(5, 5, 5, 0.18);
+  --shadow-teal: 0 18px 34px rgba(247, 222, 99, 0.3);
+  --background-image-brand-gradient: linear-gradient(135deg, #050505 0%, #16140f 58%, #3a321a 100%);
+  --background-image-dark-radial: radial-gradient(circle at top left, rgba(247, 222, 99, 0.3), transparent 34%), radial-gradient(circle at top right, rgba(5, 5, 5, 0.07), transparent 30%), linear-gradient(180deg, #fffdf3 0%, #f9f5e8 100%);
+}
+
 :root {
   --verdicts-ink: #0d1117;
   --verdicts-charcoal: #17130a;

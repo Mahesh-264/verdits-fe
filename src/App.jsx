@@ -18,6 +18,7 @@ import ResetPassword from './pages/ResetPassword.jsx';
 import Chat from './pages/Chat.jsx';
 
 import LandingPage from './LandingPage.jsx';
+import MarketingSite from './landing/MarketingSite.jsx';
 import UserHome from './Screens/UserHome.jsx';
 import CaseSelection from './Screens/CaseSelection.jsx';
 import LawyerList from './Screens/LawyerList.jsx';
@@ -231,7 +232,8 @@ export default function App() {
         } />
 
         {/* --- Global Redirects --- */}
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/*" element={<MarketingSite />} />
+        <Route path="/role-selection" element={<LandingPage />} />
         <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </BrowserRouter>

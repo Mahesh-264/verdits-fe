@@ -4,6 +4,7 @@ import { Provider } from 'react-redux';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { store } from './redux/store.jsx';
 import './index.css'
+import './landing/styles.css'
 import App from './App.jsx'
 
 const app = (
