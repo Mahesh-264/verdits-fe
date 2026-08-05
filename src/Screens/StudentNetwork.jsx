@@ -42,7 +42,11 @@ export default function StudentNetwork() {
         ]);
 
         if (studentsResult.status === 'fulfilled') {
-          setStudents(Array.isArray(studentsResult.value.data) ? studentsResult.value.data : []);
+          const studentData = studentsResult.value.data;
+          const studentList = Array.isArray(studentData)
+            ? studentData
+            : (Array.isArray(studentData?.students) ? studentData.students : []);
+          setStudents(studentList);
         }
         if (lawyersResult.status === 'fulfilled') {
           setLawyers(Array.isArray(lawyersResult.value.data) ? lawyersResult.value.data : (Array.isArray(lawyersResult.value.data?.lawyers) ? lawyersResult.value.data.lawyers : []));
