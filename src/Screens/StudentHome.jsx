@@ -168,7 +168,7 @@ export default function StudentHome() {
   return (
     <StudentLayout>
       <div className="space-y-8">
-        <section className="overflow-hidden rounded-[32px] border border-[#ead79c] bg-[linear-gradient(135deg,#715318_0%,#b58526_52%,#fff6dc_52%,#fffdf7_100%)] p-6 text-white shadow-[0_20px_60px_rgba(91,65,17,0.16)] md:p-8">
+        <section className="overflow-hidden rounded-[32px] border border-[#ead79c] bg-[linear-gradient(135deg,#f4e6ae_0%,#fff2c9_52%,#fff6dc_52%,#fffdf7_100%)] p-6 text-[#102144] shadow-[0_20px_60px_rgba(91,65,17,0.16)] md:p-8">
           <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr] lg:items-end">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full bg-[#fff7de]/20 px-4 py-2 text-sm font-semibold backdrop-blur">
@@ -178,7 +178,7 @@ export default function StudentHome() {
               <h1 className="mt-5 max-w-2xl text-[34px] font-semibold tracking-tight md:text-[46px]">
                 Network-first legal updates, opportunities, and conversations.
               </h1>
-              <p className="mt-4 max-w-2xl text-[16px] leading-8 text-white/82">
+              <p className="mt-4 max-w-2xl text-[16px] leading-8 text-[#44516d]">
                 Your home feed now blends posts from your network, relevant legal content, and internship or jam opportunities in one modern stream.
               </p>
             </div>
@@ -188,8 +188,8 @@ export default function StudentHome() {
                 <p className="text-sm uppercase tracking-[0.16em] text-[#6d7a92]">Internships in Feed</p>
                 <p className="mt-3 text-[32px] font-semibold">{feedHighlights.internshipCount}</p>
               </div>
-              <div className="rounded-[28px] bg-[#6b4d14] p-5">
-                <p className="text-sm uppercase tracking-[0.16em] text-white/65">Jam Sessions in Feed</p>
+              <div className="rounded-[28px] bg-[#f7e9bb] p-5 text-[#102144]">
+                <p className="text-sm uppercase tracking-[0.16em] text-[#6d7a92]">Jam Sessions in Feed</p>
                 <p className="mt-3 text-[32px] font-semibold">{feedHighlights.jamCount}</p>
               </div>
             </div>

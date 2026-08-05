@@ -376,13 +376,16 @@ const CaseDetailsView = ({
   loadTeamWorkspace,
   formatDate,
 }) => {
-  const [editingPhone, setEditingPhone] = useState(selectedCase.clientPhone || '');
+  const [caseDetails, setCaseDetails] = useState(null);
+  const caseRecord = caseDetails || selectedCase;
+  const [editingPhone, setEditingPhone] = useState(caseRecord.clientPhone || '');
   const [savingPhone, setSavingPhone] = useState(false);
   const [savingHearingHistory, setSavingHearingHistory] = useState(false);
 
   const getInitialHearingHistory = useCallback(() => {
-    if (Array.isArray(selectedCase.hearingHistory) && selectedCase.hearingHistory.length > 0) {
-      return selectedCase.hearingHistory.map((item) => ({
+    if (Array.isArray(caseRecord.hearingHistory) && caseRecord.hearingHistory.length > 0) {
+      return caseRecord.hearingHistory.map((item) => ({
+        id: item.id,
         courtName: item.courtName || '',
         hearingDate: item.hearingDate ? new Date(item.hearingDate).toISOString().split('T')[0] : '',
         hearingDetails: item.hearingDetails || '',
@@ -391,26 +394,34 @@ const CaseDetailsView = ({
     }
     return [
       {
-        courtName: selectedCase.courtName || '',
-        hearingDate: selectedCase.startingDate ? new Date(selectedCase.startingDate).toISOString().split('T')[0] : '',
+        courtName: caseRecord.courtName || '',
+        hearingDate: '',
         hearingDetails: '',
-        nextHearing: selectedCase.nextHearingDate ? new Date(selectedCase.nextHearingDate).toISOString().split('T')[0] : '',
+        nextHearing: caseRecord.nextHearingDate ? new Date(caseRecord.nextHearingDate).toISOString().split('T')[0] : '',
       },
     ];
-  }, [selectedCase]);
+  }, [caseRecord]);
 
   const [localHearingHistory, setLocalHearingHistory] = useState(getInitialHearingHistory);
 
   useEffect(() => {
-    setEditingPhone(selectedCase.clientPhone || '');
+    let active = true;
+    api.get(`/teams/${displayTeam.id}/cases/${selectedCase.id}`)
+      .then(({ data }) => { if (active) setCaseDetails(data?.case || null); })
+      .catch((error) => console.error('Error loading case details:', error));
+    return () => { active = false; };
+  }, [displayTeam.id, selectedCase.id]);
+
+  useEffect(() => {
+    setEditingPhone(caseRecord.clientPhone || '');
     setLocalHearingHistory(getInitialHearingHistory());
-  }, [selectedCase, getInitialHearingHistory]);
+  }, [caseRecord, getInitialHearingHistory]);
 
   const handleSavePhone = async () => {
-    if (editingPhone === (selectedCase.clientPhone || '')) return;
+    if (editingPhone === (caseRecord.clientPhone || '')) return;
     try {
       setSavingPhone(true);
-      await api.patch(`/teams/${displayTeam.id}/cases/${selectedCase.id}`, { clientPhone: editingPhone.trim() });
+      await api.patch(`/teams/${displayTeam.id}/cases/${caseRecord.id}`, { clientPhone: editingPhone.trim() });
       await loadTeamWorkspace();
     } catch (error) {
       console.error('Error updating client phone:', error);
@@ -428,7 +439,7 @@ const CaseDetailsView = ({
   };
 
   const handleAddHearingRow = () => {
-    let newCourtName = selectedCase?.courtName || '';
+    let newCourtName = caseRecord?.courtName || '';
     let newHearingDate = '';
 
     if (localHearingHistory.length > 0) {
@@ -449,17 +460,14 @@ const CaseDetailsView = ({
   };
 
   const handleRemoveHearingRow = (index) => {
-    if (localHearingHistory.length <= 1) return;
     setLocalHearingHistory((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSaveHearingHistory = async () => {
     try {
       setSavingHearingHistory(true);
-      await api.patch(`/teams/${displayTeam.id}/cases/${selectedCase.id}`, {
-        clientPhone: editingPhone.trim(),
-        hearingHistory: localHearingHistory,
-      });
+      const { data } = await api.put(`/teams/${displayTeam.id}/cases/${caseRecord.id}/hearings`, { hearings: localHearingHistory });
+      setCaseDetails(data?.case || null);
       await loadTeamWorkspace();
     } catch (error) {
       console.error('Error saving hearing history:', error);
@@ -489,9 +497,9 @@ const CaseDetailsView = ({
           </button>
           <span className="text-xs font-bold text-[#5f7488]">Status:</span>
           <select
-            value={selectedCase.status || 'new'}
-            onChange={(event) => handleUpdateTeamCaseStatus(selectedCase, event.target.value)}
-            disabled={updatingTeamCaseId === selectedCase.id}
+            value={caseRecord.status || 'new'}
+            onChange={(event) => handleUpdateTeamCaseStatus(caseRecord, event.target.value)}
+            disabled={updatingTeamCaseId === caseRecord.id}
             className="rounded-xl border border-[#d7e9ef] bg-white px-3 py-1.5 text-xs font-bold text-[#062552] outline-none focus:border-[#15a276]"
           >
             {teamCaseStatuses.map((status) => (
@@ -508,21 +516,21 @@ const CaseDetailsView = ({
         <div className="border-b border-[#eef5f8] pb-3">
           <h4 className="text-xs font-bold uppercase tracking-wider text-[#15a276]">Case Details</h4>
           <h3 className="mt-1 text-2xl font-bold text-[#062552]">
-            {selectedCase.caseName || selectedCase.caseTitle || selectedCase.title || 'Untitled Case'}
+            {caseRecord.caseName || caseRecord.caseTitle || caseRecord.title || 'Untitled Case'}
           </h3>
         </div>
 
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Brief Description</p>
           <p className="mt-1 text-sm leading-relaxed text-[#2c3e50]">
-            {selectedCase.briefInfo || selectedCase.caseDetails || 'No brief description added.'}
+            {caseRecord.briefInfo || caseRecord.caseDetails || 'No brief description added.'}
           </p>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 pt-2">
           <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
             <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Client Name</p>
-            <p className="mt-1 text-sm font-bold text-[#062552]">{selectedCase.clientName || 'Not provided'}</p>
+            <p className="mt-1 text-sm font-bold text-[#062552]">{caseRecord.clientName || 'Not provided'}</p>
           </div>
 
           <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
@@ -532,6 +540,7 @@ const CaseDetailsView = ({
               value={editingPhone}
               onChange={(e) => setEditingPhone(e.target.value)}
               onBlur={handleSavePhone}
+              disabled={savingPhone}
               placeholder="Enter phone number"
               className="mt-1 w-full rounded-md border border-[#d7e9ef] bg-[#f8fbfc] px-3 py-1 text-xs font-bold text-[#062552] outline-none focus:border-[#15a276]"
             />
@@ -539,13 +548,13 @@ const CaseDetailsView = ({
 
           <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
             <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Address</p>
-            <p className="mt-1 text-sm font-bold text-[#062552]">{selectedCase.clientAddress || 'Not provided'}</p>
+            <p className="mt-1 text-sm font-bold text-[#062552]">{caseRecord.clientAddress || 'Not provided'}</p>
           </div>
 
           <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
             <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Starting Date</p>
             <p className="mt-1 text-sm font-bold text-[#062552]">
-              {formatDate(selectedCase.startingDate || selectedCase.hearingDate) || 'Not provided'}
+              {formatDate(caseRecord.startingDate || caseRecord.hearingDate) || 'Not provided'}
             </p>
           </div>
         </div>
@@ -626,16 +635,14 @@ const CaseDetailsView = ({
                     />
                   </td>
                   <td className="px-2 py-2.5 text-center">
-                    {localHearingHistory.length > 1 ? (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveHearingRow(index)}
-                        className="text-red-500 hover:text-red-700 transition"
-                        title="Remove row"
-                      >
-                        <FaTrash size={12} />
-                      </button>
-                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveHearingRow(index)}
+                      className="text-red-500 hover:text-red-700 transition"
+                      title="Remove row"
+                    >
+                      <FaTrash size={12} />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -657,6 +664,7 @@ export default function LawyerDashboard() {
   const [showAppointmentsModal, setShowAppointmentsModal] = useState(false);
   const [showClientsModal, setShowClientsModal] = useState(false);
   const [showHearingsModal, setShowHearingsModal] = useState(false);
+  const [nextHearings, setNextHearings] = useState([]);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [teamMode, setTeamMode] = useState('create');
   const [teamLoading, setTeamLoading] = useState(false);
@@ -974,7 +982,7 @@ export default function LawyerDashboard() {
       if (event?.teamId && selectedTeamId && String(event.teamId) !== String(selectedTeamId)) return;
       loadTeamWorkspace();
     };
-    const events = ['team:created', 'team:member-joined', 'team:member-left', 'team:join-request-created', 'team:join-request-rejected', 'case:created', 'case:updated', 'case:deleted', 'case:status-changed', 'hearing:created', 'hearing:updated', 'hearing:deleted'];
+    const events = ['team:created', 'team:member-joined', 'team:member-left', 'team:join-request-created', 'team:join-request-rejected', 'case:created', 'case:updated', 'case:deleted', 'case:status-changed', 'hearing:created', 'hearing:updated', 'hearing:deleted', 'case.updated', 'hearing.created', 'hearing.updated', 'hearing.deleted'];
     events.forEach((event) => socket.on(event, refreshTeamWorkspace));
     return () => events.forEach((event) => socket.off(event, refreshTeamWorkspace));
   }, [loadTeamWorkspace, selectedTeamId, user?.role]);
@@ -1108,23 +1116,6 @@ export default function LawyerDashboard() {
     } catch (error) {
       console.error('Error updating team case status:', error);
       setTeamError(error.response?.data?.message || 'Failed to update case status');
-    } finally {
-      setUpdatingTeamCaseId('');
-    }
-  };
-
-  const handleUpdateNextHearingDate = async (teamCase, nextHearingDate) => {
-    try {
-      setUpdatingTeamCaseId(teamCase.id);
-      setTeamError('');
-      setTeamMessage('');
-
-      await api.patch(`/teams/${displayTeam.id}/cases/${teamCase.id}`, { nextHearingDate });
-      await loadTeamWorkspace();
-      setTeamMessage('Next hearing date updated.');
-    } catch (error) {
-      console.error('Error updating next hearing date:', error);
-      setTeamError(error.response?.data?.message || 'Failed to update next hearing date');
     } finally {
       setUpdatingTeamCaseId('');
     }
@@ -1546,16 +1537,6 @@ export default function LawyerDashboard() {
   const teamSize = hasTeam ? teamMembers.length + 1 : 0;
   const currentLawyerId = getEntityId(user);
   const currentLawyerName = getLawyerDisplayName(user);
-  const ownerSelfProfile = {
-    id: currentLawyerId,
-    lawyerId: currentLawyerId,
-    name: `${currentLawyerName} (You)`,
-    email: user?.email || '',
-    phone: user?.phone || '',
-    joinedAt: displayTeam.createdAt,
-    roleLabel: 'Team Owner',
-    isOwner: true,
-  };
   const normalizedTeamMembers = teamMembers.map((member) => {
     const memberId = getEntityId(member.lawyerId || member.id || member._id);
     return {
@@ -1630,9 +1611,16 @@ export default function LawyerDashboard() {
       }
       return false;
     });
-  const ownHearings = ownTeamCases
-    .filter((teamCase) => teamCase.hearingDate)
-    .sort((first, second) => new Date(first.hearingDate || 0) - new Date(second.hearingDate || 0));
+  useEffect(() => {
+    if (!displayTeam?.id) { setNextHearings([]); return; }
+    let active = true;
+    api.get(`/teams/${displayTeam.id}/next-hearings`)
+      .then(({ data }) => { if (active) setNextHearings(Array.isArray(data?.cases) ? data.cases : []); })
+      .catch((error) => console.error('Error loading next hearings:', error));
+    return () => { active = false; };
+  }, [displayTeam?.id, teamWorkspace?.updatedAt]);
+
+  const ownHearings = nextHearings;
 
   const cards = [
     {

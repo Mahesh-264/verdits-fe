@@ -1,8 +1,15 @@
-import { Facebook, Linkedin, Mail, MapPin, Phone, Twitter } from 'lucide-react';
+import { Instagram, Linkedin, Mail, MapPin, Phone } from 'lucide-react';
+import { FaWhatsapp } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import ContactForm from '../components/ContactForm.jsx';
 import SectionTitle from '../components/SectionTitle.jsx';
+
+const socialLinks = [
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/in/mahesh-babu-bonthala', Icon: Linkedin },
+  { label: 'WhatsApp', href: 'https://wa.me/918688332369', Icon: FaWhatsapp },
+  { label: 'Instagram', href: 'https://www.instagram.com/_verdits/?hl=en', Icon: Instagram },
+];
 
 export default function Contact() {
   return (
@@ -36,12 +43,14 @@ export default function Contact() {
               <Info icon={MapPin} label="Location" value="Hyderabad, Telangana, India" />
             </div>
             <div className="mt-8 flex gap-3">
-              {[Linkedin, Twitter, Facebook].map((Icon, index) => (
+              {socialLinks.map(({ label, href, Icon }) => (
                 <a
-                  key={index}
-                  href="#"
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
                   className="flex h-11 w-11 items-center justify-center rounded-full border border-verdits-line bg-white text-verdits-text transition hover:border-verdits-teal hover:bg-verdits-mint hover:text-verdits-navy"
-                  aria-label="Social link"
+                  aria-label={label}
                 >
                   <Icon size={19} />
                 </a>
