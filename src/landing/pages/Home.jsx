@@ -1,10 +1,17 @@
-import { Facebook, Linkedin, Mail, MapPin, Phone, Twitter } from 'lucide-react';
+import { Instagram, Linkedin, Mail, MapPin, Phone } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { FaWhatsapp } from 'react-icons/fa';
 import ContactForm from '../components/ContactForm.jsx';
 import Features from '../components/Features.jsx';
 import Hero from '../components/Hero.jsx';
 import SectionTitle from '../components/SectionTitle.jsx';
 import Timeline from '../components/Timeline.jsx';
+
+const socialLinks = [
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/in/mahesh-babu-bonthala', Icon: Linkedin },
+  { label: 'WhatsApp', href: 'https://wa.me/918688332369', Icon: FaWhatsapp },
+  { label: 'Instagram', href: 'https://www.instagram.com/_verdits/?hl=en', Icon: Instagram },
+];
 
 export default function Home() {
   return (
@@ -44,12 +51,14 @@ function ContactSection() {
               <Info icon={MapPin} label="Location" value="India" />
             </div>
             <div className="mt-8 flex gap-3">
-              {[Linkedin, Twitter, Facebook].map((Icon, index) => (
+              {socialLinks.map(({ label, href, Icon }) => (
                 <a
-                  key={index}
-                  href="#"
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
                   className="flex h-11 w-11 items-center justify-center rounded-full border border-verdits-line bg-white text-verdits-text transition hover:border-verdits-teal hover:bg-verdits-goldSoft hover:text-verdits-navy"
-                  aria-label="Social link"
+                  aria-label={label}
                 >
                   <Icon size={19} />
                 </a>

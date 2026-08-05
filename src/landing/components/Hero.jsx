@@ -34,7 +34,7 @@ export default function Hero() {
               <ArrowRight size={18} />
             </Link>
             <Link
-              to="/role-selection"
+              to="/login?role=user"
               className="inline-flex items-center justify-center rounded-full border border-verdits-line bg-white px-7 py-4 text-base font-semibold text-verdits-navy shadow-sm transition hover:border-verdits-teal hover:bg-verdits-mint"
             >
               Book a Consultation
