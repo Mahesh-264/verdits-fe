@@ -379,8 +379,11 @@ const CaseDetailsView = ({
   const [caseDetails, setCaseDetails] = useState(null);
   const caseRecord = caseDetails || selectedCase;
   const [editingPhone, setEditingPhone] = useState(caseRecord.clientPhone || '');
-  const [savingPhone, setSavingPhone] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(caseRecord.clientAddress || '');
+  const [savingCaseDetails, setSavingCaseDetails] = useState(false);
   const [savingHearingHistory, setSavingHearingHistory] = useState(false);
+  const [caseDetailsMessage, setCaseDetailsMessage] = useState('');
+  const [caseDetailsError, setCaseDetailsError] = useState('');
 
   const getInitialHearingHistory = useCallback(() => {
     if (Array.isArray(caseRecord.hearingHistory) && caseRecord.hearingHistory.length > 0) {
@@ -414,19 +417,25 @@ const CaseDetailsView = ({
 
   useEffect(() => {
     setEditingPhone(caseRecord.clientPhone || '');
+    setEditingAddress(caseRecord.clientAddress || '');
     setLocalHearingHistory(getInitialHearingHistory());
   }, [caseRecord, getInitialHearingHistory]);
 
-  const handleSavePhone = async () => {
-    if (editingPhone === (caseRecord.clientPhone || '')) return;
+  const handleSaveCaseDetails = async () => {
+    if (!editingPhone.trim()) { setCaseDetailsError('Phone number is required.'); return; }
     try {
-      setSavingPhone(true);
-      await api.patch(`/teams/${displayTeam.id}/cases/${caseRecord.id}`, { clientPhone: editingPhone.trim() });
+      setSavingCaseDetails(true);
+      setCaseDetailsError('');
+      setCaseDetailsMessage('');
+      await api.patch(`/teams/${displayTeam.id}/cases/${caseRecord.id}`, { clientPhone: editingPhone.trim(), clientAddress: editingAddress.trim() });
+      const { data } = await api.get(`/teams/${displayTeam.id}/cases/${caseRecord.id}`);
+      setCaseDetails(data?.case || null);
       await loadTeamWorkspace();
+      setCaseDetailsMessage('Case details saved.');
     } catch (error) {
-      console.error('Error updating client phone:', error);
+      setCaseDetailsError(error.response?.data?.message || 'Unable to save case details.');
     } finally {
-      setSavingPhone(false);
+      setSavingCaseDetails(false);
     }
   };
 
@@ -539,16 +548,22 @@ const CaseDetailsView = ({
               type="tel"
               value={editingPhone}
               onChange={(e) => setEditingPhone(e.target.value)}
-              onBlur={handleSavePhone}
-              disabled={savingPhone}
+              disabled={savingCaseDetails}
               placeholder="Enter phone number"
               className="mt-1 w-full rounded-md border border-[#d7e9ef] bg-[#f8fbfc] px-3 py-1 text-xs font-bold text-[#062552] outline-none focus:border-[#15a276]"
             />
           </div>
 
           <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Address</p>
-            <p className="mt-1 text-sm font-bold text-[#062552]">{caseRecord.clientAddress || 'Not provided'}</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Address (Editable)</p>
+            <input
+              type="text"
+              value={editingAddress}
+              onChange={(e) => setEditingAddress(e.target.value)}
+              disabled={savingCaseDetails}
+              placeholder="Enter address"
+              className="mt-1 w-full rounded-md border border-[#d7e9ef] bg-[#f8fbfc] px-3 py-1 text-xs font-bold text-[#062552] outline-none focus:border-[#15a276]"
+            />
           </div>
 
           <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
@@ -557,6 +572,13 @@ const CaseDetailsView = ({
               {formatDate(caseRecord.startingDate || caseRecord.hearingDate) || 'Not provided'}
             </p>
           </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="button" onClick={handleSaveCaseDetails} disabled={savingCaseDetails} className="inline-flex items-center gap-1.5 rounded-lg bg-[#15a276] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#118460] disabled:cursor-not-allowed disabled:opacity-60">
+            <FaCheck size={12} /> {savingCaseDetails ? 'Saving...' : 'Save Case Details'}
+          </button>
+          {caseDetailsMessage ? <p className="text-xs font-semibold text-[#118460]">{caseDetailsMessage}</p> : null}
+          {caseDetailsError ? <p className="text-xs font-semibold text-red-600">{caseDetailsError}</p> : null}
         </div>
       </div>
 
@@ -579,7 +601,7 @@ const CaseDetailsView = ({
               type="button"
               onClick={handleSaveHearingHistory}
               disabled={savingHearingHistory}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#062552] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#041a3b] disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#15a276] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#118460] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <FaCheck size={12} /> {savingHearingHistory ? 'Saving...' : 'Save Hearing History'}
             </button>
@@ -982,7 +1004,7 @@ export default function LawyerDashboard() {
       if (event?.teamId && selectedTeamId && String(event.teamId) !== String(selectedTeamId)) return;
       loadTeamWorkspace();
     };
-    const events = ['team:created', 'team:member-joined', 'team:member-left', 'team:join-request-created', 'team:join-request-rejected', 'case:created', 'case:updated', 'case:deleted', 'case:status-changed', 'hearing:created', 'hearing:updated', 'hearing:deleted', 'case.updated', 'hearing.created', 'hearing.updated', 'hearing.deleted'];
+    const events = ['team:created', 'team:member-joined', 'team:member-left', 'team:join-request-created', 'team:join-request-rejected', 'case:created', 'case:updated', 'case:deleted', 'case:status-changed', 'hearing:created', 'hearing:updated', 'hearing:deleted', 'case.created', 'case.updated', 'case.deleted', 'hearing.created', 'hearing.updated', 'hearing.deleted', 'client.updated'];
     events.forEach((event) => socket.on(event, refreshTeamWorkspace));
     return () => events.forEach((event) => socket.off(event, refreshTeamWorkspace));
   }, [loadTeamWorkspace, selectedTeamId, user?.role]);
