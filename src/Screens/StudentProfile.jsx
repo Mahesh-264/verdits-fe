@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, BriefcaseBusiness, GraduationCap, MapPin, X } from 'lucide-react';
+import { ArrowLeft, Award, BriefcaseBusiness, GraduationCap, MapPin, Paperclip, X } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/axios.jsx';
@@ -25,6 +25,12 @@ const getInternships = (value) => (
     : []
 );
 
+const getCertificates = (value) => (
+  Array.isArray(value)
+    ? value.filter((item) => item && typeof item === 'object').map((item) => ({ ...item, file: null }))
+    : []
+);
+
 const getInitialFormState = (user) => ({
   firstName: user?.firstName || '',
   lastName: user?.lastName || '',
@@ -38,6 +44,8 @@ const getInitialFormState = (user) => ({
   specializations: getStringList(user?.studentProfile?.specializations).join(', '),
   skills: getStringList(user?.studentProfile?.skills).join(', '),
   internships: getInternships(user?.studentProfile?.internships),
+  certificates: getCertificates(user?.studentProfile?.certificates),
+  profileImageFile: null,
 });
 
 // Helper Field component defined outside StudentProfile to preserve input focus during typing
@@ -68,6 +76,7 @@ export default function StudentProfile() {
   const specializations = getStringList(profileUser?.studentProfile?.specializations);
   const skills = getStringList(profileUser?.studentProfile?.skills);
   const internships = getInternships(profileUser?.studentProfile?.internships);
+  const certificates = getCertificates(profileUser?.studentProfile?.certificates);
   const currentYearLabel = profileUser?.studentProfile?.currentYear || 'Not added yet';
   const profileReactionItem = useMemo(() => ({
     id: profileUser?._id || profileUser?.id || 'student-profile',
@@ -134,11 +143,32 @@ export default function StudentProfile() {
     }));
   };
 
+  const addCertificateField = () => {
+    setFormData((current) => ({
+      ...current,
+      certificates: [...current.certificates, { name: '', description: '', fileUrl: '', fileName: '', file: null }],
+    }));
+  };
+
+  const updateCertificateField = (index, field, value) => {
+    setFormData((current) => ({
+      ...current,
+      certificates: current.certificates.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item),
+    }));
+  };
+
+  const removeCertificateField = (index) => {
+    setFormData((current) => ({ ...current, certificates: current.certificates.filter((_, itemIndex) => itemIndex !== index) }));
+  };
+
   const openEditor = (section = 'full') => {
     if (!isOwnProfile) return;
     const nextFormData = getInitialFormState(user);
     if (section === 'internships' && !nextFormData.internships.length) {
       nextFormData.internships = [{ role: '', org: '', period: '', description: '' }];
+    }
+    if (section === 'certificates' && !nextFormData.certificates.length) {
+      nextFormData.certificates = [{ name: '', description: '', fileUrl: '', fileName: '', file: null }];
     }
     setFormData(nextFormData);
     setActiveEditModal(section);
@@ -155,31 +185,34 @@ export default function StudentProfile() {
     try {
       setIsSaving(true);
 
-      const payload = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        address: {
-          city: formData.city,
-          district: formData.district,
-        },
-        studentProfile: {
-          bio: formData.bio,
-          currentYear: formData.currentYear,
-          collegeName: formData.collegeName,
-          collegeEmail: formData.collegeEmail,
-          specializations: String(formData.specializations || '').split(',').map((item) => item.trim()).filter(Boolean),
-          skills: String(formData.skills || '').split(',').map((item) => item.trim()).filter(Boolean),
-          internships: formData.internships
-            .map((item) => ({
-              role: item.role?.trim(),
-              org: item.org?.trim(),
-              period: item.period?.trim(),
-              description: item.description?.trim(),
-            }))
-            .filter((item) => item.role || item.org || item.period || item.description),
-        },
+      let certificateFileIndex = 0;
+      const studentProfile = {
+        bio: formData.bio,
+        currentYear: formData.currentYear,
+        collegeName: formData.collegeName,
+        collegeEmail: formData.collegeEmail,
+        specializations: String(formData.specializations || '').split(',').map((item) => item.trim()).filter(Boolean),
+        skills: String(formData.skills || '').split(',').map((item) => item.trim()).filter(Boolean),
+        internships: formData.internships
+          .map((item) => ({ role: item.role?.trim(), org: item.org?.trim(), period: item.period?.trim(), description: item.description?.trim() }))
+          .filter((item) => item.role || item.org || item.period || item.description),
+        certificates: formData.certificates
+          .map((item) => {
+            const fileIndex = item.file ? certificateFileIndex++ : undefined;
+            return { name: item.name?.trim(), description: item.description?.trim(), fileUrl: item.fileUrl, fileName: item.fileName, fileIndex };
+          })
+          .filter((item) => item.name || item.description || item.fileUrl || item.fileIndex !== undefined),
       };
+      const payload = new FormData();
+      payload.append('firstName', formData.firstName);
+      payload.append('lastName', formData.lastName);
+      payload.append('email', formData.email);
+      payload.append('address', JSON.stringify({ city: formData.city, district: formData.district }));
+      payload.append('studentProfile', JSON.stringify(studentProfile));
+      if (formData.profileImageFile) payload.append('profileImage', formData.profileImageFile);
+      formData.certificates.forEach((item) => {
+        if (item.file) payload.append('certificateFiles', item.file);
+      });
 
       const { data } = await api.put('/auth/update-profile', payload);
       dispatch(updateUser(data.user));
@@ -375,6 +408,7 @@ export default function StudentProfile() {
                 </div>
               </div>
             </section>
+
           </div>
 
           <div className="space-y-8">
@@ -424,6 +458,39 @@ export default function StudentProfile() {
                 )}
               </div>
             </section>
+
+            <section className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 md:p-8 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-[22px] font-semibold">Certificates</h2>
+                  <p className="mt-2 text-[18px] text-[#5e6c87]">Add certificates and supporting documents.</p>
+                </div>
+                {isOwnProfile && (
+                  <button type="button" onClick={() => openEditor('certificates')} className="rounded-2xl border border-[#dbe2ef] px-5 py-3 text-[18px] font-semibold text-[#15a276] hover:bg-[#f8faff] transition">
+                    {certificates.length ? 'Edit Certificates' : 'Add Certificate'}
+                  </button>
+                )}
+              </div>
+              <div className="mt-8 space-y-4">
+                {certificates.length ? certificates.map((certificate, index) => (
+                  <div key={`${certificate.name}-${index}`} className="rounded-2xl border border-[#dbe2ef] p-5">
+                    <div className="flex items-start gap-3">
+                      <Award size={22} className="mt-0.5 shrink-0 text-[#15a276]" />
+                      <div className="min-w-0">
+                        <p className="font-semibold text-[#0b1f44]">{certificate.name || 'Certificate'}</p>
+                        {certificate.description ? <p className="mt-1 leading-7 text-[#5e6c87]">{certificate.description}</p> : null}
+                        {certificate.fileUrl ? <a href={certificate.fileUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-[#15a276] hover:underline"><Paperclip size={15} /> View certificate</a> : null}
+                      </div>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="rounded-2xl border border-dashed border-[#dbe2ef] p-6 text-[#5e6c87]">
+                    <p>No certificates added yet.</p>
+                    {isOwnProfile && <button type="button" onClick={() => openEditor('certificates')} className="mt-3 text-sm font-semibold text-[#15a276] hover:underline">Add Certificate</button>}
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
         </div>
       </div>
@@ -438,8 +505,10 @@ export default function StudentProfile() {
                     ? 'Add / Edit Specializations'
                     : activeEditModal === 'skills'
                       ? 'Add / Edit Skills'
-                      : activeEditModal === 'internships'
-                        ? 'Add / Edit Internship Experience'
+                        : activeEditModal === 'internships'
+                          ? 'Add / Edit Internship Experience'
+                          : activeEditModal === 'certificates'
+                            ? 'Add / Edit Certificates'
                         : activeEditModal === 'academic'
                           ? 'Edit Academic Details'
                           : 'Edit Student Profile'}
@@ -451,6 +520,8 @@ export default function StudentProfile() {
                       ? 'Add or update the legal and professional skills you possess.'
                       : activeEditModal === 'internships'
                         ? 'Add or update your internship experiences below.'
+                        : activeEditModal === 'certificates'
+                          ? 'Add certificates and supporting files to your student profile.'
                         : activeEditModal === 'academic'
                           ? 'Keep your college and location details current.'
                           : 'Update your student details and save them to your account.'}
@@ -572,6 +643,28 @@ export default function StudentProfile() {
                   </div>
                 )}
 
+                {activeEditModal === 'certificates' && (
+                  <div className="rounded-2xl bg-[#f8faff] border border-[#dbe2ef] p-6 space-y-6">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-lg font-semibold text-[#0b1f44]">Certificates</h3>
+                        <p className="mt-1 text-sm text-[#5e6c87]">Add the certificate name, its file, and a short description.</p>
+                      </div>
+                      <button type="button" onClick={addCertificateField} className="shrink-0 rounded-xl bg-[#15a276] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#10835e]">+ Add Certificate</button>
+                    </div>
+                    <div className="space-y-4">
+                      {formData.certificates.map((certificate, index) => (
+                        <div key={`certificate-${index}`} className="rounded-2xl border border-[#dbe2ef] bg-white p-5 space-y-4">
+                          <div className="flex items-center justify-between gap-3"><h4 className="font-semibold text-[#0b1f44]">Certificate {index + 1}</h4><button type="button" onClick={() => removeCertificateField(index)} className="rounded-xl border border-red-200 px-3.5 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition">Remove</button></div>
+                          <Field label="Certificate Name"><input value={certificate.name} onChange={(event) => updateCertificateField(index, 'name', event.target.value)} placeholder="Example: Moot Court Competition" className="w-full rounded-xl border border-[#dbe2ef] px-4 py-3 outline-none focus:border-[#15a276]" /></Field>
+                          <Field label="Add Certificate"><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx" onChange={(event) => { const file = event.target.files?.[0] || null; updateCertificateField(index, 'file', file); updateCertificateField(index, 'fileName', file?.name || certificate.fileName); }} className="w-full rounded-xl border border-[#dbe2ef] px-4 py-3 outline-none focus:border-[#15a276]" />{certificate.fileName ? <p className="mt-2 text-sm text-[#5e6c87]">Selected: {certificate.fileName}</p> : null}</Field>
+                          <Field label="Description"><textarea value={certificate.description} onChange={(event) => updateCertificateField(index, 'description', event.target.value)} placeholder="Describe the certificate and achievement" rows="3" className="w-full rounded-xl border border-[#dbe2ef] px-4 py-3 outline-none focus:border-[#15a276]" /></Field>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {activeEditModal === 'academic' && (
                   <div className="rounded-2xl bg-[#f8faff] border border-[#dbe2ef] p-6 space-y-5">
                     <h3 className="text-lg font-semibold text-[#0b1f44]">Academic & Contact Details</h3>
@@ -628,6 +721,24 @@ export default function StudentProfile() {
 
                 {activeEditModal === 'full' && (
                   <div className="space-y-6">
+                    <div className="rounded-2xl bg-[#f8faff] border border-[#dbe2ef] p-5">
+                      <h3 className="text-lg font-semibold text-[#0b1f44]">Profile Photo</h3>
+                      <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+                        {formData.profileImageFile ? (
+                          <img src={URL.createObjectURL(formData.profileImageFile)} alt="Profile preview" className="h-20 w-20 rounded-full object-cover" />
+                        ) : profileUser?.profileImage ? (
+                          <img src={profileUser.profileImage} alt={studentName} className="h-20 w-20 rounded-full object-cover" />
+                        ) : (
+                          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#e8f7f2] text-2xl font-bold text-[#15a276]">{studentName.charAt(0).toUpperCase()}</div>
+                        )}
+                        <div>
+                          <Field label="Add Profile Photo">
+                            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setFormData((current) => ({ ...current, profileImageFile: event.target.files?.[0] || null }))} className="w-full rounded-xl border border-[#dbe2ef] bg-white px-4 py-3 outline-none focus:border-[#15a276]" />
+                          </Field>
+                          <p className="mt-2 text-sm text-[#5e6c87]">JPG, PNG, or WEBP up to 10 MB.</p>
+                        </div>
+                      </div>
+                    </div>
                     <div className="rounded-2xl bg-[#f8faff] border border-[#dbe2ef] p-5">
                       <h3 className="text-lg font-semibold text-[#0b1f44]">Basic Information</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">

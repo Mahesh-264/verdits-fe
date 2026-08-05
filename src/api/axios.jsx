@@ -17,6 +17,11 @@ let refreshPromise = null;
 
 // 🛡️ Request Interceptor: Attach Token to every call
 api.interceptors.request.use((config) => {
+    if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+        // Let the browser supply the multipart boundary required by multer.
+        config.headers.delete?.('Content-Type');
+        delete config.headers['Content-Type'];
+    }
     const token = getAccessToken();
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;

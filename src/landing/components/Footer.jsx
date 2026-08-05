@@ -1,4 +1,5 @@
-import { Facebook, Github, Linkedin, Twitter } from 'lucide-react';
+import { Instagram, Linkedin } from 'lucide-react';
+import { FaWhatsapp } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import BrandLogo from './BrandLogo.jsx';
 
@@ -9,6 +10,12 @@ const quickLinks = [
   ['How We Work', '/#how-we-work'],
   ['Contact Us', '/contact'],
   ['Login', '/role-selection'],
+];
+
+const socialLinks = [
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/in/mahesh-babu-bonthala', Icon: Linkedin },
+  { label: 'WhatsApp', href: 'https://wa.me/918688332369', Icon: FaWhatsapp },
+  { label: 'Instagram', href: 'https://www.instagram.com/_verdits/?hl=en', Icon: Instagram },
 ];
 
 export default function Footer() {
@@ -23,12 +30,14 @@ export default function Footer() {
               one secure digital ecosystem.
             </p>
             <div className="mt-6 flex gap-3">
-              {[Linkedin, Twitter, Facebook, Github].map((Icon, index) => (
+              {socialLinks.map(({ label, href, Icon }) => (
                 <a
-                  key={index}
-                  href="#"
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
                   className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-verdits-line bg-white text-verdits-text transition hover:border-verdits-teal hover:bg-verdits-goldSoft hover:text-verdits-navy"
-                  aria-label="Social link"
+                  aria-label={label}
                 >
                   <Icon size={18} />
                 </a>
