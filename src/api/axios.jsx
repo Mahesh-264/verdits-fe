@@ -58,10 +58,10 @@ api.interceptors.response.use(
                 return api(originalRequest);
             } catch (err) {
                 clearAuthStorage();
-                // Signed-out visitors always begin at the role-selection page.
+                // Signed-out visitors always return to the role-selection page.
                 // This also prevents delayed requests from overriding a logout
                 // navigation with a redirect to the login form.
-                window.location.href = '/';
+                window.location.href = '/role-selection';
                 return Promise.reject(err);
             }
         }

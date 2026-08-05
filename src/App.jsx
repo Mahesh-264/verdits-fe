@@ -231,9 +231,9 @@ export default function App() {
           </ProtectedRoute>
         } />
 
+        <Route path="/role-selection" element={<LandingPage />} />
         {/* --- Global Redirects --- */}
         <Route path="/*" element={<MarketingSite />} />
-        <Route path="/role-selection" element={<LandingPage />} />
         <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </BrowserRouter>

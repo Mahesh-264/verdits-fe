@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
 import { logout as clearSession } from '../redux/authSlice';
 import { logoutAccount } from '../api/authApi';
 import socket from '../utils/socket.jsx';
@@ -8,7 +7,6 @@ import { getAccessToken } from '../utils/authStorage';
 
 export default function useSessionLogout() {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
 
   return useCallback(() => {
     // Start the server-side logout without holding up the visitor's navigation.
@@ -21,6 +19,6 @@ export default function useSessionLogout() {
     socket.disconnect();
     dispatch(clearSession());
     window.localStorage.setItem('auth:logout', String(Date.now()));
-    navigate('/', { replace: true });
-  }, [dispatch, navigate]);
+    window.location.replace('/role-selection');
+  }, [dispatch]);
 }
