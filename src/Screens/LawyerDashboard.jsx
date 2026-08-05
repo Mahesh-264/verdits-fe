@@ -1168,13 +1168,25 @@ export default function LawyerDashboard() {
       setTeamMessage('');
 
       const normalizedDecision = decision === 'accept' ? 'approve' : 'reject';
-      const { data } = await api.patch(`/teams/${displayTeam.id}/join-requests/${request.id}/${normalizedDecision}`);
+      // Send an explicit empty object: Axios otherwise omits the request body,
+      // which is valid for this endpoint but should not be relied upon.
+      const { data: response } = await api.patch(
+        `/teams/${displayTeam.id}/join-requests/${request.id}/${normalizedDecision}`,
+        {}
+      );
+      const data = response?.data;
+      if (!response?.success) {
+        throw new Error(response?.message || 'Failed to update team request');
+      }
       setTeamWorkspace(data?.team || null);
       setTeamWorkspaces(Array.isArray(data?.teams) ? data.teams : []);
-      setTeamMessage(data?.message || (decision === 'accept' ? 'Join request accepted.' : 'Join request rejected.'));
+      // Keep the owner's pending-request list current even when Socket.IO is
+      // unavailable or reconnecting.
+      await loadTeamWorkspace();
+      setTeamMessage(response.message || (decision === 'accept' ? 'Join request accepted.' : 'Join request rejected.'));
     } catch (error) {
       console.error('Error updating team request:', error);
-      const detailMessage = error.response?.data?.message || error.message;
+      const detailMessage = error.response?.data?.message || error.message || 'Unable to update team request';
       setTeamError(detailMessage ? `Failed to update team request: ${detailMessage}` : 'Failed to update team request');
     } finally {
       setUpdatingTeamRequestId('');
@@ -1214,10 +1226,17 @@ export default function LawyerDashboard() {
       setTeamError('');
       setTeamMessage('');
 
-      const { data } = await api.delete(`/teams/${displayTeam.id}/members/${memberId}`);
+      const { data: response } = await api.delete(`/teams/${displayTeam.id}/members/${memberId}`, {
+        // Keep this explicit so the API contract remains stable if a removal
+        // reason field is added to the UI later.
+        data: {},
+      });
+      if (!response?.success) {
+        throw new Error(response?.message || 'Failed to remove team member');
+      }
       setSelectedTeamMemberId('');
       await loadTeamWorkspace();
-      setTeamMessage(data?.message || 'Team member removed.');
+      setTeamMessage(response.message || 'Team member removed.');
     } catch (error) {
       console.error('Error removing team member:', error);
       setTeamError(error.response?.data?.message || 'Failed to remove team member');
