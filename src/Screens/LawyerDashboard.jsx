@@ -372,6 +372,7 @@ const CaseDetailsView = ({
   teamCaseStatuses,
   updatingTeamCaseId,
   handleUpdateTeamCaseStatus,
+  handleDeleteTeamCase,
   loadTeamWorkspace,
   formatDate,
 }) => {
@@ -479,6 +480,13 @@ const CaseDetailsView = ({
           <FaArrowLeft /> Back to Cases
         </button>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => handleDeleteTeamCase(selectedCase)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 transition hover:bg-red-100"
+          >
+            <FaTrash size={12} /> Delete Case
+          </button>
           <span className="text-xs font-bold text-[#5f7488]">Status:</span>
           <select
             value={selectedCase.status || 'new'}
@@ -1142,8 +1150,29 @@ export default function LawyerDashboard() {
     }
   };
 
+  const handleDeleteTeamCase = async (teamCase) => {
+    const caseName = teamCase.caseName || teamCase.caseTitle || teamCase.title || 'this case';
+    const confirmed = window.confirm(`Are you sure you want to permanently delete "${caseName}"?`);
+    if (!confirmed) return;
+
+    try {
+      setTeamError('');
+      setTeamMessage('');
+
+      await api.delete(`/teams/${displayTeam.id}/cases/${teamCase.id}`);
+      if (selectedCaseForDetailsId === String(teamCase.id)) {
+        setSelectedCaseForDetailsId('');
+      }
+      await loadTeamWorkspace();
+      setTeamMessage('Case deleted successfully.');
+    } catch (error) {
+      console.error('Error deleting case:', error);
+      setTeamError(error.response?.data?.message || 'Failed to delete case');
+    }
+  };
+
   const handleRemoveTeamMember = async (member) => {
-    const memberId = member.lawyerId || member.id;
+    const memberId = getEntityId(member.lawyerId || member.id);
     if (!memberId) return;
 
     const confirmed = window.confirm(`Remove ${member.name || 'this lawyer'} from the team?`);
@@ -1155,8 +1184,8 @@ export default function LawyerDashboard() {
       setTeamMessage('');
 
       const { data } = await api.delete(`/teams/${displayTeam.id}/members/${memberId}`);
-      setTeamWorkspace(data?.team || null);
-      setTeamWorkspaces(Array.isArray(data?.teams) ? data.teams : []);
+      setSelectedTeamMemberId('');
+      await loadTeamWorkspace();
       setTeamMessage(data?.message || 'Team member removed.');
     } catch (error) {
       console.error('Error removing team member:', error);
@@ -2052,9 +2081,13 @@ export default function LawyerDashboard() {
                     <button
                       type="button"
                       onClick={() => setShowTeamCaseForm((current) => !current)}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-4 py-3 text-sm font-bold transition shadow-sm border border-[#d6b85b]"
+                      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition shadow-sm border ${
+                        showTeamCaseForm
+                          ? 'bg-red-600 hover:bg-red-700 text-white border-red-700'
+                          : 'bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 border-[#d6b85b]'
+                      }`}
                     >
-                      <FaPlus />
+                      {showTeamCaseForm ? <FaTimes /> : <FaPlus />}
                       {showTeamCaseForm ? 'Close Form' : 'Add Case'}
                     </button>
                   </div>
@@ -2186,6 +2219,7 @@ export default function LawyerDashboard() {
                         teamCaseStatuses={teamCaseStatuses}
                         updatingTeamCaseId={updatingTeamCaseId}
                         handleUpdateTeamCaseStatus={handleUpdateTeamCaseStatus}
+                        handleDeleteTeamCase={handleDeleteTeamCase}
                         loadTeamWorkspace={loadTeamWorkspace}
                         formatDate={formatDate}
                       />
