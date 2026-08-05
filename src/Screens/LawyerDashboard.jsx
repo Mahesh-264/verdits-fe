@@ -12,6 +12,7 @@ import {
   FaMagic,
   FaPlus,
   FaTimes,
+  FaTrash,
   FaUserGraduate,
 } from 'react-icons/fa';
 import { Copy, KeyRound, UserPlus, Users } from 'lucide-react';
@@ -362,6 +363,280 @@ const getNoticeRequestError = (error, fallbackMessage) => {
   if (error.response?.data?.message) return error.response.data.message;
   if (error.request) return 'Unable to reach the server. Please check your connection and try again.';
   return fallbackMessage;
+};
+
+const CaseDetailsView = ({
+  selectedCase,
+  displayTeam,
+  onBack,
+  teamCaseStatuses,
+  updatingTeamCaseId,
+  handleUpdateTeamCaseStatus,
+  loadTeamWorkspace,
+  formatDate,
+}) => {
+  const [editingPhone, setEditingPhone] = useState(selectedCase.clientPhone || '');
+  const [savingPhone, setSavingPhone] = useState(false);
+  const [savingHearingHistory, setSavingHearingHistory] = useState(false);
+
+  const getInitialHearingHistory = useCallback(() => {
+    if (Array.isArray(selectedCase.hearingHistory) && selectedCase.hearingHistory.length > 0) {
+      return selectedCase.hearingHistory.map((item) => ({
+        courtName: item.courtName || '',
+        hearingDate: item.hearingDate ? new Date(item.hearingDate).toISOString().split('T')[0] : '',
+        hearingDetails: item.hearingDetails || '',
+        nextHearing: item.nextHearing ? new Date(item.nextHearing).toISOString().split('T')[0] : '',
+      }));
+    }
+    return [
+      {
+        courtName: selectedCase.courtName || '',
+        hearingDate: selectedCase.startingDate ? new Date(selectedCase.startingDate).toISOString().split('T')[0] : '',
+        hearingDetails: '',
+        nextHearing: selectedCase.nextHearingDate ? new Date(selectedCase.nextHearingDate).toISOString().split('T')[0] : '',
+      },
+    ];
+  }, [selectedCase]);
+
+  const [localHearingHistory, setLocalHearingHistory] = useState(getInitialHearingHistory);
+
+  useEffect(() => {
+    setEditingPhone(selectedCase.clientPhone || '');
+    setLocalHearingHistory(getInitialHearingHistory());
+  }, [selectedCase, getInitialHearingHistory]);
+
+  const handleSavePhone = async () => {
+    if (editingPhone === (selectedCase.clientPhone || '')) return;
+    try {
+      setSavingPhone(true);
+      await api.patch(`/teams/${displayTeam.id}/cases/${selectedCase.id}`, { clientPhone: editingPhone.trim() });
+      await loadTeamWorkspace();
+    } catch (error) {
+      console.error('Error updating client phone:', error);
+    } finally {
+      setSavingPhone(false);
+    }
+  };
+
+  const handleHearingHistoryChange = (index, field, value) => {
+    setLocalHearingHistory((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const handleAddHearingRow = () => {
+    let newCourtName = selectedCase?.courtName || '';
+    let newHearingDate = '';
+
+    if (localHearingHistory.length > 0) {
+      const lastRow = localHearingHistory[localHearingHistory.length - 1];
+      newCourtName = lastRow.courtName || newCourtName;
+      newHearingDate = lastRow.nextHearing || '';
+    }
+
+    setLocalHearingHistory((prev) => [
+      ...prev,
+      {
+        courtName: newCourtName,
+        hearingDate: newHearingDate,
+        hearingDetails: '',
+        nextHearing: '',
+      },
+    ]);
+  };
+
+  const handleRemoveHearingRow = (index) => {
+    if (localHearingHistory.length <= 1) return;
+    setLocalHearingHistory((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSaveHearingHistory = async () => {
+    try {
+      setSavingHearingHistory(true);
+      await api.patch(`/teams/${displayTeam.id}/cases/${selectedCase.id}`, {
+        clientPhone: editingPhone.trim(),
+        hearingHistory: localHearingHistory,
+      });
+      await loadTeamWorkspace();
+    } catch (error) {
+      console.error('Error saving hearing history:', error);
+    } finally {
+      setSavingHearingHistory(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6 rounded-2xl border border-[#d7e9ef] bg-white p-6 shadow-sm">
+      {/* Top Navigation & Status Bar */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[#eef5f8] pb-5">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex items-center gap-2 rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-2 text-sm font-bold text-[#062552] transition hover:border-[#15a276] hover:text-[#15a276]"
+        >
+          <FaArrowLeft /> Back to Cases
+        </button>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-bold text-[#5f7488]">Status:</span>
+          <select
+            value={selectedCase.status || 'new'}
+            onChange={(event) => handleUpdateTeamCaseStatus(selectedCase, event.target.value)}
+            disabled={updatingTeamCaseId === selectedCase.id}
+            className="rounded-xl border border-[#d7e9ef] bg-white px-3 py-1.5 text-xs font-bold text-[#062552] outline-none focus:border-[#15a276]"
+          >
+            {teamCaseStatuses.map((status) => (
+              <option key={status.value} value={status.value}>
+                {status.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Expanded Case Details Section */}
+      <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-5 space-y-4">
+        <div className="border-b border-[#eef5f8] pb-3">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-[#15a276]">Case Details</h4>
+          <h3 className="mt-1 text-2xl font-bold text-[#062552]">
+            {selectedCase.caseName || selectedCase.caseTitle || selectedCase.title || 'Untitled Case'}
+          </h3>
+        </div>
+
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Brief Description</p>
+          <p className="mt-1 text-sm leading-relaxed text-[#2c3e50]">
+            {selectedCase.briefInfo || selectedCase.caseDetails || 'No brief description added.'}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 pt-2">
+          <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Client Name</p>
+            <p className="mt-1 text-sm font-bold text-[#062552]">{selectedCase.clientName || 'Not provided'}</p>
+          </div>
+
+          <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Phone Number (Editable)</p>
+            <input
+              type="tel"
+              value={editingPhone}
+              onChange={(e) => setEditingPhone(e.target.value)}
+              onBlur={handleSavePhone}
+              placeholder="Enter phone number"
+              className="mt-1 w-full rounded-md border border-[#d7e9ef] bg-[#f8fbfc] px-3 py-1 text-xs font-bold text-[#062552] outline-none focus:border-[#15a276]"
+            />
+          </div>
+
+          <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Address</p>
+            <p className="mt-1 text-sm font-bold text-[#062552]">{selectedCase.clientAddress || 'Not provided'}</p>
+          </div>
+
+          <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Starting Date</p>
+            <p className="mt-1 text-sm font-bold text-[#062552]">
+              {formatDate(selectedCase.startingDate || selectedCase.hearingDate) || 'Not provided'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Hearing History Table Section */}
+      <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-5 space-y-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-[#eef5f8] pb-3">
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#15a276]">Hearing History</h4>
+            <p className="text-xs text-[#5f7488] mt-0.5">Track all court hearing schedules and details.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleAddHearingRow}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#15a276] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#118460]"
+            >
+              <FaPlus size={12} /> Add Hearing Row
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveHearingHistory}
+              disabled={savingHearingHistory}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#062552] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#041a3b] disabled:opacity-60"
+            >
+              <FaCheck size={12} /> {savingHearingHistory ? 'Saving...' : 'Save Hearing History'}
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto rounded-lg border border-[#d7e9ef] bg-white">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-[#f8fbfc] border-b border-[#d7e9ef] text-[#5f7488] uppercase tracking-wider font-bold">
+              <tr>
+                <th className="px-4 py-3 min-w-[160px]">Court Name</th>
+                <th className="px-4 py-3 min-w-[140px]">Hearing Date</th>
+                <th className="px-4 py-3 min-w-[200px]">Hearing Details</th>
+                <th className="px-4 py-3 min-w-[140px]">Next Hearing</th>
+                <th className="px-2 py-3 w-10"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#eef5f8] text-[#062552]">
+              {localHearingHistory.map((row, index) => (
+                <tr key={`hearing-row-${index}`} className="hover:bg-[#f8fbfc]">
+                  <td className="px-4 py-2.5">
+                    <input
+                      type="text"
+                      value={row.courtName}
+                      onChange={(e) => handleHearingHistoryChange(index, 'courtName', e.target.value)}
+                      placeholder="Court name"
+                      className="w-full rounded-md border border-[#d7e9ef] bg-white px-2.5 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]"
+                    />
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <input
+                      type="date"
+                      value={row.hearingDate}
+                      onChange={(e) => handleHearingHistoryChange(index, 'hearingDate', e.target.value)}
+                      className="w-full rounded-md border border-[#d7e9ef] bg-white px-2 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]"
+                    />
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <input
+                      type="text"
+                      value={row.hearingDetails}
+                      onChange={(e) => handleHearingHistoryChange(index, 'hearingDetails', e.target.value)}
+                      placeholder="Hearing details"
+                      className="w-full rounded-md border border-[#d7e9ef] bg-white px-2.5 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]"
+                    />
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <input
+                      type="date"
+                      value={row.nextHearing}
+                      onChange={(e) => handleHearingHistoryChange(index, 'nextHearing', e.target.value)}
+                      className="w-full rounded-md border border-[#d7e9ef] bg-white px-2 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]"
+                    />
+                  </td>
+                  <td className="px-2 py-2.5 text-center">
+                    {localHearingHistory.length > 1 ? (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveHearingRow(index)}
+                        className="text-red-500 hover:text-red-700 transition"
+                        title="Remove row"
+                      >
+                        <FaTrash size={12} />
+                      </button>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default function LawyerDashboard() {
@@ -1904,92 +2179,16 @@ export default function LawyerDashboard() {
                   {selectedCaseForDetailsId && ownTeamCases.some((item) => String(item.id) === String(selectedCaseForDetailsId)) ? (() => {
                     const selectedCase = ownTeamCases.find((item) => String(item.id) === String(selectedCaseForDetailsId));
                     return (
-                      <div className="space-y-6 rounded-2xl border border-[#d7e9ef] bg-white p-6 shadow-sm">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[#eef5f8] pb-5">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedCaseForDetailsId('')}
-                            className="inline-flex items-center gap-2 rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-2 text-sm font-bold text-[#062552] transition hover:border-[#15a276] hover:text-[#15a276]"
-                          >
-                            <FaArrowLeft /> Back to Cases
-                          </button>
-                          <div className="flex items-center gap-3">
-                            <span className="text-xs font-bold text-[#5f7488]">Status:</span>
-                            <select
-                              value={selectedCase.status || 'new'}
-                              onChange={(event) => handleUpdateTeamCaseStatus(selectedCase, event.target.value)}
-                              disabled={updatingTeamCaseId === selectedCase.id}
-                              className="rounded-xl border border-[#d7e9ef] bg-white px-3 py-1.5 text-xs font-bold text-[#062552] outline-none focus:border-[#15a276]"
-                            >
-                              {teamCaseStatuses.map((status) => (
-                                <option key={status.value} value={status.value}>
-                                  {status.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-
-                        {/* Section 1: Case Details */}
-                        <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-5">
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-[#15a276]">Case Details</h4>
-                          <div className="mt-3 space-y-2">
-                            <h3 className="text-xl font-bold text-[#062552]">
-                              {selectedCase.caseName || selectedCase.caseTitle || 'Untitled Case'}
-                            </h3>
-                            <p className="text-xs font-semibold text-[#5f7488]">Brief Description</p>
-                            <p className="text-sm leading-relaxed text-[#2c3e50]">
-                              {selectedCase.briefInfo || selectedCase.caseDetails || 'No brief description added.'}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Section 2: Client Details */}
-                        <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-5">
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-[#15a276]">Client Details</h4>
-                          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                            <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
-                              <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Client Name</p>
-                              <p className="mt-1 text-sm font-bold text-[#062552]">{selectedCase.clientName || 'Not provided'}</p>
-                            </div>
-                            <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
-                              <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Phone Number</p>
-                              <p className="mt-1 text-sm font-bold text-[#062552]">{selectedCase.clientPhone || 'Not provided'}</p>
-                            </div>
-                            <div className="rounded-lg border border-[#d7e9ef] bg-white p-3 sm:col-span-3 lg:col-span-1">
-                              <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Address</p>
-                              <p className="mt-1 text-sm font-bold text-[#062552]">{selectedCase.clientAddress || 'Not provided'}</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Section 3: Case Information */}
-                        <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-5">
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-[#15a276]">Case Information</h4>
-                          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                            <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
-                              <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Starting Date</p>
-                              <p className="mt-1 text-sm font-bold text-[#062552]">
-                                {formatDate(selectedCase.startingDate || selectedCase.hearingDate) || 'Not provided'}
-                              </p>
-                            </div>
-                            <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
-                              <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Court Name</p>
-                              <p className="mt-1 text-sm font-bold text-[#062552]">{selectedCase.courtName || 'Not added'}</p>
-                            </div>
-                            <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
-                              <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Next Hearing Date</p>
-                              <input
-                                type="date"
-                                value={selectedCase.nextHearingDate ? new Date(selectedCase.nextHearingDate).toISOString().split('T')[0] : ''}
-                                onChange={(event) => handleUpdateNextHearingDate(selectedCase, event.target.value)}
-                                disabled={updatingTeamCaseId === selectedCase.id}
-                                className="mt-1 w-full rounded-lg border border-[#d7e9ef] bg-white px-3 py-1.5 text-xs font-bold text-[#062552] outline-none focus:border-[#15a276]"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                      <CaseDetailsView
+                        selectedCase={selectedCase}
+                        displayTeam={displayTeam}
+                        onBack={() => setSelectedCaseForDetailsId('')}
+                        teamCaseStatuses={teamCaseStatuses}
+                        updatingTeamCaseId={updatingTeamCaseId}
+                        handleUpdateTeamCaseStatus={handleUpdateTeamCaseStatus}
+                        loadTeamWorkspace={loadTeamWorkspace}
+                        formatDate={formatDate}
+                      />
                     );
                   })() : ownTeamCases.length === 0 ? (
                     <EmptyBlock icon={<FaBriefcase size={24} />} message="No cases added by you yet." />
@@ -2004,7 +2203,7 @@ export default function LawyerDashboard() {
                           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                             <div>
                               <h4 className="text-lg font-bold text-white group-hover:text-[#15a276] transition">
-                                {teamCase.caseName || teamCase.caseTitle || 'Untitled Case'}
+                                {teamCase.caseName || teamCase.caseTitle || teamCase.title || 'Untitled Case'}
                               </h4>
                               <p className="mt-1 text-sm text-zinc-400">
                                 Client: <span className="font-semibold text-blue-300 underline">{teamCase.clientName || 'Not added'}</span>
