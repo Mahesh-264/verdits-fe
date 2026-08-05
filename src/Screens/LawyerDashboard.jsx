@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -674,6 +674,10 @@ export default function LawyerDashboard() {
   const [teamWorkspace, setTeamWorkspace] = useState(null);
   const [teamWorkspaces, setTeamWorkspaces] = useState([]);
   const [selectedTeamId, setSelectedTeamId] = useState('');
+  const selectedTeamIdRef = useRef('');
+  useEffect(() => {
+    selectedTeamIdRef.current = selectedTeamId;
+  }, [selectedTeamId]);
   const [activeTeamTab, setActiveTeamTab] = useState('my_team');
   const [showTeamCaseForm, setShowTeamCaseForm] = useState(false);
   const [selectedTeamMemberId, setSelectedTeamMemberId] = useState('');
@@ -936,15 +940,17 @@ export default function LawyerDashboard() {
     setTeamCaseForm((current) => ({ ...current, [name]: value }));
   };
 
-  const loadTeamWorkspace = useCallback(async () => {
+  const loadTeamWorkspace = useCallback(async (targetTeamId) => {
     try {
       setTeamWorkspaceLoading(true);
-      const params = selectedTeamId ? { teamId: selectedTeamId } : undefined;
+      const teamIdToFetch = targetTeamId !== undefined ? targetTeamId : selectedTeamIdRef.current;
+      const params = teamIdToFetch ? { teamId: teamIdToFetch } : undefined;
       const { data } = await api.get('/teams/workspace', { params });
       const teams = Array.isArray(data?.teams) ? data.teams : data?.team ? [data.team] : [];
-      const activeId = data?.activeTeamId || data?.team?.id || selectedTeamId || teams[0]?.id || '';
+      const activeId = data?.activeTeamId || data?.team?.id || teamIdToFetch || teams[0]?.id || '';
       setTeamWorkspaces(teams);
       setSelectedTeamId(activeId ? String(activeId) : '');
+      selectedTeamIdRef.current = activeId ? String(activeId) : '';
       setTeamWorkspace(data?.team || null);
     } catch (error) {
       console.error('Error loading team workspace:', error);
@@ -953,7 +959,25 @@ export default function LawyerDashboard() {
     } finally {
       setTeamWorkspaceLoading(false);
     }
-  }, [selectedTeamId]);
+  }, []);
+
+  const handleSwitchTeam = useCallback(async (newTeamId) => {
+    const targetId = String(newTeamId || '');
+    if (!targetId || targetId === String(selectedTeamIdRef.current)) return;
+
+    selectedTeamIdRef.current = targetId;
+    setSelectedTeamId(targetId);
+    setSelectedCaseForDetailsId('');
+    setSelectedTeamMemberId('');
+    setShowTeamCaseForm(false);
+    setTeamWorkspace(null);
+    setNextHearings([]);
+    setTeamMode('overview');
+    setTeamError('');
+    setTeamMessage('');
+
+    await loadTeamWorkspace(targetId);
+  }, [loadTeamWorkspace]);
 
   useEffect(() => {
     if (!showTeamModal) return;
@@ -964,12 +988,6 @@ export default function LawyerDashboard() {
     if (user?.role !== 'lawyer') return;
     loadTeamWorkspace();
   }, [loadTeamWorkspace, user?.role]);
-
-  useEffect(() => {
-    if (!selectedTeamId || String(teamWorkspace?.id) === String(selectedTeamId)) return;
-    setSelectedTeamMemberId('');
-    loadTeamWorkspace();
-  }, [loadTeamWorkspace, selectedTeamId, teamWorkspace?.id]);
 
   useEffect(() => {
     if (!showTeamModal) return;
@@ -1526,10 +1544,9 @@ export default function LawyerDashboard() {
   const pendingCount = pendingAppointments.filter((appointment) => appointment.status === 'Pending').length;
   const clientCount = acceptedClients.length;
   const lawyerTeam = user?.lawyerProfile?.team || null;
-  const hasLegacyTeam = Boolean(lawyerTeam?.teamCode);
-  const hasTeam = Boolean(teamWorkspace?.teamCode || teamWorkspaces.length || hasLegacyTeam);
-  const displayTeam = teamWorkspace || lawyerTeam || {};
-  const displayTeamRole = teamWorkspace?.role || lawyerTeam?.role;
+  const hasTeam = Boolean(teamWorkspace?.teamCode || teamWorkspaces.length);
+  const displayTeam = teamWorkspace || {};
+  const displayTeamRole = teamWorkspace?.role;
   const displayIsTeamOwner = displayTeamRole === 'owner';
   const teamMembers = Array.isArray(displayTeam?.members) ? displayTeam.members : [];
   const teamPendingRequests = Array.isArray(displayTeam?.pendingRequests) ? displayTeam.pendingRequests : [];
@@ -1918,10 +1935,7 @@ export default function LawyerDashboard() {
                         <button
                           key={team.id || team.teamCode}
                           type="button"
-                          onClick={() => {
-                            setSelectedTeamId(String(team.id));
-                            setTeamMode('overview');
-                          }}
+                          onClick={() => handleSwitchTeam(team.id)}
                           className={`rounded-xl border p-4 text-left transition ${
                             isSelectedTeam
                               ? 'border-[#15a276] bg-[#e8f7f2] shadow-sm'
