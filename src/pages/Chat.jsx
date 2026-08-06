@@ -372,7 +372,7 @@ export default function Chat() {
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
         if (!file || !activePartner) return;
-        const type = file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image';
+        const type = file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : file.type.startsWith('image/') ? 'image' : 'document';
         const formData = new FormData();
         formData.append("receiverId", activePartner._id || activePartner.id);
         formData.append("messageType", type);
@@ -585,6 +585,9 @@ export default function Chat() {
                                     const previousDateLabel = i > 0 ? formatMessageDateLabel(messages[i - 1]?.timestamp) : '';
                                     const showDateSeparator = currentDateLabel && currentDateLabel !== previousDateLabel;
                                     const messageTimestamp = formatMessageTimestamp(m.timestamp);
+                                    // Cloudinary's secure_url is already the final delivery URL.
+                                    // Prefer the new attachment metadata and retain mediaUrl for old messages.
+                                    const attachmentUrl = m.attachment?.url || m.mediaUrl;
 
                                     return (
                                         <React.Fragment key={m._id || i}>
@@ -601,9 +604,14 @@ export default function Chat() {
                                                 </div>
                                                 <div onDoubleClick={() => dispatch(toggleMessageSelection(m._id))}
                                                     className={`max-w-[85%] md:max-w-[65%] rounded-2xl shadow-sm relative pt-1.5 pb-2 px-3 border ${isSelected ? 'bg-[#d9f3ea] border-[#15a276] scale-[0.99]' : isMe ? 'bg-[#062552] border-[#062552] text-white rounded-br-md' : 'bg-white border-[#dbe2ef] text-[#243b67] rounded-bl-md'}`}>
-                                                    {m.mediaUrl && m.messageType === 'image' && <img src={m.mediaUrl} alt="sent" className="rounded-md max-h-64 w-full object-cover mb-1 cursor-pointer" onClick={() => !isSelectionMode && window.open(m.mediaUrl, '_blank')} />}
-                                                    {m.mediaUrl && m.messageType === 'video' && <video controls className="rounded-md max-h-64 w-full mb-1"><source src={m.mediaUrl} /></video>}
-                                                    {m.mediaUrl && m.messageType === 'audio' && <div className="flex items-center gap-2 p-1 bg-[#e8f7f2] text-[#062552] rounded-md"><FaMicrophone className="text-[#15a276]" /><audio controls className="h-8 w-full"><source src={m.mediaUrl} /></audio></div>}
+                                                    {attachmentUrl && m.messageType === 'image' && <img src={attachmentUrl} alt={m.attachment?.originalName || 'sent image'} className="rounded-md max-h-64 w-full object-cover mb-1 cursor-pointer" onClick={() => !isSelectionMode && window.open(attachmentUrl, '_blank', 'noopener,noreferrer')} />}
+                                                    {attachmentUrl && m.messageType === 'video' && <video controls className="rounded-md max-h-64 w-full mb-1"><source src={attachmentUrl} /></video>}
+                                                    {attachmentUrl && m.messageType === 'audio' && <div className="flex items-center gap-2 p-1 bg-[#e8f7f2] text-[#062552] rounded-md"><FaMicrophone className="text-[#15a276]" /><audio controls className="h-8 w-full"><source src={attachmentUrl} /></audio></div>}
+                                                    {attachmentUrl && (m.messageType === 'document' || m.attachment?.mimeType === 'application/pdf') && (
+                                                        <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="mb-1 flex items-center gap-2 rounded-md bg-[#e8f7f2] px-3 py-2 text-sm font-semibold text-[#062552] hover:bg-[#d9f3ea]">
+                                                            Open {m.attachment?.originalName || 'document'}
+                                                        </a>
+                                                    )}
                                                     {m.content && <div className="text-[14.2px] leading-relaxed break-words whitespace-pre-wrap">{renderMessageText(m.content)}</div>}
                                                     <div className={`text-[10px] text-right mt-0.5 flex justify-end items-center gap-1 float-right ml-3 pt-1 ${isMe ? 'text-[#b8c8dc]' : 'text-[#7f8ba2]'}`}>
                                                         {messageTimestamp}
@@ -644,7 +652,7 @@ export default function Chat() {
                                 </div>
                             ) : (
                                 <>
-                                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*,audio/*" />
+                                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,video/*,audio/*" />
                                     <div className="p-2 cursor-pointer text-[#5e6c87] hover:text-[#15a276] transition-colors" onClick={() => !isUploading && fileInputRef.current.click()}>
                                         <FaPaperclip className={`text-xl ${isUploading ? 'animate-spin text-white' : ''}`} />
                                     </div>
