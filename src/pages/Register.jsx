@@ -673,7 +673,7 @@ export default function Register() {
         <div className="min-h-screen bg-[#f3f8fb] flex items-center justify-center p-4 font-sans text-[#062552] py-12">
             <div className="w-full max-w-3xl bg-white border border-[#d7e9ef] rounded-2xl p-8 shadow-2xl shadow-[#062552]/10">
                 <div className="flex justify-center mb-6">
-                    <Link to="/" aria-label="Go to role selection">
+                    <Link to="/role-selection" aria-label="Go to role selection">
                         <BrandLogo className="h-16 max-w-[240px]" />
                     </Link>
                 </div>
@@ -683,7 +683,7 @@ export default function Register() {
                         {isGoogleCompletion ? 'Complete Your Registration' : `${role} Registration`}
                     </h2>
                 </div>
-                <Link to="/" className="mb-6 inline-flex text-sm font-semibold text-[#15a276] hover:underline">
+                <Link to="/role-selection" className="mb-6 inline-flex text-sm font-semibold text-[#15a276] hover:underline">
                     &larr; Back to Role Selection
                 </Link>
 

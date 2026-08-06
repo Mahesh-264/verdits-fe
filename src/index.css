@@ -495,6 +495,67 @@ textarea::placeholder {
   background-color: var(--verdicts-gold-soft);
 }
 
+/* Chat attachments intentionally keep a light, high-contrast surface inside
+   outgoing dark bubbles. These explicit classes are placed after the global
+   theme aliases so attachment controls never inherit the dark bubble color. */
+.chat-page .chat-sender-bubble {
+  background-color: #062552 !important;
+  border-color: #062552 !important;
+  color: #ffffff !important;
+}
+
+.chat-page .chat-receiver-bubble {
+  background-color: #ffffff !important;
+  border-color: #dbe2ef !important;
+  color: #243b67 !important;
+}
+
+.chat-page .chat-attachment-surface,
+.chat-page .chat-link-card {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  border: 1px solid #dbe2ef;
+}
+
+.chat-page .chat-link-card {
+  display: block;
+}
+
+.chat-page .chat-attachment-primary,
+.chat-page .chat-attachment-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.chat-page .chat-attachment-primary {
+  background-color: #15a276 !important;
+  color: #ffffff !important;
+}
+
+.chat-page .chat-attachment-primary:hover {
+  background-color: #118b66 !important;
+  color: #ffffff !important;
+}
+
+.chat-page .chat-attachment-secondary {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1;
+}
+
+.chat-page .chat-attachment-secondary:hover,
+.chat-page .chat-link-card:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
 .lawyer-theme .fixed.inset-0 {
   color: var(--verdicts-ink);
 }

@@ -108,6 +108,9 @@ export default function App() {
       if (event.key === 'auth:logout') {
         socket.disconnect();
         dispatch(logout());
+        window.localStorage.clear();
+        window.sessionStorage.clear();
+        window.location.replace('/role-selection');
       }
     };
     window.addEventListener('storage', syncLogout);
@@ -231,9 +234,9 @@ export default function App() {
           </ProtectedRoute>
         } />
 
+        <Route path="/role-selection" element={<LandingPage />} />
         {/* --- Global Redirects --- */}
         <Route path="/*" element={<MarketingSite />} />
-        <Route path="/role-selection" element={<LandingPage />} />
         <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </BrowserRouter>
