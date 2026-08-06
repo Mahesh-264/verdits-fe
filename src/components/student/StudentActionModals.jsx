@@ -47,7 +47,8 @@ const TagInput = ({ value, onChange }) => {
         <button
           type="button"
           onClick={commitTag}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#062552] text-white"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#d6b85b] bg-[#f1d15f] text-[#062552] transition hover:bg-[#e5bd3c]"
+          aria-label="Add skill"
         >
           <Plus size={16} />
         </button>

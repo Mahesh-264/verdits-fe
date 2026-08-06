@@ -20,7 +20,7 @@ const UserHome = () => {
     const [messages, setMessages] = useState([
         {
             sender: 'ai',
-            text: 'Ask me a legal question only. I can explain it simply and suggest matching lawyers when available.',
+            text: 'Ask me anything related to law. I can explain legal sections, rights, procedures, and suggest matching lawyers when available.',
             lawyers: []
         }
     ]);
@@ -64,7 +64,7 @@ const UserHome = () => {
                 ...prev,
                 {
                     sender: 'ai',
-                    text: data?.reply || 'I could not process that legal question right now.',
+                    text: data?.reply || 'I could not process that legal query right now.',
                     lawyers: Array.isArray(data?.lawyers) ? data.lawyers : []
                 }
             ]);
@@ -74,7 +74,7 @@ const UserHome = () => {
                 ...prev,
                 {
                     sender: 'ai',
-                    text: 'I could not process that legal question right now. Please try again in a moment.',
+                    text: 'I could not process that legal query right now. Please try again in a moment.',
                     lawyers: []
                 }
             ]);
@@ -183,7 +183,7 @@ const UserHome = () => {
                             >
                                 <div className={`max-w-[88%] ${isUser ? 'items-end' : 'items-start'} flex flex-col gap-2`}>
                                     <div
-                                        className={`rounded-2xl px-4 py-3 text-sm shadow-sm ${isUser ? 'bg-[#062552] text-white rounded-br-md' : 'bg-[#eef7f4] text-gray-800 rounded-bl-md'}`}
+                                        className={`rounded-2xl px-4 py-3 text-sm shadow-sm ${isUser ? 'bg-[#f1d15f] text-[#062552] rounded-br-md' : 'bg-[#eef7f4] text-gray-800 rounded-bl-md'}`}
                                     >
                                         {message.text}
                                     </div>
@@ -360,7 +360,7 @@ const UserHome = () => {
                         value={input}
                         onChange={(event) => setInput(event.target.value)}
                         onKeyDown={handleInputKeyDown}
-                        placeholder="Ask a legal question only"
+                        placeholder="Ask a question about law"
                         className="w-full p-3 rounded-xl bg-white text-gray-800 outline-none"
                     />
                     <button

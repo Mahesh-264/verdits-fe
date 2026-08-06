@@ -680,17 +680,19 @@ export default function LawyerDashboard() {
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [appointments, setAppointments] = useState([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [showAppointmentsModal, setShowAppointmentsModal] = useState(false);
   const [showClientsModal, setShowClientsModal] = useState(false);
   const [showHearingsModal, setShowHearingsModal] = useState(false);
   const [nextHearings, setNextHearings] = useState([]);
+  const [loadedHearingsTeamId, setLoadedHearingsTeamId] = useState('');
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [teamMode, setTeamMode] = useState('create');
   const [teamLoading, setTeamLoading] = useState(false);
   const [teamWorkspaceLoading, setTeamWorkspaceLoading] = useState(false);
+  const [teamWorkspaceLoaded, setTeamWorkspaceLoaded] = useState(false);
   const [teamError, setTeamError] = useState('');
   const [teamMessage, setTeamMessage] = useState('');
   const [teamWorkspace, setTeamWorkspace] = useState(null);
@@ -822,15 +824,38 @@ export default function LawyerDashboard() {
   }, [dispatch]);
 
   useEffect(() => {
-    if (searchParams.get('section') === 'student-interactions') {
+    const requestedSection = searchParams.get('section');
+
+    // Keep the feature displayed in sync with the URL. This lets a browser
+    // refresh (and links from notifications) reopen the same workspace.
+    setShowAppointmentsModal(false);
+    setShowClientsModal(false);
+    setShowHearingsModal(false);
+    setShowTeamModal(false);
+    setShowNoticeGenerator(false);
+    setShowStudentInteractionModal(false);
+
+    if (requestedSection === 'student-interactions') {
       setShowStudentInteractionModal(true);
     }
 
-    if (searchParams.get('section') === 'appointments') {
+    if (requestedSection === 'appointments') {
       setShowAppointmentsModal(true);
     }
 
-    if (searchParams.get('section') === 'team') {
+    if (requestedSection === 'hearings') {
+      setShowHearingsModal(true);
+    }
+
+    if (requestedSection === 'notice-generator') {
+      setShowNoticeGenerator(true);
+    }
+
+    if (requestedSection === 'clients') {
+      setShowClientsModal(true);
+    }
+
+    if (requestedSection === 'team') {
       const requestedMode = searchParams.get('mode');
       const requestedTeamId = searchParams.get('teamId');
       if (requestedTeamId) setSelectedTeamId(requestedTeamId);
@@ -965,6 +990,7 @@ export default function LawyerDashboard() {
   const loadTeamWorkspace = useCallback(async (targetTeamId) => {
     try {
       setTeamWorkspaceLoading(true);
+      setTeamWorkspaceLoaded(false);
       const teamIdToFetch = targetTeamId !== undefined ? targetTeamId : selectedTeamIdRef.current;
       const params = teamIdToFetch ? { teamId: teamIdToFetch } : undefined;
       const { data } = await api.get('/teams/workspace', { params });
@@ -980,6 +1006,7 @@ export default function LawyerDashboard() {
       setTeamWorkspaces([]);
     } finally {
       setTeamWorkspaceLoading(false);
+      setTeamWorkspaceLoaded(true);
     }
   }, []);
 
@@ -1651,15 +1678,30 @@ export default function LawyerDashboard() {
       return false;
     });
   useEffect(() => {
-    if (!displayTeam?.id) { setNextHearings([]); return; }
+    if (!displayTeam?.id) {
+      setNextHearings([]);
+      setLoadedHearingsTeamId('');
+      return;
+    }
     let active = true;
-    api.get(`/teams/${displayTeam.id}/next-hearings`)
-      .then(({ data }) => { if (active) setNextHearings(Array.isArray(data?.cases) ? data.cases : []); })
-      .catch((error) => console.error('Error loading next hearings:', error));
+    const teamId = String(displayTeam.id);
+    api.get(`/teams/${teamId}/next-hearings`)
+      .then(({ data }) => {
+        if (!active) return;
+        setNextHearings(Array.isArray(data?.cases) ? data.cases : []);
+        setLoadedHearingsTeamId(teamId);
+      })
+      .catch((error) => {
+        console.error('Error loading next hearings:', error);
+        if (active) setLoadedHearingsTeamId(teamId);
+      });
     return () => { active = false; };
   }, [displayTeam?.id, teamWorkspace?.updatedAt]);
 
   const ownHearings = nextHearings;
+  const hearingsLoading = !teamWorkspaceLoaded
+    || teamWorkspaceLoading
+    || (Boolean(displayTeam?.id) && loadedHearingsTeamId !== String(displayTeam.id));
 
   const cards = [
     {
@@ -1667,27 +1709,27 @@ export default function LawyerDashboard() {
       badge: pendingCount > 0 ? pendingCount : null,
       icon: <FaCalendarPlus className="text-4xl text-[#15a276]" />,
       desc: 'Review and manage incoming consultation requests.',
-      onClick: () => setShowAppointmentsModal(true),
+      onClick: () => openFeature('appointments'),
     },
     {
       title: 'Next Hearings',
       badge: ownHearings.length > 0 ? ownHearings.length : null,
       icon: <FaGavel className="text-4xl text-emerald-500" />,
       desc: 'Track hearing dates from your own team cases.',
-      onClick: () => setShowHearingsModal(true),
+      onClick: () => openFeature('hearings'),
     },
     {
       title: 'Notice Generator',
       icon: <FaFileSignature className="text-4xl text-[#15a276]" />,
       desc: 'Quickly draft and send legal notices to parties.',
-      onClick: () => setShowNoticeGenerator(true),
+      onClick: () => openFeature('notice-generator'),
     },
     {
       title: 'My Clients',
       badge: clientCount > 0 ? clientCount : null,
       icon: <FaBriefcase className="text-4xl text-[#062552]" />,
       desc: 'See all clients whose requests you have accepted.',
-      onClick: () => setShowClientsModal(true),
+      onClick: () => openFeature('clients'),
     },
     {
       title: 'My Team',
@@ -1702,14 +1744,14 @@ export default function LawyerDashboard() {
         setTeamMode(hasTeam ? 'overview' : 'create');
         setTeamError('');
         setTeamMessage('');
-        setShowTeamModal(true);
+        openFeature('team');
       },
     },
     {
       title: 'Student Interaction',
       icon: <FaUserGraduate className="text-4xl text-cyan-400" />,
       desc: 'Publish internships and jam sessions for students.',
-      onClick: () => setShowStudentInteractionModal(true),
+      onClick: () => openFeature('student-interactions'),
     },
   ];
 
@@ -1733,6 +1775,10 @@ export default function LawyerDashboard() {
     showStudentInteractionModal
   );
 
+  const openFeature = (section) => {
+    setSearchParams({ section });
+  };
+
   const closeAllFeatures = () => {
     setShowAppointmentsModal(false);
     setShowClientsModal(false);
@@ -1742,6 +1788,7 @@ export default function LawyerDashboard() {
     setShowStudentInteractionModal(false);
     setDrawer(emptyDrawerState);
     setResumePreview(null);
+    setSearchParams({}, { replace: true });
   };
 
   return (
@@ -1786,7 +1833,7 @@ export default function LawyerDashboard() {
             )}
 
       {showClientsModal && (
-        <ModalShell title="My Clients" icon={<FaBriefcase className="text-[#062552]" />} onClose={() => setShowClientsModal(false)}>
+        <ModalShell title="My Clients" icon={<FaBriefcase className="text-[#062552]" />} onClose={closeAllFeatures}>
           {loadingAppointments ? (
             <EmptyBlock icon={<FaBriefcase size={24} />} message="Loading accepted clients..." />
           ) : acceptedClients.length === 0 ? (
@@ -1819,7 +1866,7 @@ export default function LawyerDashboard() {
       )}
 
       {showHearingsModal && (
-        <ModalShell title="Next Hearings" icon={<FaGavel className="text-[#062552]" />} onClose={() => setShowHearingsModal(false)}>
+        <ModalShell title="Next Hearings" icon={<FaGavel className="text-[#062552]" />} onClose={closeAllFeatures}>
           <div className="lawyer-team-workspace space-y-4">
             <div className="rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
               <h3 className="text-lg font-bold text-[#062552]">My Hearings</h3>
@@ -1828,7 +1875,9 @@ export default function LawyerDashboard() {
               </p>
             </div>
 
-            {ownHearings.length === 0 ? (
+            {hearingsLoading ? (
+              <EmptyBlock icon={<FaGavel size={24} />} message="Loading hearings..." />
+            ) : ownHearings.length === 0 ? (
               <EmptyBlock icon={<FaGavel size={24} />} message="No hearings scheduled from your team cases yet." />
             ) : (
               <div className="grid grid-cols-1 gap-4">
@@ -1871,7 +1920,7 @@ export default function LawyerDashboard() {
         <ModalShell
           title="My Team"
           icon={<Users className="h-6 w-6 text-[#15a276]" />}
-          onClose={() => setShowTeamModal(false)}
+          onClose={closeAllFeatures}
         >
           <div className="lawyer-team-workspace text-[#062552]">
             {hasTeam ? (
@@ -2661,11 +2710,7 @@ export default function LawyerDashboard() {
         <ModalShell
           title="Student Interaction"
           icon={<FaUserGraduate className="text-cyan-400" />}
-          onClose={() => {
-            setShowStudentInteractionModal(false);
-            setDrawer(emptyDrawerState);
-            setResumePreview(null);
-          }}
+          onClose={closeAllFeatures}
         >
           <div className="flex flex-col gap-4">
             <p className="text-sm text-[#5f7488]">Create, manage, and track all student engagement from one dashboard module.</p>
@@ -3128,7 +3173,7 @@ export default function LawyerDashboard() {
         <ModalShell
           title="AI Notice Generator"
           icon={<FaFileSignature className="text-[#15a276]" />}
-          onClose={() => setShowNoticeGenerator(false)}
+          onClose={closeAllFeatures}
         >
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
             <form onSubmit={handleGenerateNotice} className="space-y-5">
@@ -3318,7 +3363,7 @@ export default function LawyerDashboard() {
                 <div
                   key={idx}
                   onClick={card.onClick}
-                  className="relative bg-white border border-[#d7e9ef] p-6 rounded-2xl hover:border-[#15a276]/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-md cursor-pointer shadow-sm text-[#062552]"
+                  className="relative min-h-[340px] bg-white border border-[#d7e9ef] px-5 py-6 rounded-2xl hover:border-[#15a276]/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-md cursor-pointer shadow-sm text-[#062552]"
                 >
                   {card.badge > 0 && (
                     <div className="absolute top-4 right-4 bg-[#15a276] text-white text-xs font-bold h-6 w-6 flex items-center justify-center rounded-full shadow animate-pulse">
@@ -3328,8 +3373,8 @@ export default function LawyerDashboard() {
                   <div className="bg-[#e8f7f2] w-16 h-16 rounded-full flex items-center justify-center mb-6 text-[#15a276]">
                     {card.icon}
                   </div>
-                  <h2 className="text-xl font-bold mb-2 text-[#062552]">{card.title}</h2>
-                  <p className="text-[#5f7488] text-sm">{card.desc}</p>
+                  <h2 className="mb-2 text-[18px] font-bold leading-8 text-[#062552] [word-break:keep-all]">{card.title}</h2>
+                  <p className="break-words text-sm leading-6 text-[#5f7488]">{card.desc}</p>
                 </div>
               ))}
             </div>
@@ -3367,7 +3412,7 @@ export default function LawyerDashboard() {
                 {ownHearings.length > 0 && (
                   <button
                     type="button"
-                    onClick={() => setShowHearingsModal(true)}
+                    onClick={() => openFeature('hearings')}
                     className="text-xs font-bold text-[#15a276] hover:text-[#118b66] transition-colors cursor-pointer"
                   >
                     View All ({ownHearings.length})
