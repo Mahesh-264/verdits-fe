@@ -32,7 +32,7 @@ export default function ForgotPassword() {
         <div className="mb-6 flex justify-center"><BrandLogo className="h-16 max-w-[230px]" /></div>
         <h1 className="text-center text-3xl font-bold">Forgot password</h1>
         <p className="mt-2 text-center text-sm text-[#5f7488]">We will email you a 6-digit reset code.</p>
-        <Link to="/" className="mt-6 inline-flex text-sm font-semibold text-[#15a276] hover:underline">
+        <Link to="/role-selection" className="mt-6 inline-flex text-sm font-semibold text-[#15a276] hover:underline">
           &larr; Back to Role Selection
         </Link>
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">

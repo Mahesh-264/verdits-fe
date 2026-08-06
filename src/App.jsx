@@ -108,6 +108,9 @@ export default function App() {
       if (event.key === 'auth:logout') {
         socket.disconnect();
         dispatch(logout());
+        window.localStorage.clear();
+        window.sessionStorage.clear();
+        window.location.replace('/role-selection');
       }
     };
     window.addEventListener('storage', syncLogout);

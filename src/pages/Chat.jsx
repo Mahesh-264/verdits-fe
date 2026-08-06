@@ -13,7 +13,8 @@ import useSessionLogout from '../hooks/useSessionLogout';
 import {
     FaEllipsisV, FaPaperPlane, FaTimes, FaPhone, FaVideo, FaCommentDots,
     FaPaperclip, FaSignOutAlt, FaSearch, FaCheckDouble,
-    FaTrash, FaMicrophone, FaCheckCircle, FaCircle, FaStop, FaExternalLinkAlt, FaArrowLeft
+    FaTrash, FaMicrophone, FaCheckCircle, FaCircle, FaStop, FaExternalLinkAlt, FaArrowLeft,
+    FaFileAlt, FaFilePdf, FaDownload
 } from 'react-icons/fa';
 
 const hasAcceptedAppointment = (appointments, lawyerId, clientId) =>
@@ -101,6 +102,20 @@ const formatMessageDateLabel = (value) => {
     });
 };
 
+const formatFileSize = (bytes) => {
+    if (!Number.isFinite(bytes) || bytes < 0) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const getAttachmentType = (file) => {
+    if (file.type.startsWith('video/')) return 'video';
+    if (file.type.startsWith('audio/')) return 'audio';
+    if (file.type.startsWith('image/')) return 'image';
+    return 'document';
+};
+
 export default function Chat() {
     const dispatch = useDispatch();
     const location = useLocation();
@@ -161,6 +176,7 @@ export default function Chat() {
     const [isUploading, setIsUploading] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
+    const [pendingAttachment, setPendingAttachment] = useState(null);
 
     const socketRef = useRef(null);
     const scrollRef = useRef();
@@ -168,6 +184,7 @@ export default function Chat() {
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
     const timerRef = useRef(null);
+    const discardRecordingRef = useRef(false);
 
     const activePartnerRef = useRef(null);
     const userIdRef = useRef(null);
@@ -177,6 +194,10 @@ export default function Chat() {
         activePartnerRef.current = activePartner?._id || activePartner?.id;
     }, [activePartner]);
     useEffect(() => { userIdRef.current = user?._id || user?.id; }, [user]);
+
+    useEffect(() => () => {
+        if (pendingAttachment?.previewUrl) URL.revokeObjectURL(pendingAttachment.previewUrl);
+    }, [pendingAttachment]);
 
     // 0. Handle incoming chat request from profiles
     useEffect(() => {
@@ -324,7 +345,7 @@ export default function Chat() {
                                 <span className="text-[12px] text-[#243b67] truncate w-44 underline">{part}</span>
                             </div>
                         </div>
-                        <a href={part} target="_blank" rel="noopener noreferrer" className="bg-[#062552] hover:bg-[#0b3b70] text-white text-center py-1.5 rounded-lg text-[11px] font-semibold transition-colors mt-1">
+                        <a href={part} target="_blank" rel="noopener noreferrer" className="chat-link-card text-center py-1.5 rounded-lg text-[11px] font-semibold transition-colors mt-1">
                             Open
                         </a>
                     </div>
@@ -334,22 +355,25 @@ export default function Chat() {
         });
     };
 
+    const stageAttachment = (file) => {
+        const type = getAttachmentType(file);
+        const previewUrl = ['image', 'video', 'audio'].includes(type) ? URL.createObjectURL(file) : '';
+        setPendingAttachment({ file, type, previewUrl });
+    };
+
+    const clearPendingAttachment = () => setPendingAttachment(null);
+
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorderRef.current = new MediaRecorder(stream);
             audioChunksRef.current = [];
             mediaRecorderRef.current.ondataavailable = (e) => audioChunksRef.current.push(e.data);
-            mediaRecorderRef.current.onstop = async () => {
+            mediaRecorderRef.current.onstop = () => {
                 const file = new File([new Blob(audioChunksRef.current)], "voice.mp3", { type: 'audio/mpeg' });
-                const formData = new FormData();
-                formData.append("receiverId", activePartner._id || activePartner.id);
-                formData.append("messageType", 'audio');
-                formData.append("file", file);
-                setIsUploading(true);
-                await dispatch(sendMediaMessage(formData));
-                setIsUploading(false);
                 stream.getTracks().forEach(t => t.stop());
+                if (!discardRecordingRef.current) stageAttachment(file);
+                discardRecordingRef.current = false;
             };
             mediaRecorderRef.current.start();
             setIsRecording(true);
@@ -369,17 +393,36 @@ export default function Chat() {
         }
     };
 
-    const handleFileChange = async (e) => {
+    const cancelRecording = () => {
+        discardRecordingRef.current = true;
+        mediaRecorderRef.current?.stop();
+        setIsRecording(false);
+        clearInterval(timerRef.current);
+    };
+
+    const handleFileChange = (e) => {
         const file = e.target.files[0];
+        e.target.value = '';
         if (!file || !activePartner) return;
-        const type = file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : file.type.startsWith('image/') ? 'image' : 'document';
+        stageAttachment(file);
+    };
+
+    const sendPendingAttachment = async () => {
+        if (!pendingAttachment || !activePartner || isUploading) return;
         const formData = new FormData();
         formData.append("receiverId", activePartner._id || activePartner.id);
-        formData.append("messageType", type);
-        formData.append("file", file);
-        setIsUploading(true);
-        await dispatch(sendMediaMessage(formData));
-        setIsUploading(false);
+        formData.append("messageType", pendingAttachment.type);
+        formData.append("file", pendingAttachment.file);
+        try {
+            setIsUploading(true);
+            await dispatch(sendMediaMessage(formData)).unwrap();
+            clearPendingAttachment();
+        } catch (error) {
+            console.error('Media upload failed:', error);
+            alert('Unable to send this attachment. Please try again.');
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     const handleSend = async (e) => {
@@ -458,11 +501,6 @@ export default function Chat() {
     };
 
     const handleBackToPreviousPage = () => {
-        if (window.history.state?.idx > 0) {
-            navigate(-1);
-            return;
-        }
-
         navigate(location.state?.returnTo || (user?.role === 'lawyer' ? '/lawyer-dash' : '/user-home'));
     };
 
@@ -588,6 +626,9 @@ export default function Chat() {
                                     // Cloudinary's secure_url is already the final delivery URL.
                                     // Prefer the new attachment metadata and retain mediaUrl for old messages.
                                     const attachmentUrl = m.attachment?.url || m.mediaUrl;
+                                    const attachmentName = m.attachment?.originalName || 'Attachment';
+                                    const attachmentSize = formatFileSize(m.attachment?.size);
+                                    const isPdf = m.attachment?.mimeType === 'application/pdf' || attachmentName.toLowerCase().endsWith('.pdf');
 
                                     return (
                                         <React.Fragment key={m._id || i}>
@@ -603,14 +644,24 @@ export default function Chat() {
                                                     {isSelected ? <FaCheckCircle className="text-[#15a276] text-lg shadow-sm" /> : <FaCircle className="text-[#a8b5c9] text-lg" />}
                                                 </div>
                                                 <div onDoubleClick={() => dispatch(toggleMessageSelection(m._id))}
-                                                    className={`max-w-[85%] md:max-w-[65%] rounded-2xl shadow-sm relative pt-1.5 pb-2 px-3 border ${isSelected ? 'bg-[#d9f3ea] border-[#15a276] scale-[0.99]' : isMe ? 'bg-[#062552] border-[#062552] text-white rounded-br-md' : 'bg-white border-[#dbe2ef] text-[#243b67] rounded-bl-md'}`}>
-                                                    {attachmentUrl && m.messageType === 'image' && <img src={attachmentUrl} alt={m.attachment?.originalName || 'sent image'} className="rounded-md max-h-64 w-full object-cover mb-1 cursor-pointer" onClick={() => !isSelectionMode && window.open(attachmentUrl, '_blank', 'noopener,noreferrer')} />}
-                                                    {attachmentUrl && m.messageType === 'video' && <video controls className="rounded-md max-h-64 w-full mb-1"><source src={attachmentUrl} /></video>}
-                                                    {attachmentUrl && m.messageType === 'audio' && <div className="flex items-center gap-2 p-1 bg-[#e8f7f2] text-[#062552] rounded-md"><FaMicrophone className="text-[#15a276]" /><audio controls className="h-8 w-full"><source src={attachmentUrl} /></audio></div>}
+                                                    className={`max-w-[85%] md:max-w-[65%] rounded-2xl shadow-sm relative pt-1.5 pb-2 px-3 border ${isMe ? 'chat-sender-bubble rounded-br-md' : 'chat-receiver-bubble rounded-bl-md'} ${isSelected ? 'ring-2 ring-[#15a276] scale-[0.99]' : ''}`}>
+                                                    {attachmentUrl && m.messageType === 'image' && <div className="chat-attachment-surface mb-1 overflow-hidden rounded-xl p-1"><img src={attachmentUrl} alt={attachmentName} className="max-h-64 w-full rounded-lg object-cover cursor-pointer" onClick={() => !isSelectionMode && window.open(attachmentUrl, '_blank', 'noopener,noreferrer')} /></div>}
+                                                    {attachmentUrl && m.messageType === 'video' && <div className="chat-attachment-surface mb-1 overflow-hidden rounded-xl p-1"><video controls className="max-h-64 w-full rounded-lg"><source src={attachmentUrl} /></video></div>}
+                                                    {attachmentUrl && m.messageType === 'audio' && <div className="chat-attachment-surface mb-1 flex items-center gap-2 rounded-xl p-2"><FaMicrophone className="text-[#15a276]" /><audio controls className="h-8 min-w-0 flex-1"><source src={attachmentUrl} /></audio></div>}
                                                     {attachmentUrl && (m.messageType === 'document' || m.attachment?.mimeType === 'application/pdf') && (
-                                                        <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="mb-1 flex items-center gap-2 rounded-md bg-[#e8f7f2] px-3 py-2 text-sm font-semibold text-[#062552] hover:bg-[#d9f3ea]">
-                                                            Open {m.attachment?.originalName || 'document'}
-                                                        </a>
+                                                        <div className="chat-attachment-surface mb-1 rounded-xl p-3">
+                                                            <div className="flex min-w-0 items-center gap-3">
+                                                                {isPdf ? <FaFilePdf className="shrink-0 text-xl text-red-600" /> : <FaFileAlt className="shrink-0 text-xl text-[#15a276]" />}
+                                                                <div className="min-w-0 flex-1">
+                                                                    <p className="truncate text-sm font-bold text-[#0f172a]">{attachmentName}</p>
+                                                                    {attachmentSize && <p className="text-xs text-[#475569]">{attachmentSize}</p>}
+                                                                </div>
+                                                            </div>
+                                                            <div className="mt-3 flex gap-2">
+                                                                <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="chat-attachment-primary">Open</a>
+                                                                <a href={attachmentUrl} download={attachmentName} className="chat-attachment-secondary"><FaDownload /> Download</a>
+                                                            </div>
+                                                        </div>
                                                     )}
                                                     {m.content && <div className="text-[14.2px] leading-relaxed break-words whitespace-pre-wrap">{renderMessageText(m.content)}</div>}
                                                     <div className={`text-[10px] text-right mt-0.5 flex justify-end items-center gap-1 float-right ml-3 pt-1 ${isMe ? 'text-[#b8c8dc]' : 'text-[#7f8ba2]'}`}>
@@ -648,7 +699,20 @@ export default function Chat() {
                                 <div className="flex-1 flex items-center justify-between bg-[#e8f7f2] p-2.5 px-5 rounded-lg border border-[#15a276]/30">
                                     <div className="flex items-center gap-3 text-[#062552] font-bold"><FaMicrophone className="animate-pulse text-[#15a276]" />{Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}</div>
                                     <span className="text-[#5e6c87] text-[13px] tracking-wide">Recording audio...</span>
-                                    <button onClick={() => { setIsRecording(false); clearInterval(timerRef.current); }} className="text-[#5e6c87] hover:text-[#062552] transition-colors text-[13px] font-semibold">Cancel</button>
+                                    <button onClick={cancelRecording} className="text-[#5e6c87] hover:text-[#062552] transition-colors text-[13px] font-semibold">Cancel</button>
+                                </div>
+                            ) : pendingAttachment ? (
+                                <div className="flex w-full min-w-0 items-center gap-3 rounded-xl border border-[#dbe2ef] bg-[#f8fafc] p-2">
+                                    {pendingAttachment.type === 'image' && <img src={pendingAttachment.previewUrl} alt="Selected attachment preview" className="h-14 w-14 shrink-0 rounded-lg object-cover" />}
+                                    {pendingAttachment.type === 'video' && <video src={pendingAttachment.previewUrl} className="h-14 w-20 shrink-0 rounded-lg bg-slate-900 object-cover" />}
+                                    {pendingAttachment.type === 'audio' && <FaMicrophone className="ml-2 shrink-0 text-xl text-[#15a276]" />}
+                                    {pendingAttachment.type === 'document' && (pendingAttachment.file.type === 'application/pdf' ? <FaFilePdf className="ml-2 shrink-0 text-2xl text-red-600" /> : <FaFileAlt className="ml-2 shrink-0 text-2xl text-[#15a276]" />)}
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-sm font-bold text-[#0f172a]">{pendingAttachment.file.name}</p>
+                                        <p className="text-xs text-[#475569]">{formatFileSize(pendingAttachment.file.size)} · Ready to send</p>
+                                    </div>
+                                    <button type="button" onClick={clearPendingAttachment} disabled={isUploading} className="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold text-[#475569] hover:bg-slate-200 disabled:opacity-60">Cancel</button>
+                                    <button type="button" onClick={sendPendingAttachment} disabled={isUploading} className="chat-attachment-primary shrink-0 disabled:opacity-60">{isUploading ? 'Uploading…' : 'Send'}</button>
                                 </div>
                             ) : (
                                 <>
@@ -662,7 +726,7 @@ export default function Chat() {
                                     </form>
                                 </>
                             )}
-                            {!canChat || isCheckingChatAccess ? null : (
+                            {!canChat || isCheckingChatAccess || pendingAttachment ? null : (
                                 <button onClick={text.trim() ? handleSend : isRecording ? stopRecording : startRecording}
                                     className={`p-3 rounded-full flex items-center justify-center transition-all ${text.trim() ? 'bg-[#15a276] text-white hover:bg-[#118b66]' : isRecording ? 'bg-[#15a276] text-white animate-pulse' : 'text-[#5e6c87] hover:text-[#15a276]'}`}>
                                     {text.trim() ? <FaPaperPlane className="ml-1" size={16} /> : isRecording ? <FaStop size={18} /> : <FaMicrophone size={20} />}

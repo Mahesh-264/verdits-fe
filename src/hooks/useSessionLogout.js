@@ -18,7 +18,10 @@ export default function useSessionLogout() {
 
     socket.disconnect();
     dispatch(clearSession());
+    // A logout must not leave role-specific drafts or cached session state behind.
     window.localStorage.setItem('auth:logout', String(Date.now()));
+    window.localStorage.clear();
+    window.sessionStorage.clear();
     window.location.replace('/role-selection');
   }, [dispatch]);
 }
