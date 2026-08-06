@@ -709,6 +709,7 @@ export default function LawyerDashboard() {
   const [publishedInternships, setPublishedInternships] = useState([]);
   const [publishedJamSessions, setPublishedJamSessions] = useState([]);
   const [publishedPosts, setPublishedPosts] = useState([]);
+  const [followerStudents, setFollowerStudents] = useState([]);
   const [quickStats, setQuickStats] = useState(initialStats);
   const [showInternshipForm, setShowInternshipForm] = useState(false);
   const [showJamSessionForm, setShowJamSessionForm] = useState(false);
@@ -780,11 +781,13 @@ export default function LawyerDashboard() {
       const { data } = await api.get('/auth/lawyer/student-interactions');
       setPublishedInternships(Array.isArray(data?.internships) ? data.internships : []);
       setPublishedJamSessions(Array.isArray(data?.jamSessions) ? data.jamSessions : []);
+      setFollowerStudents(Array.isArray(data?.followers) ? data.followers : []);
       setQuickStats(data?.stats || initialStats);
     } catch (error) {
       console.error('Error loading student interaction posts:', error);
       setPublishedInternships([]);
       setPublishedJamSessions([]);
+      setFollowerStudents([]);
       setQuickStats(initialStats);
     } finally {
       setInteractionLoading(false);
@@ -837,7 +840,7 @@ export default function LawyerDashboard() {
     }
 
     const requestedTab = searchParams.get('tab');
-    if (['internships', 'jamSessions', 'posts'].includes(requestedTab)) {
+    if (['internships', 'jamSessions', 'posts', 'followers'].includes(requestedTab)) {
       setStudentInteractionTab(requestedTab);
     }
   }, [searchParams, user?.lawyerProfile?.team?.teamCode]);
@@ -2674,52 +2677,75 @@ export default function LawyerDashboard() {
         >
           <div className="flex flex-col gap-4">
             <p className="text-sm text-[#5f7488]">Create, manage, and track all student engagement from one dashboard module.</p>
-            <div className="flex flex-col xl:flex-row min-h-[600px] border border-[#d7e9ef] rounded-2xl overflow-hidden bg-white shadow-sm text-[#062552]">
-              <div className="w-full xl:w-64 border-b xl:border-b-0 xl:border-r border-[#d7e9ef] bg-[#f8fbfc] p-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStudentInteractionTab('internships');
-                    setShowJamSessionForm(false);
-                  }}
-                  className={`w-full text-left rounded-xl px-4 py-4 font-semibold transition ${
-                    studentInteractionTab === 'internships'
-                      ? 'bg-[#f1d15f] text-zinc-950 font-bold border border-[#d6b85b] shadow-sm'
-                      : 'bg-white text-[#43556a] hover:bg-[#e8f7f2] hover:text-[#15a276] border border-[#d7e9ef]'
-                  }`}
-                >
-                  Internships
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStudentInteractionTab('jamSessions');
-                    setShowInternshipForm(false);
-                  }}
-                  className={`mt-3 w-full text-left rounded-xl px-4 py-4 font-semibold transition ${
-                    studentInteractionTab === 'jamSessions'
-                      ? 'bg-[#f1d15f] text-zinc-950 font-bold border border-[#d6b85b] shadow-sm'
-                      : 'bg-white text-[#43556a] hover:bg-[#e8f7f2] hover:text-[#15a276] border border-[#d7e9ef]'
-                  }`}
-                >
-                  Jam Sessions
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStudentInteractionTab('posts');
-                    setShowInternshipForm(false);
-                    setShowJamSessionForm(false);
-                  }}
-                  className={`mt-3 w-full text-left rounded-xl px-4 py-4 font-semibold transition ${
-                    studentInteractionTab === 'posts'
-                      ? 'bg-[#f1d15f] text-zinc-950 font-bold border border-[#d6b85b] shadow-sm'
-                      : 'bg-white text-[#43556a] hover:bg-[#e8f7f2] hover:text-[#15a276] border border-[#d7e9ef]'
-                  }`}
-                >
-                  Posts
-                </button>
-              </div>
+            
+            {/* Top Horizontal Tab Navigation */}
+            <div className="flex flex-wrap items-center gap-2 border-b border-[#d7e9ef] pb-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setStudentInteractionTab('internships');
+                  setShowJamSessionForm(false);
+                }}
+                className={`rounded-xl px-5 py-3 text-sm font-bold transition ${
+                  studentInteractionTab === 'internships'
+                    ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
+                    : 'bg-white text-[#43556a] hover:bg-[#e8f7f2] hover:text-[#15a276] border border-[#d7e9ef]'
+                }`}
+              >
+                Internships
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStudentInteractionTab('jamSessions');
+                  setShowInternshipForm(false);
+                }}
+                className={`rounded-xl px-5 py-3 text-sm font-bold transition ${
+                  studentInteractionTab === 'jamSessions'
+                    ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
+                    : 'bg-white text-[#43556a] hover:bg-[#e8f7f2] hover:text-[#15a276] border border-[#d7e9ef]'
+                }`}
+              >
+                Jam Sessions
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStudentInteractionTab('posts');
+                  setShowInternshipForm(false);
+                  setShowJamSessionForm(false);
+                }}
+                className={`rounded-xl px-5 py-3 text-sm font-bold transition ${
+                  studentInteractionTab === 'posts'
+                    ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
+                    : 'bg-white text-[#43556a] hover:bg-[#e8f7f2] hover:text-[#15a276] border border-[#d7e9ef]'
+                }`}
+              >
+                Posts
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStudentInteractionTab('followers');
+                  setShowInternshipForm(false);
+                  setShowJamSessionForm(false);
+                }}
+                className={`rounded-xl px-5 py-3 text-sm font-bold transition inline-flex items-center gap-2 ${
+                  studentInteractionTab === 'followers'
+                    ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
+                    : 'bg-white text-[#43556a] hover:bg-[#e8f7f2] hover:text-[#15a276] border border-[#d7e9ef]'
+                }`}
+              >
+                Followers
+                {followerStudents.length > 0 ? (
+                  <span className="rounded-full bg-zinc-950 px-2 py-0.5 text-xs text-white">
+                    {followerStudents.length}
+                  </span>
+                ) : null}
+              </button>
+            </div>
+
+            <div className="min-h-[600px] border border-[#d7e9ef] rounded-2xl overflow-hidden bg-white shadow-sm text-[#062552]">
 
               <div className="flex-1 grid min-h-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px]">
                 <div className="overflow-y-auto p-6">
@@ -2874,7 +2900,7 @@ export default function LawyerDashboard() {
                         ))
                       )}
                     </div>
-                  ) : (
+                  ) : studentInteractionTab === 'posts' ? (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between gap-4">
                         <div>
@@ -2891,6 +2917,83 @@ export default function LawyerDashboard() {
                         publishedPosts.map((post) => (
                           <FeedPostCard key={`lawyer-post-${post.id}`} post={post} />
                         ))
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-5">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <h3 className="text-xl font-bold text-[#062552]">Student Followers</h3>
+                          <p className="text-sm text-[#5f7488] mt-1">Students who are currently following your profile and updates.</p>
+                        </div>
+                        <span className="shrink-0 rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-1.5 text-sm font-bold text-[#5f7488]">
+                          {followerStudents.length} {followerStudents.length === 1 ? 'Follower' : 'Followers'}
+                        </span>
+                      </div>
+
+                      {interactionLoading ? (
+                        <EmptyBlock icon={<Users size={24} />} message="Loading followers..." />
+                      ) : followerStudents.length === 0 ? (
+                        <EmptyBlock icon={<Users size={24} />} message="No student followers yet." />
+                      ) : (
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          {followerStudents.map((follower) => {
+                            const followerId = follower.id || follower._id;
+                            return (
+                              <div
+                                key={followerId}
+                                className="rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm transition hover:border-[#15a276] hover:shadow-md flex flex-col justify-between"
+                              >
+                                <div>
+                                  <div className="flex items-center gap-4">
+                                    {follower.profileImage ? (
+                                      <img
+                                        src={follower.profileImage}
+                                        alt={follower.name}
+                                        className="h-14 w-14 rounded-full object-cover border border-[#d7e9ef]"
+                                      />
+                                    ) : (
+                                      <div className="h-14 w-14 rounded-full bg-gradient-to-br from-[#8de2c6] to-[#15a276] text-white font-bold text-lg flex items-center justify-center border border-[#d7e9ef]">
+                                        {follower.name ? follower.name.charAt(0).toUpperCase() : 'S'}
+                                      </div>
+                                    )}
+                                    <div className="min-w-0 flex-1">
+                                      <h4 className="truncate text-base font-bold text-[#062552]">{follower.name}</h4>
+                                      <p className="truncate text-xs font-semibold text-[#15a276]">
+                                        {follower.collegeName || 'Law Student'}
+                                      </p>
+                                      {follower.currentYear ? (
+                                        <p className="text-[11px] text-[#5f7488]">{follower.currentYear}</p>
+                                      ) : null}
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-4 border-t border-[#f0f6f8] pt-3 text-xs text-[#5f7488] space-y-1">
+                                    {follower.email ? (
+                                      <p className="truncate">Email: <span className="font-semibold text-[#062552]">{follower.email}</span></p>
+                                    ) : null}
+                                    {follower.phone ? (
+                                      <p>Phone: <span className="font-semibold text-[#062552]">{follower.phone}</span></p>
+                                    ) : null}
+                                  </div>
+                                </div>
+
+                                <div className="mt-4 border-t border-[#f0f6f8] pt-3 flex items-center justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setShowStudentInteractionModal(false);
+                                      navigate(`/student-profile/${followerId}`);
+                                    }}
+                                    className="inline-flex items-center gap-1.5 rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-2 text-xs font-bold text-[#062552] transition hover:bg-[#15a276] hover:text-white"
+                                  >
+                                    View Profile &rarr;
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       )}
                     </div>
                   )}
@@ -2950,7 +3053,7 @@ export default function LawyerDashboard() {
                         </form>
                       )}
                     </div>
-                  ) : (
+                  ) : studentInteractionTab === 'posts' ? (
                     <div>
                       <button
                         type="button"
@@ -2966,6 +3069,19 @@ export default function LawyerDashboard() {
                       <p className="mt-4 text-sm leading-7 text-zinc-400">
                         Share general updates, insights, and media posts. These appear instantly in the social feed and are ranked by network relevance and recency.
                       </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="rounded-2xl border border-[#d7e9ef] bg-[#f8fbfc] p-5">
+                        <h4 className="text-base font-bold text-[#062552]">Followers Overview</h4>
+                        <p className="mt-2 text-xs leading-6 text-[#5f7488]">
+                          Students who follow you receive real-time notifications whenever you publish new internships, jam sessions, or educational posts.
+                        </p>
+                        <div className="mt-4 rounded-xl border border-[#d7e9ef] bg-white p-4">
+                          <p className="text-xs font-semibold text-[#5f7488]">Total Followers</p>
+                          <p className="mt-1 text-2xl font-bold text-[#062552]">{followerStudents.length}</p>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
