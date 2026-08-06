@@ -986,13 +986,8 @@ export default function LawyerDashboard() {
   const loadTeamWorkspace = useCallback(async () => {
     try {
       setTeamWorkspaceLoading(true);
-<<<<<<< HEAD
       setTeamWorkspaceLoaded(false);
-      const teamIdToFetch = targetTeamId !== undefined ? targetTeamId : selectedTeamIdRef.current;
-      const params = teamIdToFetch ? { teamId: teamIdToFetch } : undefined;
-=======
       const params = selectedTeamId ? { teamId: selectedTeamId } : undefined;
->>>>>>> 5b90b655623c0f7e14ce396fb9787e81fc06624c
       const { data } = await api.get('/teams/workspace', { params });
       const teams = Array.isArray(data?.teams) ? data.teams : data?.team ? [data.team] : [];
       const activeId = data?.activeTeamId || data?.team?.id || selectedTeamId || teams[0]?.id || '';
