@@ -1063,8 +1063,70 @@ export default function LawyerDashboard() {
     });
   }, [teamCases, displayIsTeamOwner, displayTeam?.seniorLawyerName, currentLawyerName, currentLawyerId]);
 
-  const ownHearings = nextHearings;
-  const hearingsLoading = !teamWorkspaceLoaded || teamWorkspaceLoading || (Boolean(displayTeam?.id) && loadedHearingsTeamId !== String(displayTeam.id));
+  const ownHearings = useMemo(() => {
+    if (!Array.isArray(ownTeamCases) || ownTeamCases.length === 0) return [];
+    
+    const list = [];
+    ownTeamCases.forEach((teamCase) => {
+      const caseTitle = teamCase.caseName || teamCase.caseTitle || teamCase.title || 'Untitled Case';
+      const clientName = teamCase.clientName || 'Not specified';
+      const teamName = displayTeam?.firmName || 'My Team';
+      const teamCode = displayTeam?.teamCode || '';
+      const caseStatus = teamCase.status || 'new';
+
+      // 1. Extract from hearingHistory array if present
+      if (Array.isArray(teamCase.hearingHistory) && teamCase.hearingHistory.length > 0) {
+        teamCase.hearingHistory.forEach((hearing, idx) => {
+          const rawDate = hearing.nextHearingDate || hearing.nextHearing || hearing.hearingDate;
+          if (!rawDate) return;
+
+          const dateObj = new Date(rawDate);
+          if (Number.isNaN(dateObj.getTime())) return;
+
+          list.push({
+            id: hearing.id || `${teamCase.id}-hh-${idx}`,
+            caseId: teamCase.id,
+            caseTitle,
+            clientName,
+            courtName: hearing.courtName || teamCase.courtName || 'N/A',
+            hearingDate: dateObj.toISOString(),
+            status: caseStatus,
+            teamName,
+            teamCode,
+            dateTime: dateObj.getTime(),
+          });
+        });
+      }
+
+      // 2. Extract top-level case hearing dates (nextHearingDate or hearingDate)
+      const topDate = teamCase.nextHearingDate || teamCase.hearingDate;
+      if (topDate) {
+        const topDateObj = new Date(topDate);
+        if (!Number.isNaN(topDateObj.getTime())) {
+          const topIso = topDateObj.toISOString();
+          const alreadyAdded = list.some((item) => item.caseId === teamCase.id && item.hearingDate === topIso);
+          if (!alreadyAdded) {
+            list.push({
+              id: `${teamCase.id}-top-hearing`,
+              caseId: teamCase.id,
+              caseTitle,
+              clientName,
+              courtName: teamCase.courtName || 'N/A',
+              hearingDate: topIso,
+              status: caseStatus,
+              teamName,
+              teamCode,
+              dateTime: topDateObj.getTime(),
+            });
+          }
+        }
+      }
+    });
+
+    return list.sort((a, b) => a.dateTime - b.dateTime);
+  }, [ownTeamCases, displayTeam?.firmName, displayTeam?.teamCode]);
+
+  const hearingsLoading = !teamWorkspaceLoaded || teamWorkspaceLoading;
   const currentActiveTeamTab = displayIsTeamOwner ? activeTeamTab : 'my_cases';
 
   const openFeature = (section) => {
