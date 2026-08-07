@@ -54,7 +54,7 @@ const TagInput = ({ value, onChange }) => {
         <button
           type="button"
           onClick={commitTag}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#062552] text-white"
+          className="verdits-icon-action inline-flex h-9 w-9 items-center justify-center rounded-full transition"
         >
           <Plus size={16} />
         </button>
@@ -180,7 +180,7 @@ export default function PostComposerModal({
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-2xl bg-[#062552] px-6 py-3 font-semibold text-white transition hover:bg-[#0b3b70] disabled:cursor-not-allowed disabled:opacity-60"
+              className="verdits-primary-action rounded-2xl px-6 py-3 font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? 'Posting...' : 'Post Now'}
             </button>

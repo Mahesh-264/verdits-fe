@@ -1496,7 +1496,7 @@ export default function LawyerDashboard() {
     return data;
   };
 
-  const handleOpenApplicantsDrawer = (internship) => {
+  const handleOpenApplicantsDrawer = async (internship) => {
     setDrawer({
       open: true,
       type: 'applicants',
@@ -1506,6 +1506,28 @@ export default function LawyerDashboard() {
       items: internship.applicants || [],
     });
     setDrawerFilter('All');
+
+    // Refresh the selected internship so every application is shown, including
+    // applications received after the dashboard was initially opened.
+    try {
+      const { data } = await api.get('/auth/lawyer/student-interactions');
+      const internships = Array.isArray(data?.internships) ? data.internships : [];
+      const latestInternship = internships.find((item) => String(item.id) === String(internship.id));
+
+      if (!latestInternship) return;
+
+      setQuickStats(data?.stats || initialStats);
+      setDrawer({
+        open: true,
+        type: 'applicants',
+        title: latestInternship.title,
+        parentId: latestInternship.id,
+        parentLabel: 'Applicants',
+        items: Array.isArray(latestInternship.applicants) ? latestInternship.applicants : [],
+      });
+    } catch (error) {
+      console.error('Error refreshing internship applicants:', error);
+    }
   };
 
   const handleOpenParticipantsDrawer = (session) => {
@@ -2015,7 +2037,7 @@ export default function LawyerDashboard() {
                     <p className="text-xs text-[#5f7488] font-medium">Client communication unlocked</p>
                     <button
                       onClick={() => handleOpenChat(client)}
-                      className="px-5 py-2 bg-[#15a276] hover:bg-[#118b66] text-white rounded-xl font-bold shadow transition-transform active:scale-95"
+                      className="verdits-primary-action px-5 py-2 rounded-xl font-bold shadow transition-transform active:scale-95"
                     >
                       Go to Chat
                     </button>
@@ -2226,7 +2248,7 @@ export default function LawyerDashboard() {
                   <button
                     type="submit"
                     disabled={teamLoading}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#15a276] px-5 py-3 font-bold text-white transition hover:bg-[#118b66] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="verdits-primary-action inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-bold transition disabled:cursor-not-allowed"
                   >
                     <Users size={18} />
                     {teamLoading ? 'Creating...' : 'Create Team'}
@@ -2250,7 +2272,7 @@ export default function LawyerDashboard() {
                   <button
                     type="submit"
                     disabled={teamLoading}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#15a276] px-5 py-3 font-bold text-white transition hover:bg-[#118b66] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="verdits-primary-action inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-bold transition disabled:cursor-not-allowed"
                   >
                     <UserPlus size={18} />
                         {teamLoading ? 'Sending...' : 'Request to Join'}
@@ -2829,7 +2851,7 @@ export default function LawyerDashboard() {
                   <button
                     type="submit"
                     disabled={teamLoading}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-300 px-5 py-3 font-bold text-zinc-950 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="verdits-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 font-bold transition disabled:cursor-not-allowed"
                   >
                     <Users size={18} />
                     {teamLoading ? 'Creating...' : 'Create Team'}
@@ -2851,7 +2873,7 @@ export default function LawyerDashboard() {
                   <button
                     type="submit"
                     disabled={teamLoading}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-300 px-5 py-3 font-bold text-zinc-950 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="verdits-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 font-bold transition disabled:cursor-not-allowed"
                   >
                     <UserPlus size={18} />
                     {teamLoading ? 'Sending request...' : 'Request to Join'}
@@ -2949,7 +2971,7 @@ export default function LawyerDashboard() {
 
             <div className="min-h-[600px] border border-[#d7e9ef] rounded-2xl overflow-hidden bg-white shadow-sm text-[#062552]">
 
-              <div className="flex-1 grid min-h-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px]">
+              <div className="relative flex-1 grid min-h-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px]">
                 <div className="overflow-y-auto p-6">
                   {studentInteractionTab === 'internships' ? (
                     <div className="space-y-4">
@@ -3009,7 +3031,7 @@ export default function LawyerDashboard() {
                               <button
                                 type="button"
                                 onClick={() => handleOpenApplicantsDrawer(internship)}
-                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 font-semibold text-white hover:border-[#15a276]/40"
+                                className="verdits-primary-action inline-flex items-center justify-center gap-2 rounded-lg border border-[#d6b85b] px-4 py-3 font-semibold transition"
                               >
                                 <Users size={16} />
                                 View Applicants
@@ -3020,8 +3042,8 @@ export default function LawyerDashboard() {
                                 disabled={togglingInternshipId === internship.id}
                                 className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-3 font-semibold transition ${
                                   internship.status === 'closed'
-                                    ? 'bg-emerald-700 hover:bg-emerald-600 text-white'
-                                    : 'bg-red-900/60 hover:bg-red-800 text-red-100'
+                                    ? 'verdits-primary-action'
+                                    : 'verdits-danger-action'
                                 } disabled:cursor-not-allowed disabled:opacity-60`}
                               >
                                 {togglingInternshipId === internship.id
@@ -3034,7 +3056,7 @@ export default function LawyerDashboard() {
                                 type="button"
                                 onClick={() => handleDeleteInternship(internship)}
                                 disabled={deletingInternshipId === internship.id}
-                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-900/60 bg-red-950/50 px-4 py-3 font-semibold text-red-100 transition hover:bg-red-900/70 disabled:cursor-not-allowed disabled:opacity-60"
+                                className="verdits-danger-secondary inline-flex items-center justify-center gap-2 rounded-lg border border-red-900/60 px-4 py-3 font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 {deletingInternshipId === internship.id ? 'Deleting...' : 'Delete'}
                               </button>
@@ -3287,10 +3309,9 @@ export default function LawyerDashboard() {
                     </div>
                   )}
                 </div>
-              </div>
 
-              {drawer.open ? (
-                <div className="w-full xl:w-[390px] border-t xl:border-t-0 xl:border-l border-zinc-800 bg-zinc-950/90 p-6 overflow-y-auto">
+                {drawer.open ? (
+                <div className="absolute inset-y-0 right-0 z-20 w-full max-w-[420px] border-l border-zinc-800 bg-zinc-950 p-6 shadow-2xl overflow-y-auto">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">{drawer.parentLabel}</p>
@@ -3410,7 +3431,7 @@ export default function LawyerDashboard() {
                                   type="button"
                                   onClick={() => handleApplicantDecision(item.id, 'accepted')}
                                   disabled={updatingApplicantId === item.id || item.status === 'accepted'}
-                                  className="flex-1 rounded-lg bg-[#005c4b] px-4 py-2 text-sm font-bold text-[#e9edef] hover:bg-[#007b64] disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="verdits-primary-action flex-1 rounded-lg px-4 py-2 text-sm font-bold transition disabled:cursor-not-allowed"
                                 >
                                   {updatingApplicantId === item.id ? 'Saving...' : 'Accept'}
                                 </button>
@@ -3418,7 +3439,7 @@ export default function LawyerDashboard() {
                                   type="button"
                                   onClick={() => handleApplicantDecision(item.id, 'rejected')}
                                   disabled={updatingApplicantId === item.id || item.status === 'rejected'}
-                                  className="flex-1 rounded-lg border border-red-900/60 bg-red-900/40 px-4 py-2 text-sm font-bold text-red-100 hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="verdits-danger-action flex-1 rounded-lg border border-red-900/60 px-4 py-2 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   {updatingApplicantId === item.id ? 'Saving...' : 'Reject'}
                                 </button>
@@ -3436,6 +3457,7 @@ export default function LawyerDashboard() {
                 </div>
               ) : null}
             </div>
+          </div>
           </div>
         </ModalShell>
       )}

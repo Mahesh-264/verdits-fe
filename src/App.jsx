@@ -211,7 +211,7 @@ export default function App() {
         } />
 
         <Route path="/student-profile/:id" element={
-          <ProtectedRoute allowedRoles={['student']}>
+          <ProtectedRoute allowedRoles={['student', 'lawyer']}>
             <StudentProfile />
           </ProtectedRoute>
         } />

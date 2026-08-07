@@ -109,7 +109,7 @@ export default function ReactionBar({
             <button
               type="submit"
               disabled={working || !commentText.trim()}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#062552] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0b3b70] disabled:cursor-not-allowed disabled:opacity-60"
+              className="verdits-primary-action inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed"
             >
               <Send size={16} />
               Post
