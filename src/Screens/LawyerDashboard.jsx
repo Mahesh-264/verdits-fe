@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -10,6 +10,7 @@ import {
   FaFileSignature,
   FaGavel,
   FaMagic,
+  FaPencilAlt,
   FaPlus,
   FaTimes,
   FaTrash,
@@ -376,14 +377,25 @@ const CaseDetailsView = ({
   loadTeamWorkspace,
   formatDate,
 }) => {
+  const { user } = useSelector((state) => state.auth);
   const [caseDetails, setCaseDetails] = useState(null);
   const caseRecord = caseDetails || selectedCase;
+
+  const currentUserId = user?._id || user?.id;
+  const canEditCase = caseRecord?.canEdit !== undefined
+    ? Boolean(caseRecord.canEdit)
+    : String(caseRecord?.addedBy?._id || caseRecord?.addedBy || caseRecord?.ownerId?._id || caseRecord?.ownerId || '') === String(currentUserId || '');
+
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [editingPhone, setEditingPhone] = useState(caseRecord.clientPhone || '');
   const [editingAddress, setEditingAddress] = useState(caseRecord.clientAddress || '');
   const [savingCaseDetails, setSavingCaseDetails] = useState(false);
   const [savingHearingHistory, setSavingHearingHistory] = useState(false);
   const [caseDetailsMessage, setCaseDetailsMessage] = useState('');
   const [caseDetailsError, setCaseDetailsError] = useState('');
+
+  const currentStatusObject = teamCaseStatuses.find((item) => item.value === (caseRecord.status || 'new'));
+  const statusLabel = currentStatusObject ? currentStatusObject.label : (caseRecord.status || 'New');
 
   const getInitialHearingHistory = useCallback(() => {
     if (Array.isArray(caseRecord.hearingHistory) && caseRecord.hearingHistory.length > 0) {
@@ -395,22 +407,29 @@ const CaseDetailsView = ({
         nextHearing: item.nextHearing ? new Date(item.nextHearing).toISOString().split('T')[0] : '',
       }));
     }
-    return [
+    return canEditCase ? [
       {
         courtName: caseRecord.courtName || '',
         hearingDate: '',
         hearingDetails: '',
         nextHearing: caseRecord.nextHearingDate ? new Date(caseRecord.nextHearingDate).toISOString().split('T')[0] : '',
       },
-    ];
-  }, [caseRecord]);
+    ] : [];
+  }, [caseRecord, canEditCase]);
 
   const [localHearingHistory, setLocalHearingHistory] = useState(getInitialHearingHistory);
 
   useEffect(() => {
     let active = true;
     api.get(`/teams/${displayTeam.id}/cases/${selectedCase.id}`)
-      .then(({ data }) => { if (active) setCaseDetails(data?.case || null); })
+      .then(({ data }) => {
+        if (active && data?.case) {
+          setCaseDetails((prev) => ({
+            ...(prev || selectedCase),
+            ...data.case,
+          }));
+        }
+      })
       .catch((error) => console.error('Error loading case details:', error));
     return () => { active = false; };
   }, [displayTeam.id, selectedCase.id]);
@@ -422,16 +441,28 @@ const CaseDetailsView = ({
   }, [caseRecord, getInitialHearingHistory]);
 
   const handleSaveCaseDetails = async () => {
+    if (!canEditCase) return;
     if (!editingPhone.trim()) { setCaseDetailsError('Phone number is required.'); return; }
     try {
       setSavingCaseDetails(true);
       setCaseDetailsError('');
       setCaseDetailsMessage('');
-      await api.patch(`/teams/${displayTeam.id}/cases/${caseRecord.id}`, { clientPhone: editingPhone.trim(), clientAddress: editingAddress.trim() });
+      await api.patch(`/teams/${displayTeam.id}/cases/${caseRecord.id}`, {
+        clientPhone: editingPhone.trim(),
+        clientAddress: editingAddress.trim(),
+      });
       const { data } = await api.get(`/teams/${displayTeam.id}/cases/${caseRecord.id}`);
-      setCaseDetails(data?.case || null);
+      if (data?.case) {
+        setCaseDetails((prev) => ({
+          ...(prev || caseRecord),
+          ...data.case,
+          clientPhone: editingPhone.trim(),
+          clientAddress: editingAddress.trim(),
+        }));
+      }
       await loadTeamWorkspace();
       setCaseDetailsMessage('Case details saved.');
+      setIsEditingDetails(false);
     } catch (error) {
       setCaseDetailsError(error.response?.data?.message || 'Unable to save case details.');
     } finally {
@@ -440,6 +471,7 @@ const CaseDetailsView = ({
   };
 
   const handleHearingHistoryChange = (index, field, value) => {
+    if (!canEditCase) return;
     setLocalHearingHistory((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
@@ -448,6 +480,7 @@ const CaseDetailsView = ({
   };
 
   const handleAddHearingRow = () => {
+    if (!canEditCase) return;
     let newCourtName = caseRecord?.courtName || '';
     let newHearingDate = '';
 
@@ -469,17 +502,41 @@ const CaseDetailsView = ({
   };
 
   const handleRemoveHearingRow = (index) => {
+    if (!canEditCase) return;
     setLocalHearingHistory((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSaveHearingHistory = async () => {
+    if (!canEditCase) return;
     try {
       setSavingHearingHistory(true);
+      setCaseDetailsError('');
+      setCaseDetailsMessage('');
       const { data } = await api.put(`/teams/${displayTeam.id}/cases/${caseRecord.id}/hearings`, { hearings: localHearingHistory });
-      setCaseDetails(data?.case || null);
+      if (data?.case) {
+        setCaseDetails((prev) => ({
+          ...(prev || caseRecord),
+          ...data.case,
+          clientName: data.case.clientName || prev?.clientName || caseRecord.clientName,
+          clientPhone: data.case.clientPhone || prev?.clientPhone || caseRecord.clientPhone,
+          clientAddress: data.case.clientAddress || prev?.clientAddress || caseRecord.clientAddress,
+        }));
+
+        if (Array.isArray(data.case.hearingHistory)) {
+          setLocalHearingHistory(data.case.hearingHistory.map((item) => ({
+            id: item.id || item._id,
+            courtName: item.courtName || '',
+            hearingDate: item.hearingDate ? new Date(item.hearingDate).toISOString().split('T')[0] : '',
+            hearingDetails: item.hearingDetails || '',
+            nextHearing: item.nextHearing ? new Date(item.nextHearing).toISOString().split('T')[0] : (item.nextHearingDate ? new Date(item.nextHearingDate).toISOString().split('T')[0] : ''),
+          })));
+        }
+      }
       await loadTeamWorkspace();
+      setCaseDetailsMessage('Hearing history saved.');
     } catch (error) {
       console.error('Error saving hearing history:', error);
+      setCaseDetailsError(error.response?.data?.message || 'Failed to save hearing history');
     } finally {
       setSavingHearingHistory(false);
     }
@@ -497,36 +554,84 @@ const CaseDetailsView = ({
           <FaArrowLeft /> Back to Cases
         </button>
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => handleDeleteTeamCase(selectedCase)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 transition hover:bg-red-100"
-          >
-            <FaTrash size={12} /> Delete Case
-          </button>
-          <span className="text-xs font-bold text-[#5f7488]">Status:</span>
-          <select
-            value={caseRecord.status || 'new'}
-            onChange={(event) => handleUpdateTeamCaseStatus(caseRecord, event.target.value)}
-            disabled={updatingTeamCaseId === caseRecord.id}
-            className="rounded-xl border border-[#d7e9ef] bg-white px-3 py-1.5 text-xs font-bold text-[#062552] outline-none focus:border-[#15a276]"
-          >
-            {teamCaseStatuses.map((status) => (
-              <option key={status.value} value={status.value}>
-                {status.label}
-              </option>
-            ))}
-          </select>
+          {canEditCase ? (
+            <>
+              <button
+                type="button"
+                onClick={() => handleDeleteTeamCase(selectedCase)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 transition hover:bg-red-100"
+              >
+                <FaTrash size={12} /> Delete Case
+              </button>
+              <span className="text-xs font-bold text-[#5f7488]">Status:</span>
+              <select
+                value={caseRecord.status || 'new'}
+                onChange={(event) => handleUpdateTeamCaseStatus(caseRecord, event.target.value)}
+                disabled={updatingTeamCaseId === caseRecord.id}
+                className="rounded-xl border border-[#d7e9ef] bg-white px-3 py-1.5 text-xs font-bold text-[#062552] outline-none focus:border-[#15a276]"
+              >
+                {teamCaseStatuses.map((status) => (
+                  <option key={status.value} value={status.value}>
+                    {status.label}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-[#5f7488]">Status:</span>
+              <span className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-3.5 py-1.5 text-xs font-bold text-[#062552]">
+                {statusLabel}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Expanded Case Details Section */}
       <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-5 space-y-4">
-        <div className="border-b border-[#eef5f8] pb-3">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-[#15a276]">Case Details</h4>
-          <h3 className="mt-1 text-2xl font-bold text-[#062552]">
-            {caseRecord.caseName || caseRecord.caseTitle || caseRecord.title || 'Untitled Case'}
-          </h3>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-[#eef5f8] pb-3">
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#15a276]">Case Details</h4>
+            <h3 className="mt-1 text-2xl font-bold text-[#062552]">
+              {caseRecord.caseName || caseRecord.caseTitle || caseRecord.title || 'Untitled Case'}
+            </h3>
+          </div>
+          {canEditCase ? (
+            !isEditingDetails ? (
+              <button
+                type="button"
+                onClick={() => setIsEditingDetails(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#d7e9ef] bg-white px-3.5 py-1.5 text-xs font-bold text-[#062552] shadow-sm transition hover:border-[#15a276] hover:text-[#15a276]"
+              >
+                <FaPencilAlt size={12} /> Edit Details
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSaveCaseDetails}
+                  disabled={savingCaseDetails}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#15a276] px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-[#118460] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <FaCheck size={12} /> {savingCaseDetails ? 'Saving...' : 'Save Details'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditingDetails(false);
+                    setEditingPhone(caseRecord.clientPhone || '');
+                    setEditingAddress(caseRecord.clientAddress || '');
+                    setCaseDetailsError('');
+                  }}
+                  disabled={savingCaseDetails}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#d7e9ef] bg-white px-3.5 py-1.5 text-xs font-bold text-[#5f7488] transition hover:bg-[#f0f6f8] hover:text-[#062552]"
+                >
+                  <FaTimes size={12} /> Cancel
+                </button>
+              </div>
+            )
+          ) : null}
         </div>
 
         <div>
@@ -543,27 +648,35 @@ const CaseDetailsView = ({
           </div>
 
           <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Phone Number (Editable)</p>
-            <input
-              type="tel"
-              value={editingPhone}
-              onChange={(e) => setEditingPhone(e.target.value)}
-              disabled={savingCaseDetails}
-              placeholder="Enter phone number"
-              className="mt-1 w-full rounded-md border border-[#d7e9ef] bg-[#f8fbfc] px-3 py-1 text-xs font-bold text-[#062552] outline-none focus:border-[#15a276]"
-            />
+            <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Phone Number</p>
+            {canEditCase && isEditingDetails ? (
+              <input
+                type="tel"
+                value={editingPhone}
+                onChange={(e) => setEditingPhone(e.target.value)}
+                disabled={savingCaseDetails}
+                placeholder="Enter phone number"
+                className="mt-1 w-full rounded-md border border-[#d7e9ef] bg-[#f8fbfc] px-3 py-1 text-xs font-bold text-[#062552] outline-none focus:border-[#15a276]"
+              />
+            ) : (
+              <p className="mt-1 text-sm font-bold text-[#062552]">{caseRecord.clientPhone || 'Not provided'}</p>
+            )}
           </div>
 
           <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Address (Editable)</p>
-            <input
-              type="text"
-              value={editingAddress}
-              onChange={(e) => setEditingAddress(e.target.value)}
-              disabled={savingCaseDetails}
-              placeholder="Enter address"
-              className="mt-1 w-full rounded-md border border-[#d7e9ef] bg-[#f8fbfc] px-3 py-1 text-xs font-bold text-[#062552] outline-none focus:border-[#15a276]"
-            />
+            <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Address</p>
+            {canEditCase && isEditingDetails ? (
+              <input
+                type="text"
+                value={editingAddress}
+                onChange={(e) => setEditingAddress(e.target.value)}
+                disabled={savingCaseDetails}
+                placeholder="Enter address"
+                className="mt-1 w-full rounded-md border border-[#d7e9ef] bg-[#f8fbfc] px-3 py-1 text-xs font-bold text-[#062552] outline-none focus:border-[#15a276]"
+              />
+            ) : (
+              <p className="mt-1 text-sm font-bold text-[#062552]">{caseRecord.clientAddress || 'Not provided'}</p>
+            )}
           </div>
 
           <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
@@ -573,13 +686,12 @@ const CaseDetailsView = ({
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <button type="button" onClick={handleSaveCaseDetails} disabled={savingCaseDetails} className="inline-flex items-center gap-1.5 rounded-lg bg-[#15a276] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#118460] disabled:cursor-not-allowed disabled:opacity-60">
-            <FaCheck size={12} /> {savingCaseDetails ? 'Saving...' : 'Save Case Details'}
-          </button>
-          {caseDetailsMessage ? <p className="text-xs font-semibold text-[#118460]">{caseDetailsMessage}</p> : null}
-          {caseDetailsError ? <p className="text-xs font-semibold text-red-600">{caseDetailsError}</p> : null}
-        </div>
+        {caseDetailsMessage || caseDetailsError ? (
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            {caseDetailsMessage ? <p className="text-xs font-semibold text-[#118460]">{caseDetailsMessage}</p> : null}
+            {caseDetailsError ? <p className="text-xs font-semibold text-red-600">{caseDetailsError}</p> : null}
+          </div>
+        ) : null}
       </div>
 
       {/* Hearing History Table Section */}
@@ -589,23 +701,25 @@ const CaseDetailsView = ({
             <h4 className="text-xs font-bold uppercase tracking-wider text-[#15a276]">Hearing History</h4>
             <p className="text-xs text-[#5f7488] mt-0.5">Track all court hearing schedules and details.</p>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleAddHearingRow}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#15a276] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#118460]"
-            >
-              <FaPlus size={12} /> Add Hearing Row
-            </button>
-            <button
-              type="button"
-              onClick={handleSaveHearingHistory}
-              disabled={savingHearingHistory}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#15a276] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#118460] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <FaCheck size={12} /> {savingHearingHistory ? 'Saving...' : 'Save Hearing History'}
-            </button>
-          </div>
+          {canEditCase ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleAddHearingRow}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#15a276] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#118460]"
+              >
+                <FaPlus size={12} /> Add Hearing
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveHearingHistory}
+                disabled={savingHearingHistory}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#15a276] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#118460] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <FaCheck size={12} /> {savingHearingHistory ? 'Saving...' : 'Save Hearing'}
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <div className="overflow-x-auto rounded-lg border border-[#d7e9ef] bg-white">
@@ -616,58 +730,84 @@ const CaseDetailsView = ({
                 <th className="px-4 py-3 min-w-[140px]">Hearing Date</th>
                 <th className="px-4 py-3 min-w-[200px]">Hearing Details</th>
                 <th className="px-4 py-3 min-w-[140px]">Next Hearing</th>
-                <th className="px-2 py-3 w-10"></th>
+                {canEditCase ? <th className="px-2 py-3 w-10"></th> : null}
               </tr>
             </thead>
             <tbody className="divide-y divide-[#eef5f8] text-[#062552]">
-              {localHearingHistory.map((row, index) => (
-                <tr key={`hearing-row-${index}`} className="hover:bg-[#f8fbfc]">
-                  <td className="px-4 py-2.5">
-                    <input
-                      type="text"
-                      value={row.courtName}
-                      onChange={(e) => handleHearingHistoryChange(index, 'courtName', e.target.value)}
-                      placeholder="Court name"
-                      className="w-full rounded-md border border-[#d7e9ef] bg-white px-2.5 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]"
-                    />
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <input
-                      type="date"
-                      value={row.hearingDate}
-                      onChange={(e) => handleHearingHistoryChange(index, 'hearingDate', e.target.value)}
-                      className="w-full rounded-md border border-[#d7e9ef] bg-white px-2 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]"
-                    />
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <input
-                      type="text"
-                      value={row.hearingDetails}
-                      onChange={(e) => handleHearingHistoryChange(index, 'hearingDetails', e.target.value)}
-                      placeholder="Hearing details"
-                      className="w-full rounded-md border border-[#d7e9ef] bg-white px-2.5 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]"
-                    />
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <input
-                      type="date"
-                      value={row.nextHearing}
-                      onChange={(e) => handleHearingHistoryChange(index, 'nextHearing', e.target.value)}
-                      className="w-full rounded-md border border-[#d7e9ef] bg-white px-2 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]"
-                    />
-                  </td>
-                  <td className="px-2 py-2.5 text-center">
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveHearingRow(index)}
-                      className="text-red-500 hover:text-red-700 transition"
-                      title="Remove row"
-                    >
-                      <FaTrash size={12} />
-                    </button>
+              {localHearingHistory.length === 0 ? (
+                <tr>
+                  <td colSpan={canEditCase ? 5 : 4} className="px-4 py-4 text-center text-xs text-[#5f7488]">
+                    No hearing history recorded yet.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                localHearingHistory.map((row, index) => (
+                  <tr key={`hearing-row-${index}`} className="hover:bg-[#f8fbfc]">
+                    <td className="px-4 py-2.5">
+                      {canEditCase ? (
+                        <input
+                          type="text"
+                          value={row.courtName}
+                          onChange={(e) => handleHearingHistoryChange(index, 'courtName', e.target.value)}
+                          placeholder="Court name"
+                          className="w-full rounded-md border border-[#d7e9ef] bg-white px-2.5 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]"
+                        />
+                      ) : (
+                        <span className="font-semibold text-[#062552]">{row.courtName || 'Not provided'}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {canEditCase ? (
+                        <input
+                          type="date"
+                          value={row.hearingDate}
+                          onChange={(e) => handleHearingHistoryChange(index, 'hearingDate', e.target.value)}
+                          className="w-full rounded-md border border-[#d7e9ef] bg-white px-2 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]"
+                        />
+                      ) : (
+                        <span className="font-semibold text-[#062552]">{formatDate(row.hearingDate) || 'Not provided'}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {canEditCase ? (
+                        <input
+                          type="text"
+                          value={row.hearingDetails}
+                          onChange={(e) => handleHearingHistoryChange(index, 'hearingDetails', e.target.value)}
+                          placeholder="Hearing details"
+                          className="w-full rounded-md border border-[#d7e9ef] bg-white px-2.5 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]"
+                        />
+                      ) : (
+                        <span className="font-semibold text-[#062552]">{row.hearingDetails || 'Not provided'}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {canEditCase ? (
+                        <input
+                          type="date"
+                          value={row.nextHearing}
+                          onChange={(e) => handleHearingHistoryChange(index, 'nextHearing', e.target.value)}
+                          className="w-full rounded-md border border-[#d7e9ef] bg-white px-2 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]"
+                        />
+                      ) : (
+                        <span className="font-semibold text-[#062552]">{formatDate(row.nextHearing) || 'Not provided'}</span>
+                      )}
+                    </td>
+                    {canEditCase ? (
+                      <td className="px-2 py-2.5 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveHearingRow(index)}
+                          className="text-red-500 hover:text-red-700 transition"
+                          title="Remove row"
+                        >
+                          <FaTrash size={12} />
+                        </button>
+                      </td>
+                    ) : null}
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -697,7 +837,14 @@ export default function LawyerDashboard() {
   const [teamMessage, setTeamMessage] = useState('');
   const [teamWorkspace, setTeamWorkspace] = useState(null);
   const [teamWorkspaces, setTeamWorkspaces] = useState([]);
-  const [selectedTeamId, setSelectedTeamId] = useState('');
+  const [selectedTeamId, setSelectedTeamIdState] = useState('');
+  const selectedTeamIdRef = useRef('');
+
+  const setSelectedTeamId = useCallback((id) => {
+    const nextId = id ? String(id) : '';
+    selectedTeamIdRef.current = nextId;
+    setSelectedTeamIdState(nextId);
+  }, []);
   const [activeTeamTab, setActiveTeamTab] = useState('my_team');
   const [showTeamCaseForm, setShowTeamCaseForm] = useState(false);
   const [selectedTeamMemberId, setSelectedTeamMemberId] = useState('');
@@ -857,7 +1004,10 @@ export default function LawyerDashboard() {
     if (requestedSection === 'team') {
       const requestedMode = searchParams.get('mode');
       const requestedTeamId = searchParams.get('teamId');
-      if (requestedTeamId) setSelectedTeamId(requestedTeamId);
+      if (requestedTeamId && String(requestedTeamId) !== String(selectedTeamIdRef.current)) {
+        selectedTeamIdRef.current = String(requestedTeamId);
+        setSelectedTeamIdState(String(requestedTeamId));
+      }
       setTeamMode(requestedMode === 'join' ? 'join' : 'overview');
       setTeamError('');
       setTeamMessage('');
@@ -986,16 +1136,23 @@ export default function LawyerDashboard() {
     setTeamCaseForm((current) => ({ ...current, [name]: value }));
   };
 
-  const loadTeamWorkspace = useCallback(async () => {
+  const loadTeamWorkspace = useCallback(async (targetTeamId) => {
+    const effectiveTeamId = targetTeamId !== undefined ? targetTeamId : selectedTeamIdRef.current;
     try {
       setTeamWorkspaceLoading(true);
       setTeamWorkspaceLoaded(false);
-      const params = selectedTeamId ? { teamId: selectedTeamId } : undefined;
+      const params = effectiveTeamId ? { teamId: effectiveTeamId } : undefined;
       const { data } = await api.get('/teams/workspace', { params });
       const teams = Array.isArray(data?.teams) ? data.teams : data?.team ? [data.team] : [];
-      const activeId = data?.activeTeamId || data?.team?.id || selectedTeamId || teams[0]?.id || '';
+      let activeId = effectiveTeamId;
+      if (!activeId || !teams.some((t) => String(t.id) === String(activeId))) {
+        activeId = data?.activeTeamId || data?.team?.id || teams[0]?.id || '';
+      }
       setTeamWorkspaces(teams);
-      setSelectedTeamId(activeId ? String(activeId) : '');
+      if (activeId) {
+        selectedTeamIdRef.current = String(activeId);
+        setSelectedTeamIdState(String(activeId));
+      }
       setTeamWorkspace(data?.team || null);
     } catch (error) {
       console.error('Error loading team workspace:', error);
@@ -1005,23 +1162,23 @@ export default function LawyerDashboard() {
       setTeamWorkspaceLoading(false);
       setTeamWorkspaceLoaded(true);
     }
-  }, [selectedTeamId]);
+  }, []);
 
-  useEffect(() => {
-    if (!showTeamModal) return;
-    loadTeamWorkspace();
-  }, [loadTeamWorkspace, showTeamModal]);
+  const handleSelectTeam = useCallback((teamId) => {
+    if (!teamId) return;
+    const targetId = String(teamId);
+    if (targetId === selectedTeamIdRef.current && teamWorkspace?.id === targetId) return;
+    selectedTeamIdRef.current = targetId;
+    setSelectedTeamIdState(targetId);
+    setSelectedTeamMemberId('');
+    setSelectedCaseForDetailsId('');
+    loadTeamWorkspace(targetId);
+  }, [loadTeamWorkspace, teamWorkspace?.id]);
 
   useEffect(() => {
     if (user?.role !== 'lawyer') return;
     loadTeamWorkspace();
   }, [loadTeamWorkspace, user?.role]);
-
-  useEffect(() => {
-    if (!selectedTeamId || String(teamWorkspace?.id) === String(selectedTeamId)) return;
-    setSelectedTeamMemberId('');
-    loadTeamWorkspace();
-  }, [loadTeamWorkspace, selectedTeamId, teamWorkspace?.id]);
 
   useEffect(() => {
     if (!showTeamModal) return;
@@ -1031,13 +1188,13 @@ export default function LawyerDashboard() {
   useEffect(() => {
     if (user?.role !== 'lawyer') return undefined;
     const refreshTeamWorkspace = (event) => {
-      if (event?.teamId && selectedTeamId && String(event.teamId) !== String(selectedTeamId)) return;
-      loadTeamWorkspace();
+      if (event?.teamId && selectedTeamIdRef.current && String(event.teamId) !== String(selectedTeamIdRef.current)) return;
+      loadTeamWorkspace(selectedTeamIdRef.current);
     };
     const events = ['team:created', 'team:member-joined', 'team:member-left', 'team:join-request-created', 'team:join-request-rejected', 'case:created', 'case:updated', 'case:deleted', 'case:status-changed', 'hearing:created', 'hearing:updated', 'hearing:deleted', 'case.created', 'case.updated', 'case.deleted', 'hearing.created', 'hearing.updated', 'hearing.deleted', 'client.updated'];
     events.forEach((event) => socket.on(event, refreshTeamWorkspace));
     return () => events.forEach((event) => socket.off(event, refreshTeamWorkspace));
-  }, [loadTeamWorkspace, selectedTeamId, user?.role]);
+  }, [loadTeamWorkspace, user?.role]);
 
   const handleCreateTeam = async (event) => {
     event.preventDefault();
@@ -2012,7 +2169,7 @@ export default function LawyerDashboard() {
                           key={team.id || team.teamCode}
                           type="button"
                           onClick={() => {
-                            setSelectedTeamId(String(team.id));
+                            handleSelectTeam(String(team.id));
                             setTeamMode('overview');
                           }}
                           className={`rounded-xl border p-4 text-left transition ${
