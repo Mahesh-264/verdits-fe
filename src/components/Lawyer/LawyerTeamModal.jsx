@@ -626,53 +626,56 @@ export default function LawyerTeamModal({
 
                   <div className="space-y-4">
                     <h4 className="text-base font-bold text-[#062552]">Assigned Cases</h4>
-                    {activeTeamMemberCases.length === 0 ? (
+                    {selectedCaseForDetailsId && teamCases.some((item) => String(item.id) === String(selectedCaseForDetailsId)) ? (() => {
+                      const selectedCase = teamCases.find((item) => String(item.id) === String(selectedCaseForDetailsId));
+                      return (
+                        <CaseDetailsView
+                          selectedCase={selectedCase}
+                          displayTeam={displayTeam}
+                          onBack={() => setSelectedCaseForDetailsId('')}
+                          teamCaseStatuses={teamCaseStatuses}
+                          updatingTeamCaseId={updatingTeamCaseId}
+                          handleUpdateTeamCaseStatus={handleUpdateTeamCaseStatus}
+                          handleDeleteTeamCase={handleDeleteTeamCase}
+                          loadTeamWorkspace={loadTeamWorkspace}
+                          formatDate={formatDate}
+                        />
+                      );
+                    })() : activeTeamMemberCases.length === 0 ? (
                       <EmptyBlock icon={<FaBriefcase size={24} />} message="No cases added by this lawyer yet." />
                     ) : (
                       <div className="space-y-4">
                         {activeTeamMemberCases.map((teamCase) => (
-                          <div key={teamCase.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+                          <div
+                            key={teamCase.id}
+                            onClick={() => setSelectedCaseForDetailsId(String(teamCase.id))}
+                            className="group cursor-pointer rounded-xl border border-zinc-800 bg-zinc-950 p-5 transition hover:border-[#15a276]"
+                          >
                             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                               <div>
-                                <h4 className="text-lg font-bold text-white">{teamCase.caseName || teamCase.caseTitle || 'Untitled Case'}</h4>
-                                <p className="mt-1 text-sm text-zinc-400">Client: {teamCase.clientName || 'Not added'}</p>
+                                <h4 className="text-lg font-bold text-white group-hover:text-[#15a276] transition">
+                                  {teamCase.caseName || teamCase.caseTitle || teamCase.title || 'Untitled Case'}
+                                </h4>
+                                <p className="mt-1 text-sm text-zinc-400">
+                                  Client: <span className="font-semibold text-blue-300 underline">{teamCase.clientName || 'Not added'}</span>
+                                </p>
                                 <p className="mt-1 text-xs text-zinc-500">Added on {formatDate(teamCase.createdAt) || 'recently'}</p>
                               </div>
-                              {teamCase.canEdit ? (
-                                <select
-                                  value={teamCase.status || 'new'}
-                                  onChange={(event) => handleUpdateTeamCaseStatus(teamCase, event.target.value)}
-                                  disabled={updatingTeamCaseId === teamCase.id}
-                                  className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-amber-300 disabled:opacity-60"
-                                >
-                                  {teamCaseStatuses.map((status) => (
-                                    <option key={status.value} value={status.value} className="text-zinc-950">
-                                      {status.label}
-                                    </option>
-                                  ))}
-                                </select>
-                              ) : (
-                                <span className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-400">
-                                  {getTeamCaseStatusLabel(teamCase.status)}
-                                </span>
-                              )}
+                              <span className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-400">
+                                {getTeamCaseStatusLabel(teamCase.status)}
+                              </span>
                             </div>
 
                             <p className="mt-4 text-sm leading-7 text-zinc-300">{teamCase.briefInfo || teamCase.caseDetails || 'No brief info added.'}</p>
 
-                            <div className="mt-4 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
-                              <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                                <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Court</p>
-                                <p className="mt-1 text-zinc-200">{teamCase.courtName || 'Not added'}</p>
+                            <div className="mt-4 flex items-center justify-between border-t border-zinc-900 pt-3 text-sm">
+                              <div className="flex items-center gap-4 text-xs text-zinc-400">
+                                <span>Court: <strong className="text-zinc-200">{teamCase.courtName || 'Not added'}</strong></span>
+                                <span>Starting: <strong className="text-zinc-200">{formatDate(teamCase.startingDate || teamCase.hearingDate) || 'Not added'}</strong></span>
                               </div>
-                              <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                                <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Starting Date</p>
-                                <p className="mt-1 text-zinc-200">{formatDate(teamCase.startingDate || teamCase.hearingDate) || 'Not added'}</p>
-                              </div>
-                              <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                                <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Status</p>
-                                <p className="mt-1 text-zinc-200">{getTeamCaseStatusLabel(teamCase.status)}</p>
-                              </div>
+                              <span className="text-xs font-bold text-[#15a276] group-hover:underline flex items-center gap-1">
+                                View Case Details &rarr;
+                              </span>
                             </div>
                           </div>
                         ))}
