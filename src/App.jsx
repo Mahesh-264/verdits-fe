@@ -184,6 +184,11 @@ export default function App() {
             <LawyerDashboard />
           </ProtectedRoute>
         } />
+        <Route path="/lawyer-dashboard" element={
+          <ProtectedRoute allowedRoles={['lawyer']}>
+            <LawyerDashboard />
+          </ProtectedRoute>
+        } />
 
         {/* --- Admin Dashboard --- */}
         <Route path="/admin-dash" element={

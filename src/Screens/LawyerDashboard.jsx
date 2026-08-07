@@ -688,6 +688,9 @@ export default function LawyerDashboard() {
   const [showHearingsModal, setShowHearingsModal] = useState(false);
   const [nextHearings, setNextHearings] = useState([]);
   const [loadedHearingsTeamId, setLoadedHearingsTeamId] = useState('');
+  const [googleCalendarStatus, setGoogleCalendarStatus] = useState({ connected: false });
+  const [googleCalendarLoading, setGoogleCalendarLoading] = useState(true);
+  const [googleCalendarActionLoading, setGoogleCalendarActionLoading] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [teamMode, setTeamMode] = useState('create');
   const [teamLoading, setTeamLoading] = useState(false);
@@ -1708,6 +1711,49 @@ export default function LawyerDashboard() {
     || teamWorkspaceLoading
     || (Boolean(displayTeam?.id) && loadedHearingsTeamId !== String(displayTeam.id));
 
+  const loadGoogleCalendarStatus = useCallback(async () => {
+    try {
+      setGoogleCalendarLoading(true);
+      const { data } = await api.get('/calendar/google/status');
+      setGoogleCalendarStatus(data?.connected ? { connected: true, email: data.email } : { connected: false });
+    } catch (error) {
+      console.error('Error loading Google Calendar status:', error);
+      setGoogleCalendarStatus({ connected: false });
+    } finally {
+      setGoogleCalendarLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user?.role === 'lawyer') loadGoogleCalendarStatus();
+  }, [loadGoogleCalendarStatus, searchParams, user?.role]);
+
+  const handleConnectGoogleCalendar = async () => {
+    try {
+      setGoogleCalendarActionLoading(true);
+      // The shared API client attaches the current JWT. The backend returns
+      // a signed Google consent URL only after that protected request passes.
+      const { data } = await api.get('/calendar/google/connect?response=json');
+      if (!data?.url) throw new Error('Google Calendar connection URL was not returned');
+      window.location.assign(data.url);
+    } catch (error) {
+      console.error('Error connecting Google Calendar:', error);
+      setGoogleCalendarActionLoading(false);
+    }
+  };
+
+  const handleDisconnectGoogleCalendar = async () => {
+    try {
+      setGoogleCalendarActionLoading(true);
+      await api.delete('/calendar/google/disconnect');
+      setGoogleCalendarStatus({ connected: false });
+    } catch (error) {
+      console.error('Error disconnecting Google Calendar:', error);
+    } finally {
+      setGoogleCalendarActionLoading(false);
+    }
+  };
+
   const cards = [
     {
       title: 'New Appointments',
@@ -1873,6 +1919,35 @@ export default function LawyerDashboard() {
       {showHearingsModal && (
         <ModalShell title="Next Hearings" icon={<FaGavel className="text-[#062552]" />} onClose={closeAllFeatures}>
           <div className="lawyer-team-workspace space-y-4">
+            <div className="rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
+              <h3 className="text-lg font-bold text-[#062552]">Google Calendar</h3>
+              {googleCalendarLoading ? (
+                <p className="mt-2 text-sm text-[#5f7488]">Checking connection...</p>
+              ) : googleCalendarStatus.connected ? (
+                <div className="mt-2">
+                  <p className="text-sm font-semibold text-[#15a276]">✓ Google Calendar Connected</p>
+                  <p className="mt-1 text-sm text-[#5f7488]">Connected Email: {googleCalendarStatus.email}</p>
+                  <button
+                    type="button"
+                    onClick={handleDisconnectGoogleCalendar}
+                    disabled={googleCalendarActionLoading}
+                    className="mt-4 rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-bold text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {googleCalendarActionLoading ? 'Disconnecting...' : 'Disconnect'}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleConnectGoogleCalendar}
+                  disabled={googleCalendarActionLoading}
+                  className="mt-4 rounded-xl bg-[#15a276] px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {googleCalendarActionLoading ? 'Connecting...' : '📅 Connect Google Calendar'}
+                </button>
+              )}
+            </div>
+
             <div className="rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
               <h3 className="text-lg font-bold text-[#062552]">My Hearings</h3>
               <p className="mt-1 text-sm text-[#5f7488]">
