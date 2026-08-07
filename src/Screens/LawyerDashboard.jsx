@@ -2,836 +2,76 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  FaArrowLeft,
   FaBriefcase,
   FaCalendarPlus,
-  FaCheck,
-  FaCircle,
   FaFileSignature,
   FaGavel,
-  FaMagic,
-  FaPencilAlt,
-  FaPlus,
-  FaTimes,
-  FaTrash,
   FaUserGraduate,
 } from 'react-icons/fa';
-import { Copy, KeyRound, UserPlus, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import api from '../api/axios';
 import AppHeader from '../components/AppHeader.jsx';
-import FeedPostCard from '../components/feed/FeedPostCard.jsx';
 import PostComposerModal from '../components/feed/PostComposerModal.jsx';
-import ReactionBar from '../components/feed/ReactionBar.jsx';
 import { updateUser } from '../redux/authSlice.jsx';
 import socket from '../utils/socket.jsx';
 
-const normalizeStatus = (status) => {
-  const formattedStatus = String(status || '').toLowerCase();
-
-  if (formattedStatus === 'pending') return 'Pending';
-  if (formattedStatus === 'accepted') return 'Accepted';
-  if (formattedStatus === 'rejected') return 'Rejected';
-
-  return status || 'Pending';
-};
-
-const getUserName = (appointmentUser) => {
-  if (!appointmentUser) return 'Client';
-
-  const fullName = `${appointmentUser.firstName || ''} ${appointmentUser.lastName || ''}`.trim();
-  return fullName || appointmentUser.name || appointmentUser.phone || 'Client';
-};
-
-const applicantFilters = ['All', 'Pending', 'Accepted', 'Rejected'];
-const participantFilters = ['All', 'Joined'];
-
-const statCards = [
-  { key: 'totalInternshipsPosted', label: 'Total internships posted', accent: 'text-[#19b98d]' },
-  { key: 'activeInternships', label: 'Active internships', accent: 'text-emerald-400' },
-  { key: 'totalApplicants', label: 'Total applicants', accent: 'text-cyan-400' },
-  { key: 'totalJamSessions', label: 'Total jam sessions', accent: 'text-purple-400' },
-  { key: 'totalParticipants', label: 'Total participants', accent: 'text-pink-400' },
-];
-
-const initialStats = {
-  totalInternshipsPosted: 0,
-  activeInternships: 0,
-  totalApplicants: 0,
-  totalJamSessions: 0,
-  totalParticipants: 0,
-};
-
-const emptyDrawerState = {
-  open: false,
-  type: 'applicants',
-  title: '',
-  parentId: '',
-  parentLabel: '',
-  items: [],
-};
-
-const initialCreateTeamForm = {
-  firmName: '',
-  seniorLawyerName: '',
-  maxTeamSize: 5,
-};
-
-const initialJoinTeamForm = {
-  teamCode: '',
-};
-
-const initialTeamCaseForm = {
-  clientName: '',
-  clientPhone: '',
-  clientAddress: '',
-  caseName: '',
-  courtName: '',
-  startingDate: '',
-  nextHearingDate: '',
-  briefInfo: '',
-  status: 'new',
-};
-
-const teamCaseStatuses = [
-  { value: 'new', label: 'New' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'hearing_scheduled', label: 'Hearing Scheduled' },
-  { value: 'closed', label: 'Closed' },
-];
-
-const getTeamCaseStatusLabel = (status) => (
-  teamCaseStatuses.find((item) => item.value === status)?.label || 'New'
-);
-
-const getEntityId = (value) => {
-  if (!value) return '';
-  if (typeof value === 'string') return value.trim();
-  if (typeof value === 'object') {
-    return String(value._id || value.id || value.lawyerId || '').trim();
-  }
-  return String(value).trim();
-};
-
-const isSameId = (id1, id2) => {
-  const s1 = getEntityId(id1);
-  const s2 = getEntityId(id2);
-  return Boolean(s1 && s2 && s1 === s2);
-};
-
-const normalizeLawyerName = (name) => (
-  String(name || '')
-    .replace(/^(adv\.?|advocate|mr\.?|dr\.?)\s+/i, '')
-    .replace(/\s*\(you\)$/i, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase()
-);
-
-const getLawyerDisplayName = (lawyer) => {
-  const fullName = `${lawyer?.firstName || ''} ${lawyer?.lastName || ''}`.trim();
-  return fullName || lawyer?.name || lawyer?.phone || 'Lawyer';
-};
-
-const noticeDocumentTypes = [
-  'Legal Notice for Recovery of Money',
-  'Legal Notice for Breach of Contract',
-  'Tenant Eviction Notice',
-  'Consumer Complaint Notice',
-  'Employment Termination Dispute Notice',
-  'Cheque Bounce Notice',
-  'Property Dispute Notice',
-  'Defamation Notice',
-  'Custom Legal Notice',
-];
-
-const commonNoticeFields = [
-  {
-    id: 'clientNames',
-    label: 'Client / sender name',
-    type: 'names',
-    addLabel: 'Add another client',
-    required: true,
-  },
-  {
-    id: 'oppositePartyNames',
-    label: 'Opposite party / recipient name',
-    type: 'names',
-    addLabel: 'Add another recipient',
-    required: true,
-  },
-  {
-    id: 'clientAddress',
-    label: 'Client address',
-    type: 'textarea',
-    rows: 2,
-  },
-  {
-    id: 'oppositePartyAddress',
-    label: 'Recipient address',
-    type: 'textarea',
-    rows: 2,
-    required: true,
-  },
-  {
-    id: 'jurisdiction',
-    label: 'Jurisdiction / city',
-    type: 'text',
-  },
-  {
-    id: 'legalNoticeReceived',
-    label: 'Legal notice already received or sent',
-    type: 'checkbox',
-  },
-  {
-    id: 'previousNoticeDetails',
-    label: 'Previous notice details',
-    type: 'textarea',
-    rows: 2,
-    placeholder: 'Mention date, sender, reply status, or any important reference.',
-    dependsOn: 'legalNoticeReceived',
-  },
-];
-
-const noticeTypeFields = {
-  'Legal Notice for Recovery of Money': [
-    { id: 'amount', label: 'Amount due', type: 'text', required: true },
-    { id: 'transactionDate', label: 'Transaction / loan date', type: 'date' },
-    { id: 'dueDate', label: 'Payment due date', type: 'date' },
-    { id: 'paymentProof', label: 'Payment proof / documents', type: 'textarea', rows: 2 },
-    { id: 'reliefRequired', label: 'Relief required', type: 'text', placeholder: 'Example: pay full amount with interest within 15 days' },
-  ],
-  'Legal Notice for Breach of Contract': [
-    { id: 'contractDate', label: 'Contract date', type: 'date' },
-    { id: 'contractPurpose', label: 'Contract purpose', type: 'text', required: true },
-    { id: 'breachedTerms', label: 'Terms breached', type: 'textarea', rows: 2, required: true },
-    { id: 'losses', label: 'Loss / damage suffered', type: 'textarea', rows: 2 },
-    { id: 'reliefRequired', label: 'Relief required', type: 'text' },
-  ],
-  'Tenant Eviction Notice': [
-    { id: 'propertyAddress', label: 'Rental property address', type: 'textarea', rows: 2, required: true },
-    { id: 'tenancyStartDate', label: 'Tenancy start date', type: 'date' },
-    { id: 'rentAmount', label: 'Monthly rent', type: 'text' },
-    { id: 'evictionReason', label: 'Reason for eviction', type: 'textarea', rows: 2, required: true },
-    { id: 'vacateDeadline', label: 'Vacate deadline', type: 'date' },
-  ],
-  'Consumer Complaint Notice': [
-    { id: 'productService', label: 'Product / service', type: 'text', required: true },
-    { id: 'purchaseDate', label: 'Purchase / service date', type: 'date' },
-    { id: 'invoiceDetails', label: 'Invoice / order details', type: 'text' },
-    { id: 'defectOrIssue', label: 'Defect or issue faced', type: 'textarea', rows: 2, required: true },
-    { id: 'reliefRequired', label: 'Refund / replacement / compensation required', type: 'text' },
-  ],
-  'Employment Termination Dispute Notice': [
-    { id: 'employeeName', label: 'Employee name', type: 'text' },
-    { id: 'employerName', label: 'Employer name', type: 'text' },
-    { id: 'joiningDate', label: 'Joining date', type: 'date' },
-    { id: 'terminationDate', label: 'Termination date', type: 'date', required: true },
-    { id: 'terminationIssue', label: 'Termination issue', type: 'textarea', rows: 2, required: true },
-    { id: 'duesPending', label: 'Pending salary / dues', type: 'text' },
-  ],
-  'Cheque Bounce Notice': [
-    { id: 'chequeNumber', label: 'Cheque number', type: 'text', required: true },
-    { id: 'chequeDate', label: 'Cheque date', type: 'date' },
-    { id: 'bankName', label: 'Bank name', type: 'text' },
-    { id: 'chequeAmount', label: 'Cheque amount', type: 'text', required: true },
-    { id: 'bounceDate', label: 'Bounce date', type: 'date' },
-    { id: 'returnReason', label: 'Bank return reason', type: 'text' },
-  ],
-  'Property Dispute Notice': [
-    { id: 'propertyAddress', label: 'Property address', type: 'textarea', rows: 2, required: true },
-    { id: 'ownershipDetails', label: 'Ownership / possession details', type: 'textarea', rows: 2 },
-    { id: 'disputeType', label: 'Type of dispute', type: 'text', required: true },
-    { id: 'incidentDate', label: 'Incident date', type: 'date' },
-    { id: 'reliefRequired', label: 'Relief required', type: 'text' },
-  ],
-  'Defamation Notice': [
-    { id: 'defamatoryStatement', label: 'Defamatory statement / act', type: 'textarea', rows: 2, required: true },
-    { id: 'publicationDate', label: 'Date of publication / statement', type: 'date' },
-    { id: 'publicationMedium', label: 'Where it was said or published', type: 'text' },
-    { id: 'harmCaused', label: 'Harm caused', type: 'textarea', rows: 2 },
-    { id: 'reliefRequired', label: 'Apology / removal / compensation required', type: 'text' },
-  ],
-  'Custom Legal Notice': [
-    { id: 'customIssue', label: 'What is this notice about?', type: 'textarea', rows: 3, required: true },
-    { id: 'importantDates', label: 'Important dates', type: 'text' },
-    { id: 'supportingDocuments', label: 'Supporting documents', type: 'textarea', rows: 2 },
-    { id: 'reliefRequired', label: 'Relief required', type: 'text' },
-  ],
-};
-
-const additionalNoticeFields = [
-  {
-    id: 'facts',
-    label: 'Facts in short',
-    type: 'textarea',
-    rows: 3,
-    placeholder: 'Add the important story in simple points.',
-    required: true,
-  },
-  {
-    id: 'deadline',
-    label: 'Compliance deadline',
-    type: 'text',
-    placeholder: 'Example: 15 days from receipt of this notice',
-  },
-];
-
-const initialNoticeForm = {
-  documentType: noticeDocumentTypes[0],
-  clientNames: [''],
-  oppositePartyNames: [''],
-  clientAddress: '',
-  oppositePartyAddress: '',
-  jurisdiction: '',
-  legalNoticeReceived: false,
-  previousNoticeDetails: '',
-  amount: '',
-  transactionDate: '',
-  dueDate: '',
-  paymentProof: '',
-  reliefRequired: '',
-  contractDate: '',
-  contractPurpose: '',
-  breachedTerms: '',
-  losses: '',
-  propertyAddress: '',
-  tenancyStartDate: '',
-  rentAmount: '',
-  evictionReason: '',
-  vacateDeadline: '',
-  productService: '',
-  purchaseDate: '',
-  invoiceDetails: '',
-  defectOrIssue: '',
-  employeeName: '',
-  employerName: '',
-  joiningDate: '',
-  terminationDate: '',
-  terminationIssue: '',
-  duesPending: '',
-  chequeNumber: '',
-  chequeDate: '',
-  bankName: '',
-  chequeAmount: '',
-  bounceDate: '',
-  returnReason: '',
-  ownershipDetails: '',
-  disputeType: '',
-  incidentDate: '',
-  defamatoryStatement: '',
-  publicationDate: '',
-  publicationMedium: '',
-  harmCaused: '',
-  customIssue: '',
-  importantDates: '',
-  supportingDocuments: '',
-  facts: '',
-  deadline: '',
-};
-
-const getNoticeFields = (documentType) => [
-  ...commonNoticeFields,
-  ...(noticeTypeFields[documentType] || []),
-  ...additionalNoticeFields,
-];
-
-const isNoticeFieldFilled = (field, form) => {
-  if (field.type === 'checkbox') return true;
-  if (field.type === 'names') {
-    return (form[field.id] || []).some((value) => String(value || '').trim());
-  }
-  return Boolean(String(form[field.id] || '').trim());
-};
-
-const formatNoticeDetails = (documentType, form) => {
-  const lines = getNoticeFields(documentType)
-    .filter((field) => !field.dependsOn || form[field.dependsOn])
-    .map((field) => {
-      const value = field.type === 'names'
-        ? (form[field.id] || []).map((name) => String(name || '').trim()).filter(Boolean).join(', ')
-        : field.type === 'checkbox'
-          ? (form[field.id] ? 'Yes' : 'No')
-          : String(form[field.id] || '').trim();
-
-      return value ? `${field.label}: ${value}` : '';
-    })
-    .filter(Boolean);
-
-  return [`Document type: ${documentType}`, ...lines].join('\n');
-};
-
-const getNoticeRequestError = (error, fallbackMessage) => {
-  if (error.response?.data?.message) return error.response.data.message;
-  if (error.request) return 'Unable to reach the server. Please check your connection and try again.';
-  return fallbackMessage;
-};
-
-const CaseDetailsView = ({
-  selectedCase,
-  displayTeam,
-  onBack,
-  teamCaseStatuses,
-  updatingTeamCaseId,
-  handleUpdateTeamCaseStatus,
-  handleDeleteTeamCase,
-  loadTeamWorkspace,
+// Modular Lawyer Feature Components & Shared Utilities
+import {
+  applicantFilters,
+  emptyDrawerState,
   formatDate,
-}) => {
-  const { user } = useSelector((state) => state.auth);
-  const [caseDetails, setCaseDetails] = useState(null);
-  const caseRecord = caseDetails || selectedCase;
+  getEntityId,
+  getLawyerDisplayName,
+  getNoticeRequestError,
+  getTeamCaseStatusLabel,
+  getUserName,
+  initialCreateTeamForm,
+  initialJoinTeamForm,
+  initialNoticeForm,
+  initialStats,
+  initialTeamCaseForm,
+  isSameId,
+  normalizeLawyerName,
+  normalizeStatus,
+  participantFilters,
+  statCards,
+  teamCaseStatuses,
+} from '../utils/lawyerUtils';
 
-  const currentUserId = user?._id || user?.id;
-  const canEditCase = caseRecord?.canEdit !== undefined
-    ? Boolean(caseRecord.canEdit)
-    : String(caseRecord?.addedBy?._id || caseRecord?.addedBy || caseRecord?.ownerId?._id || caseRecord?.ownerId || '') === String(currentUserId || '');
-
-  const [isEditingDetails, setIsEditingDetails] = useState(false);
-  const [editingPhone, setEditingPhone] = useState(caseRecord.clientPhone || '');
-  const [editingAddress, setEditingAddress] = useState(caseRecord.clientAddress || '');
-  const [savingCaseDetails, setSavingCaseDetails] = useState(false);
-  const [savingHearingHistory, setSavingHearingHistory] = useState(false);
-  const [caseDetailsMessage, setCaseDetailsMessage] = useState('');
-  const [caseDetailsError, setCaseDetailsError] = useState('');
-
-  const currentStatusObject = teamCaseStatuses.find((item) => item.value === (caseRecord.status || 'new'));
-  const statusLabel = currentStatusObject ? currentStatusObject.label : (caseRecord.status || 'New');
-
-  const getInitialHearingHistory = useCallback(() => {
-    if (Array.isArray(caseRecord.hearingHistory) && caseRecord.hearingHistory.length > 0) {
-      return caseRecord.hearingHistory.map((item) => ({
-        id: item.id,
-        courtName: item.courtName || '',
-        hearingDate: item.hearingDate ? new Date(item.hearingDate).toISOString().split('T')[0] : '',
-        hearingDetails: item.hearingDetails || '',
-        nextHearing: item.nextHearing ? new Date(item.nextHearing).toISOString().split('T')[0] : '',
-      }));
-    }
-    return canEditCase ? [
-      {
-        courtName: caseRecord.courtName || '',
-        hearingDate: '',
-        hearingDetails: '',
-        nextHearing: caseRecord.nextHearingDate ? new Date(caseRecord.nextHearingDate).toISOString().split('T')[0] : '',
-      },
-    ] : [];
-  }, [caseRecord, canEditCase]);
-
-  const [localHearingHistory, setLocalHearingHistory] = useState(getInitialHearingHistory);
-
-  useEffect(() => {
-    let active = true;
-    api.get(`/teams/${displayTeam.id}/cases/${selectedCase.id}`)
-      .then(({ data }) => {
-        if (active && data?.case) {
-          setCaseDetails((prev) => ({
-            ...(prev || selectedCase),
-            ...data.case,
-          }));
-        }
-      })
-      .catch((error) => console.error('Error loading case details:', error));
-    return () => { active = false; };
-  }, [displayTeam.id, selectedCase.id]);
-
-  useEffect(() => {
-    setEditingPhone(caseRecord.clientPhone || '');
-    setEditingAddress(caseRecord.clientAddress || '');
-    setLocalHearingHistory(getInitialHearingHistory());
-  }, [caseRecord, getInitialHearingHistory]);
-
-  const handleSaveCaseDetails = async () => {
-    if (!canEditCase) return;
-    if (!editingPhone.trim()) { setCaseDetailsError('Phone number is required.'); return; }
-    try {
-      setSavingCaseDetails(true);
-      setCaseDetailsError('');
-      setCaseDetailsMessage('');
-      await api.patch(`/teams/${displayTeam.id}/cases/${caseRecord.id}`, {
-        clientPhone: editingPhone.trim(),
-        clientAddress: editingAddress.trim(),
-      });
-      const { data } = await api.get(`/teams/${displayTeam.id}/cases/${caseRecord.id}`);
-      if (data?.case) {
-        setCaseDetails((prev) => ({
-          ...(prev || caseRecord),
-          ...data.case,
-          clientPhone: editingPhone.trim(),
-          clientAddress: editingAddress.trim(),
-        }));
-      }
-      await loadTeamWorkspace();
-      setCaseDetailsMessage('Case details saved.');
-      setIsEditingDetails(false);
-    } catch (error) {
-      setCaseDetailsError(error.response?.data?.message || 'Unable to save case details.');
-    } finally {
-      setSavingCaseDetails(false);
-    }
-  };
-
-  const handleHearingHistoryChange = (index, field, value) => {
-    if (!canEditCase) return;
-    setLocalHearingHistory((prev) => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
-    });
-  };
-
-  const handleAddHearingRow = () => {
-    if (!canEditCase) return;
-    let newCourtName = caseRecord?.courtName || '';
-    let newHearingDate = '';
-
-    if (localHearingHistory.length > 0) {
-      const lastRow = localHearingHistory[localHearingHistory.length - 1];
-      newCourtName = lastRow.courtName || newCourtName;
-      newHearingDate = lastRow.nextHearing || '';
-    }
-
-    setLocalHearingHistory((prev) => [
-      ...prev,
-      {
-        courtName: newCourtName,
-        hearingDate: newHearingDate,
-        hearingDetails: '',
-        nextHearing: '',
-      },
-    ]);
-  };
-
-  const handleRemoveHearingRow = (index) => {
-    if (!canEditCase) return;
-    setLocalHearingHistory((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSaveHearingHistory = async () => {
-    if (!canEditCase) return;
-    try {
-      setSavingHearingHistory(true);
-      setCaseDetailsError('');
-      setCaseDetailsMessage('');
-      const { data } = await api.put(`/teams/${displayTeam.id}/cases/${caseRecord.id}/hearings`, { hearings: localHearingHistory });
-      if (data?.case) {
-        setCaseDetails((prev) => ({
-          ...(prev || caseRecord),
-          ...data.case,
-          clientName: data.case.clientName || prev?.clientName || caseRecord.clientName,
-          clientPhone: data.case.clientPhone || prev?.clientPhone || caseRecord.clientPhone,
-          clientAddress: data.case.clientAddress || prev?.clientAddress || caseRecord.clientAddress,
-        }));
-
-        if (Array.isArray(data.case.hearingHistory)) {
-          setLocalHearingHistory(data.case.hearingHistory.map((item) => ({
-            id: item.id || item._id,
-            courtName: item.courtName || '',
-            hearingDate: item.hearingDate ? new Date(item.hearingDate).toISOString().split('T')[0] : '',
-            hearingDetails: item.hearingDetails || '',
-            nextHearing: item.nextHearing ? new Date(item.nextHearing).toISOString().split('T')[0] : (item.nextHearingDate ? new Date(item.nextHearingDate).toISOString().split('T')[0] : ''),
-          })));
-        }
-      }
-      await loadTeamWorkspace();
-      setCaseDetailsMessage('Hearing history saved.');
-    } catch (error) {
-      console.error('Error saving hearing history:', error);
-      setCaseDetailsError(error.response?.data?.message || 'Failed to save hearing history');
-    } finally {
-      setSavingHearingHistory(false);
-    }
-  };
-
-  return (
-    <div className="space-y-6 rounded-2xl border border-[#d7e9ef] bg-white p-6 shadow-sm">
-      {/* Top Navigation & Status Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[#eef5f8] pb-5">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-2 rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-2 text-sm font-bold text-[#062552] transition hover:border-[#15a276] hover:text-[#15a276]"
-        >
-          <FaArrowLeft /> Back to Cases
-        </button>
-        <div className="flex items-center gap-3">
-          {canEditCase ? (
-            <>
-              <button
-                type="button"
-                onClick={() => handleDeleteTeamCase(selectedCase)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 transition hover:bg-red-100"
-              >
-                <FaTrash size={12} /> Delete Case
-              </button>
-              <span className="text-xs font-bold text-[#5f7488]">Status:</span>
-              <select
-                value={caseRecord.status || 'new'}
-                onChange={(event) => handleUpdateTeamCaseStatus(caseRecord, event.target.value)}
-                disabled={updatingTeamCaseId === caseRecord.id}
-                className="rounded-xl border border-[#d7e9ef] bg-white px-3 py-1.5 text-xs font-bold text-[#062552] outline-none focus:border-[#15a276]"
-              >
-                {teamCaseStatuses.map((status) => (
-                  <option key={status.value} value={status.value}>
-                    {status.label}
-                  </option>
-                ))}
-              </select>
-            </>
-          ) : (
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-[#5f7488]">Status:</span>
-              <span className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-3.5 py-1.5 text-xs font-bold text-[#062552]">
-                {statusLabel}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Expanded Case Details Section */}
-      <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-5 space-y-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-[#eef5f8] pb-3">
-          <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#15a276]">Case Details</h4>
-            <h3 className="mt-1 text-2xl font-bold text-[#062552]">
-              {caseRecord.caseName || caseRecord.caseTitle || caseRecord.title || 'Untitled Case'}
-            </h3>
-          </div>
-          {canEditCase ? (
-            !isEditingDetails ? (
-              <button
-                type="button"
-                onClick={() => setIsEditingDetails(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#d7e9ef] bg-white px-3.5 py-1.5 text-xs font-bold text-[#062552] shadow-sm transition hover:border-[#15a276] hover:text-[#15a276]"
-              >
-                <FaPencilAlt size={12} /> Edit Details
-              </button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleSaveCaseDetails}
-                  disabled={savingCaseDetails}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#15a276] px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-[#118460] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <FaCheck size={12} /> {savingCaseDetails ? 'Saving...' : 'Save Details'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditingDetails(false);
-                    setEditingPhone(caseRecord.clientPhone || '');
-                    setEditingAddress(caseRecord.clientAddress || '');
-                    setCaseDetailsError('');
-                  }}
-                  disabled={savingCaseDetails}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#d7e9ef] bg-white px-3.5 py-1.5 text-xs font-bold text-[#5f7488] transition hover:bg-[#f0f6f8] hover:text-[#062552]"
-                >
-                  <FaTimes size={12} /> Cancel
-                </button>
-              </div>
-            )
-          ) : null}
-        </div>
-
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Brief Description</p>
-          <p className="mt-1 text-sm leading-relaxed text-[#2c3e50]">
-            {caseRecord.briefInfo || caseRecord.caseDetails || 'No brief description added.'}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 pt-2">
-          <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Client Name</p>
-            <p className="mt-1 text-sm font-bold text-[#062552]">{caseRecord.clientName || 'Not provided'}</p>
-          </div>
-
-          <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Phone Number</p>
-            {canEditCase && isEditingDetails ? (
-              <input
-                type="tel"
-                value={editingPhone}
-                onChange={(e) => setEditingPhone(e.target.value)}
-                disabled={savingCaseDetails}
-                placeholder="Enter phone number"
-                className="mt-1 w-full rounded-md border border-[#d7e9ef] bg-[#f8fbfc] px-3 py-1 text-xs font-bold text-[#062552] outline-none focus:border-[#15a276]"
-              />
-            ) : (
-              <p className="mt-1 text-sm font-bold text-[#062552]">{caseRecord.clientPhone || 'Not provided'}</p>
-            )}
-          </div>
-
-          <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Address</p>
-            {canEditCase && isEditingDetails ? (
-              <input
-                type="text"
-                value={editingAddress}
-                onChange={(e) => setEditingAddress(e.target.value)}
-                disabled={savingCaseDetails}
-                placeholder="Enter address"
-                className="mt-1 w-full rounded-md border border-[#d7e9ef] bg-[#f8fbfc] px-3 py-1 text-xs font-bold text-[#062552] outline-none focus:border-[#15a276]"
-              />
-            ) : (
-              <p className="mt-1 text-sm font-bold text-[#062552]">{caseRecord.clientAddress || 'Not provided'}</p>
-            )}
-          </div>
-
-          <div className="rounded-lg border border-[#d7e9ef] bg-white p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Starting Date</p>
-            <p className="mt-1 text-sm font-bold text-[#062552]">
-              {formatDate(caseRecord.startingDate || caseRecord.hearingDate) || 'Not provided'}
-            </p>
-          </div>
-        </div>
-        {caseDetailsMessage || caseDetailsError ? (
-          <div className="flex flex-wrap items-center gap-3 pt-1">
-            {caseDetailsMessage ? <p className="text-xs font-semibold text-[#118460]">{caseDetailsMessage}</p> : null}
-            {caseDetailsError ? <p className="text-xs font-semibold text-red-600">{caseDetailsError}</p> : null}
-          </div>
-        ) : null}
-      </div>
-
-      {/* Hearing History Table Section */}
-      <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-5 space-y-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-[#eef5f8] pb-3">
-          <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#15a276]">Hearing History</h4>
-            <p className="text-xs text-[#5f7488] mt-0.5">Track all court hearing schedules and details.</p>
-          </div>
-          {canEditCase ? (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleAddHearingRow}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#15a276] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#118460]"
-              >
-                <FaPlus size={12} /> Add Hearing
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveHearingHistory}
-                disabled={savingHearingHistory}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#15a276] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#118460] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <FaCheck size={12} /> {savingHearingHistory ? 'Saving...' : 'Save Hearing'}
-              </button>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="overflow-x-auto rounded-lg border border-[#d7e9ef] bg-white">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[#f8fbfc] border-b border-[#d7e9ef] text-[#5f7488] uppercase tracking-wider font-bold">
-              <tr>
-                <th className="px-4 py-3 min-w-[160px]">Court Name</th>
-                <th className="px-4 py-3 min-w-[140px]">Hearing Date</th>
-                <th className="px-4 py-3 min-w-[200px]">Hearing Details</th>
-                <th className="px-4 py-3 min-w-[140px]">Next Hearing</th>
-                {canEditCase ? <th className="px-2 py-3 w-10"></th> : null}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#eef5f8] text-[#062552]">
-              {localHearingHistory.length === 0 ? (
-                <tr>
-                  <td colSpan={canEditCase ? 5 : 4} className="px-4 py-4 text-center text-xs text-[#5f7488]">
-                    No hearing history recorded yet.
-                  </td>
-                </tr>
-              ) : (
-                localHearingHistory.map((row, index) => (
-                  <tr key={`hearing-row-${index}`} className="hover:bg-[#f8fbfc]">
-                    <td className="px-4 py-2.5">
-                      {canEditCase ? (
-                        <input
-                          type="text"
-                          value={row.courtName}
-                          onChange={(e) => handleHearingHistoryChange(index, 'courtName', e.target.value)}
-                          placeholder="Court name"
-                          className="w-full rounded-md border border-[#d7e9ef] bg-white px-2.5 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]"
-                        />
-                      ) : (
-                        <span className="font-semibold text-[#062552]">{row.courtName || 'Not provided'}</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      {canEditCase ? (
-                        <input
-                          type="date"
-                          value={row.hearingDate}
-                          onChange={(e) => handleHearingHistoryChange(index, 'hearingDate', e.target.value)}
-                          className="w-full rounded-md border border-[#d7e9ef] bg-white px-2 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]"
-                        />
-                      ) : (
-                        <span className="font-semibold text-[#062552]">{formatDate(row.hearingDate) || 'Not provided'}</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      {canEditCase ? (
-                        <input
-                          type="text"
-                          value={row.hearingDetails}
-                          onChange={(e) => handleHearingHistoryChange(index, 'hearingDetails', e.target.value)}
-                          placeholder="Hearing details"
-                          className="w-full rounded-md border border-[#d7e9ef] bg-white px-2.5 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]"
-                        />
-                      ) : (
-                        <span className="font-semibold text-[#062552]">{row.hearingDetails || 'Not provided'}</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      {canEditCase ? (
-                        <input
-                          type="date"
-                          value={row.nextHearing}
-                          onChange={(e) => handleHearingHistoryChange(index, 'nextHearing', e.target.value)}
-                          className="w-full rounded-md border border-[#d7e9ef] bg-white px-2 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]"
-                        />
-                      ) : (
-                        <span className="font-semibold text-[#062552]">{formatDate(row.nextHearing) || 'Not provided'}</span>
-                      )}
-                    </td>
-                    {canEditCase ? (
-                      <td className="px-2 py-2.5 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveHearingRow(index)}
-                          className="text-red-500 hover:text-red-700 transition"
-                          title="Remove row"
-                        >
-                          <FaTrash size={12} />
-                        </button>
-                      </td>
-                    ) : null}
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-};
+import LawyerAppointmentsModal from '../components/Lawyer/LawyerAppointmentsModal.jsx';
+import LawyerClientsModal from '../components/Lawyer/LawyerClientsModal.jsx';
+import LawyerNextHearingsModal from '../components/Lawyer/LawyerNextHearingsModal.jsx';
+import LawyerNoticeGeneratorModal from '../components/Lawyer/LawyerNoticeGeneratorModal.jsx';
+import { ApplicantDrawer, EmptyBlock, ResumePreviewModal } from '../components/Lawyer/LawyerSharedComponents.jsx';
+import LawyerStudentInteractionModal from '../components/Lawyer/LawyerStudentInteractionModal.jsx';
+import LawyerTeamModal from '../components/Lawyer/LawyerTeamModal.jsx';
 
 export default function LawyerDashboard() {
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [appointments, setAppointments] = useState([]);
-  const [loadingAppointments, setLoadingAppointments] = useState(false);
+
+  // Feature Visibility Modals
   const [showAppointmentsModal, setShowAppointmentsModal] = useState(false);
   const [showClientsModal, setShowClientsModal] = useState(false);
   const [showHearingsModal, setShowHearingsModal] = useState(false);
+  const [showTeamModal, setShowTeamModal] = useState(false);
+  const [showNoticeGenerator, setShowNoticeGenerator] = useState(false);
+  const [showStudentInteractionModal, setShowStudentInteractionModal] = useState(false);
+
+  // Appointments & Clients State
+  const [appointments, setAppointments] = useState([]);
+  const [loadingAppointments, setLoadingAppointments] = useState(false);
+
+  // Next Hearings State
   const [nextHearings, setNextHearings] = useState([]);
   const [loadedHearingsTeamId, setLoadedHearingsTeamId] = useState('');
-  const [googleCalendarStatus, setGoogleCalendarStatus] = useState({ connected: false });
-  const [googleCalendarLoading, setGoogleCalendarLoading] = useState(true);
+  const [googleCalendarStatus, setGoogleCalendarStatus] = useState({ connected: false, email: null });
+  const [googleCalendarLoading, setGoogleCalendarLoading] = useState(false);
   const [googleCalendarActionLoading, setGoogleCalendarActionLoading] = useState(false);
-  const [showTeamModal, setShowTeamModal] = useState(false);
+
+  // Team Workspace State
   const [teamMode, setTeamMode] = useState('create');
   const [teamLoading, setTeamLoading] = useState(false);
   const [teamWorkspaceLoading, setTeamWorkspaceLoading] = useState(false);
@@ -848,15 +88,20 @@ export default function LawyerDashboard() {
     selectedTeamIdRef.current = nextId;
     setSelectedTeamIdState(nextId);
   }, []);
+
   const [activeTeamTab, setActiveTeamTab] = useState('my_team');
   const [showTeamCaseForm, setShowTeamCaseForm] = useState(false);
   const [selectedTeamMemberId, setSelectedTeamMemberId] = useState('');
+  const [selectedCaseForDetailsId, setSelectedCaseForDetailsId] = useState('');
   const [savingTeamCase, setSavingTeamCase] = useState(false);
   const [updatingTeamCaseId, setUpdatingTeamCaseId] = useState('');
   const [updatingTeamRequestId, setUpdatingTeamRequestId] = useState('');
   const [removingTeamMemberId, setRemovingTeamMemberId] = useState('');
-  const [showStudentInteractionModal, setShowStudentInteractionModal] = useState(false);
-  const [showNoticeGenerator, setShowNoticeGenerator] = useState(false);
+  const [createTeamForm, setCreateTeamForm] = useState(initialCreateTeamForm);
+  const [joinTeamForm, setJoinTeamForm] = useState(initialJoinTeamForm);
+  const [teamCaseForm, setTeamCaseForm] = useState(initialTeamCaseForm);
+
+  // Student Interaction State
   const [studentInteractionTab, setStudentInteractionTab] = useState('internships');
   const [publishedInternships, setPublishedInternships] = useState([]);
   const [publishedJamSessions, setPublishedJamSessions] = useState([]);
@@ -873,20 +118,9 @@ export default function LawyerDashboard() {
   const [postError, setPostError] = useState('');
   const [posting, setPosting] = useState(false);
   const [resumePreview, setResumePreview] = useState(null);
-  const [noticeForm, setNoticeForm] = useState(initialNoticeForm);
-  const [noticeDraft, setNoticeDraft] = useState('');
-  const [noticeEditPrompt, setNoticeEditPrompt] = useState('');
-  const [noticeLoading, setNoticeLoading] = useState(false);
-  const [noticeEditing, setNoticeEditing] = useState(false);
-  const [noticeError, setNoticeError] = useState('');
-  const [noticeMessage, setNoticeMessage] = useState('');
   const [updatingApplicantId, setUpdatingApplicantId] = useState('');
   const [togglingInternshipId, setTogglingInternshipId] = useState('');
   const [deletingInternshipId, setDeletingInternshipId] = useState('');
-  const [selectedCaseForDetailsId, setSelectedCaseForDetailsId] = useState('');
-  const [createTeamForm, setCreateTeamForm] = useState(initialCreateTeamForm);
-  const [joinTeamForm, setJoinTeamForm] = useState(initialJoinTeamForm);
-  const [teamCaseForm, setTeamCaseForm] = useState(initialTeamCaseForm);
   const [internshipForm, setInternshipForm] = useState({
     title: '',
     description: '',
@@ -901,15 +135,22 @@ export default function LawyerDashboard() {
     location: '',
   });
 
+  // Notice Generator State
+  const [noticeForm, setNoticeForm] = useState(initialNoticeForm);
+  const [noticeDraft, setNoticeDraft] = useState('');
+  const [noticeEditPrompt, setNoticeEditPrompt] = useState('');
+  const [noticeLoading, setNoticeLoading] = useState(false);
+  const [noticeEditing, setNoticeEditing] = useState(false);
+  const [noticeError, setNoticeError] = useState('');
+  const [noticeMessage, setNoticeMessage] = useState('');
+
+  // --- API DATA FETCHERS ---
   const loadAppointments = useCallback(async () => {
     if (!user) return;
-
     try {
       setLoadingAppointments(true);
-
       const lawyerId = String(user._id || user.id).trim();
       const { data } = await api.get(`/appointments/${lawyerId}`);
-
       const mappedAppointments = data.map((appointment) => ({
         id: appointment._id,
         userId: appointment.userId?._id || appointment.userId,
@@ -918,7 +159,6 @@ export default function LawyerDashboard() {
         status: normalizeStatus(appointment.status),
         timestamp: appointment.createdAt,
       }));
-
       setAppointments(mappedAppointments);
     } catch (error) {
       console.error('Error loading appointments:', error);
@@ -948,7 +188,6 @@ export default function LawyerDashboard() {
 
   const loadOwnPosts = useCallback(async () => {
     if (!user?._id) return;
-
     try {
       setPostLoading(true);
       const { data } = await api.get(`/posts/user/${user._id}`);
@@ -972,172 +211,18 @@ export default function LawyerDashboard() {
     }
   }, [dispatch]);
 
-  useEffect(() => {
-    const requestedSection = searchParams.get('section');
-
-    // Keep the feature displayed in sync with the URL. This lets a browser
-    // refresh (and links from notifications) reopen the same workspace.
-    setShowAppointmentsModal(false);
-    setShowClientsModal(false);
-    setShowHearingsModal(false);
-    setShowTeamModal(false);
-    setShowNoticeGenerator(false);
-    setShowStudentInteractionModal(false);
-
-    if (requestedSection === 'student-interactions') {
-      setShowStudentInteractionModal(true);
-    }
-
-    if (requestedSection === 'appointments') {
-      setShowAppointmentsModal(true);
-    }
-
-    if (requestedSection === 'hearings') {
-      setShowHearingsModal(true);
-    }
-
-    if (requestedSection === 'notice-generator') {
-      setShowNoticeGenerator(true);
-    }
-
-    if (requestedSection === 'clients') {
-      setShowClientsModal(true);
-    }
-
-    if (requestedSection === 'team') {
-      const requestedMode = searchParams.get('mode');
-      const requestedTeamId = searchParams.get('teamId');
-      if (requestedTeamId && String(requestedTeamId) !== String(selectedTeamIdRef.current)) {
-        selectedTeamIdRef.current = String(requestedTeamId);
-        setSelectedTeamIdState(String(requestedTeamId));
-      }
-      setTeamMode(requestedMode === 'join' ? 'join' : 'overview');
-      setTeamError('');
-      setTeamMessage('');
-      setShowTeamModal(true);
-    }
-
-    const requestedTab = searchParams.get('tab');
-    if (['internships', 'jamSessions', 'posts', 'followers'].includes(requestedTab)) {
-      setStudentInteractionTab(requestedTab);
-    }
-  }, [searchParams, user?.lawyerProfile?.team?.teamCode]);
-
-  useEffect(() => {
-    const fullName = `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
-    if (!fullName) return;
-
-    setCreateTeamForm((current) => (
-      current.seniorLawyerName ? current : { ...current, seniorLawyerName: fullName }
-    ));
-  }, [user?.firstName, user?.lastName]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    loadAppointments();
-    loadStudentInteractionPosts();
-    loadOwnPosts();
-  }, [loadAppointments, loadOwnPosts, loadStudentInteractionPosts, user]);
-
-  useEffect(() => {
-    const itemId = searchParams.get('itemId');
-    const drawerType = searchParams.get('drawer');
-
-    if (!showStudentInteractionModal || drawerType !== 'applicants' || !itemId || publishedInternships.length === 0) {
-      return;
-    }
-
-    const targetInternship = publishedInternships.find((internship) => String(internship.id) === String(itemId));
-    if (targetInternship) {
-      handleOpenApplicantsDrawer(targetInternship);
-    }
-  }, [publishedInternships, searchParams, showStudentInteractionModal]);
-
-  const updateStatus = async (id, newStatus) => {
+  const loadGoogleCalendarStatus = useCallback(async () => {
     try {
-      const { data } = await api.put(`/appointments/${id}`, {
-        status: newStatus.toLowerCase(),
-      });
-
-      setAppointments((currentAppointments) =>
-        currentAppointments.map((appointment) =>
-          appointment.id === id
-            ? {
-                ...appointment,
-                status: normalizeStatus(data?.status || newStatus),
-              }
-            : appointment
-        )
-      );
+      setGoogleCalendarLoading(true);
+      const { data } = await api.get('/calendar/google/status');
+      setGoogleCalendarStatus({ connected: Boolean(data?.connected), email: data?.email || null });
     } catch (error) {
-      console.error('Error updating appointment status:', error);
-      alert(error.response?.data?.message || 'Failed to update appointment status');
+      console.error('Error fetching Google Calendar status:', error);
+      setGoogleCalendarStatus({ connected: false, email: null });
+    } finally {
+      setGoogleCalendarLoading(false);
     }
-  };
-
-  const handleOpenChat = (appointment) => {
-    const selectedPartner =
-      appointment.user && typeof appointment.user === 'object'
-        ? { ...appointment.user, role: appointment.user.role || 'user' }
-        : {
-            _id: appointment.userId,
-            id: appointment.userId,
-            name: appointment.userName,
-            role: 'user',
-          };
-
-    const partnerId = selectedPartner._id || selectedPartner.id;
-    navigate(`/chat?partnerId=${encodeURIComponent(partnerId)}`, {
-      state: { selectedPartner, returnTo: '/lawyer-dash' },
-    });
-    setShowAppointmentsModal(false);
-    setShowClientsModal(false);
-  };
-
-  const resetInternshipForm = () => {
-    setInternshipForm({
-      title: '',
-      description: '',
-      duration: '',
-      location: '',
-      stipend: '',
-    });
-  };
-
-  const resetJamSessionForm = () => {
-    setJamSessionForm({
-      title: '',
-      description: '',
-      schedule: '',
-      location: '',
-    });
-  };
-
-  const handleInternshipInput = (event) => {
-    const { name, value } = event.target;
-    setInternshipForm((current) => ({ ...current, [name]: value }));
-  };
-
-  const handleJamSessionInput = (event) => {
-    const { name, value } = event.target;
-    setJamSessionForm((current) => ({ ...current, [name]: value }));
-  };
-
-  const handleCreateTeamInput = (event) => {
-    const { name, value } = event.target;
-    setCreateTeamForm((current) => ({ ...current, [name]: value }));
-  };
-
-  const handleJoinTeamInput = (event) => {
-    const { name, value } = event.target;
-    setJoinTeamForm((current) => ({ ...current, [name]: value.toUpperCase() }));
-  };
-
-  const handleTeamCaseInput = (event) => {
-    const { name, value } = event.target;
-    setTeamCaseForm((current) => ({ ...current, [name]: value }));
-  };
+  }, []);
 
   const loadTeamWorkspace = useCallback(async (targetTeamId) => {
     const effectiveTeamId = targetTeamId !== undefined ? targetTeamId : selectedTeamIdRef.current;
@@ -1178,6 +263,66 @@ export default function LawyerDashboard() {
     loadTeamWorkspace(targetId);
   }, [loadTeamWorkspace, teamWorkspace?.id]);
 
+  // Sync state with URL search params
+  useEffect(() => {
+    const requestedSection = searchParams.get('section');
+    setShowAppointmentsModal(false);
+    setShowClientsModal(false);
+    setShowHearingsModal(false);
+    setShowTeamModal(false);
+    setShowNoticeGenerator(false);
+    setShowStudentInteractionModal(false);
+
+    if (requestedSection === 'student-interactions') {
+      setShowStudentInteractionModal(true);
+    }
+    if (requestedSection === 'appointments') {
+      setShowAppointmentsModal(true);
+    }
+    if (requestedSection === 'hearings') {
+      setShowHearingsModal(true);
+    }
+    if (requestedSection === 'notice-generator') {
+      setShowNoticeGenerator(true);
+    }
+    if (requestedSection === 'clients') {
+      setShowClientsModal(true);
+    }
+    if (requestedSection === 'team') {
+      const requestedMode = searchParams.get('mode');
+      const requestedTeamId = searchParams.get('teamId');
+      if (requestedTeamId && String(requestedTeamId) !== String(selectedTeamIdRef.current)) {
+        selectedTeamIdRef.current = String(requestedTeamId);
+        setSelectedTeamIdState(String(requestedTeamId));
+      }
+      setTeamMode(requestedMode === 'join' ? 'join' : 'overview');
+      setTeamError('');
+      setTeamMessage('');
+      setShowTeamModal(true);
+    }
+
+    const requestedTab = searchParams.get('tab');
+    if (['internships', 'jamSessions', 'posts', 'followers'].includes(requestedTab)) {
+      setStudentInteractionTab(requestedTab);
+    }
+  }, [searchParams, user?.lawyerProfile?.team?.teamCode]);
+
+  useEffect(() => {
+    const fullName = `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
+    if (!fullName) return;
+    setCreateTeamForm((current) => (
+      current.seniorLawyerName ? current : { ...current, seniorLawyerName: fullName }
+    ));
+  }, [user?.firstName, user?.lastName]);
+
+  useEffect(() => {
+    if (!user) return;
+    loadAppointments();
+    loadStudentInteractionPosts();
+    loadOwnPosts();
+    loadGoogleCalendarStatus();
+  }, [loadAppointments, loadGoogleCalendarStatus, loadOwnPosts, loadStudentInteractionPosts, user]);
+
   useEffect(() => {
     if (user?.role !== 'lawyer') return;
     loadTeamWorkspace();
@@ -1199,24 +344,111 @@ export default function LawyerDashboard() {
     return () => events.forEach((event) => socket.off(event, refreshTeamWorkspace));
   }, [loadTeamWorkspace, user?.role]);
 
+  // Google Calendar URL Auth Redirection Listener
+  useEffect(() => {
+    const calendarParam = searchParams.get('calendar');
+    if (calendarParam === 'success') {
+      setTeamMessage('Google Calendar connected successfully!');
+      loadGoogleCalendarStatus();
+      setSearchParams((params) => {
+        params.delete('calendar');
+        return params;
+      });
+    } else if (calendarParam === 'error') {
+      setTeamError('Failed to connect Google Calendar.');
+      setSearchParams((params) => {
+        params.delete('calendar');
+        return params;
+      });
+    }
+  }, [searchParams, setSearchParams, loadGoogleCalendarStatus]);
+
+  // --- HANDLERS ---
+  const updateStatus = async (id, newStatus) => {
+    try {
+      const { data } = await api.put(`/appointments/${id}`, {
+        status: newStatus.toLowerCase(),
+      });
+      setAppointments((currentAppointments) =>
+        currentAppointments.map((appointment) =>
+          appointment.id === id
+            ? {
+                ...appointment,
+                status: normalizeStatus(data?.status || newStatus),
+              }
+            : appointment
+        )
+      );
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+      alert(error.response?.data?.message || 'Failed to update appointment status');
+    }
+  };
+
+  const handleOpenChat = (appointment) => {
+    const selectedPartner =
+      appointment.user && typeof appointment.user === 'object'
+        ? { ...appointment.user, role: appointment.user.role || 'user' }
+        : {
+            _id: appointment.userId,
+            id: appointment.userId,
+            name: appointment.userName,
+            role: 'user',
+          };
+    const partnerId = selectedPartner._id || selectedPartner.id;
+    navigate(`/chat?partnerId=${encodeURIComponent(partnerId)}`, {
+      state: { selectedPartner, returnTo: '/lawyer-dash' },
+    });
+    setShowAppointmentsModal(false);
+    setShowClientsModal(false);
+  };
+
+  const resetInternshipForm = () => {
+    setInternshipForm({ title: '', description: '', duration: '', location: '', stipend: '' });
+  };
+
+  const resetJamSessionForm = () => {
+    setJamSessionForm({ title: '', description: '', schedule: '', location: '' });
+  };
+
+  const handleInternshipInput = (event) => {
+    const { name, value } = event.target;
+    setInternshipForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleJamSessionInput = (event) => {
+    const { name, value } = event.target;
+    setJamSessionForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleCreateTeamInput = (event) => {
+    const { name, value } = event.target;
+    setCreateTeamForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleJoinTeamInput = (event) => {
+    const { name, value } = event.target;
+    setJoinTeamForm((current) => ({ ...current, [name]: value.toUpperCase() }));
+  };
+
+  const handleTeamCaseInput = (event) => {
+    const { name, value } = event.target;
+    setTeamCaseForm((current) => ({ ...current, [name]: value }));
+  };
+
   const handleCreateTeam = async (event) => {
     event.preventDefault();
-
     try {
       setTeamLoading(true);
       setTeamError('');
       setTeamMessage('');
-
       const payload = {
         firmName: createTeamForm.firmName.trim(),
         seniorLawyerName: createTeamForm.seniorLawyerName.trim(),
         maxTeamSize: Number(createTeamForm.maxTeamSize),
       };
-
       const { data } = await api.post('/teams', payload);
-      if (data?.user) {
-        dispatch(updateUser(data.user));
-      }
+      if (data?.user) dispatch(updateUser(data.user));
       setTeamMode('overview');
       setTeamMessage(`Team created. Code: ${data?.team?.teamCode || ''}`);
       const teams = Array.isArray(data?.teams) ? data.teams : data?.team ? [data.team] : [];
@@ -1233,25 +465,17 @@ export default function LawyerDashboard() {
 
   const handleJoinTeam = async (event) => {
     event.preventDefault();
-
     try {
       setTeamLoading(true);
       setTeamError('');
       setTeamMessage('');
-
-      const { data } = await api.post('/teams/join-requests', {
-        teamCode: joinTeamForm.teamCode.trim(),
-      });
-
+      const { data } = await api.post('/teams/join-requests', { teamCode: joinTeamForm.teamCode.trim() });
       if (data?.requestPending) {
         setJoinTeamForm(initialJoinTeamForm);
         setTeamMessage(data.message || 'Join request sent to the senior lawyer.');
         return;
       }
-
-      if (data?.user) {
-        dispatch(updateUser(data.user));
-      }
+      if (data?.user) dispatch(updateUser(data.user));
       setTeamMode('overview');
       setJoinTeamForm(initialJoinTeamForm);
       setTeamMessage('Team joined successfully.');
@@ -1269,7 +493,6 @@ export default function LawyerDashboard() {
   const handleCopyTeamCode = async () => {
     const teamCode = teamWorkspace?.teamCode;
     if (!teamCode) return;
-
     try {
       await navigator.clipboard.writeText(teamCode);
       setTeamMessage('Team code copied.');
@@ -1281,33 +504,26 @@ export default function LawyerDashboard() {
 
   const handleAddTeamCase = async (event) => {
     event.preventDefault();
-
+    if (!teamWorkspace?.id) return;
     try {
       setSavingTeamCase(true);
       setTeamError('');
       setTeamMessage('');
-
-      const payload = {
+      await api.post(`/teams/${teamWorkspace.id}/cases`, {
         clientName: teamCaseForm.clientName.trim(),
         clientPhone: teamCaseForm.clientPhone.trim(),
         clientAddress: teamCaseForm.clientAddress.trim(),
-        caseName: (teamCaseForm.caseName || teamCaseForm.caseTitle || '').trim(),
-        caseTitle: (teamCaseForm.caseName || teamCaseForm.caseTitle || '').trim(),
-        briefInfo: (teamCaseForm.briefInfo || teamCaseForm.caseDetails || '').trim(),
-        caseDetails: (teamCaseForm.briefInfo || teamCaseForm.caseDetails || '').trim(),
+        caseName: teamCaseForm.caseName.trim(),
         courtName: teamCaseForm.courtName.trim(),
-        startingDate: teamCaseForm.startingDate || teamCaseForm.hearingDate || '',
-        nextHearingDate: teamCaseForm.nextHearingDate || '',
-        hearingDate: teamCaseForm.startingDate || teamCaseForm.hearingDate || '',
+        startingDate: teamCaseForm.startingDate ? new Date(teamCaseForm.startingDate).toISOString() : undefined,
+        nextHearingDate: teamCaseForm.nextHearingDate ? new Date(teamCaseForm.nextHearingDate).toISOString() : undefined,
+        briefInfo: teamCaseForm.briefInfo.trim(),
         status: teamCaseForm.status,
-      };
-
-      await api.post(`/teams/${displayTeam.id}/cases`, payload);
-      await loadTeamWorkspace();
-      setSelectedTeamMemberId(currentLawyerId);
+      });
       setTeamCaseForm(initialTeamCaseForm);
       setShowTeamCaseForm(false);
-      setTeamMessage('Team case added.');
+      setTeamMessage('Case saved under your lawyer profile.');
+      await loadTeamWorkspace();
     } catch (error) {
       console.error('Error adding team case:', error);
       setTeamError(error.response?.data?.message || 'Failed to add team case');
@@ -1316,15 +532,13 @@ export default function LawyerDashboard() {
     }
   };
 
-  const handleUpdateTeamCaseStatus = async (teamCase, status) => {
+  const handleUpdateTeamCaseStatus = async (teamCase, nextStatus) => {
+    if (!teamWorkspace?.id || !teamCase?.id) return;
     try {
-      setUpdatingTeamCaseId(teamCase.id);
+      setUpdatingTeamCaseId(String(teamCase.id));
       setTeamError('');
-      setTeamMessage('');
-
-      await api.patch(`/teams/${displayTeam.id}/cases/${teamCase.id}`, { status });
+      await api.put(`/teams/${teamWorkspace.id}/cases/${teamCase.id}/status`, { status: nextStatus });
       await loadTeamWorkspace();
-      setTeamMessage('Case status updated.');
     } catch (error) {
       console.error('Error updating team case status:', error);
       setTeamError(error.response?.data?.message || 'Failed to update case status');
@@ -1333,82 +547,66 @@ export default function LawyerDashboard() {
     }
   };
 
-  const handleTeamRequestDecision = async (request, decision) => {
+  const handleDeleteTeamCase = async (teamCase) => {
+    if (!teamWorkspace?.id || !teamCase?.id) return;
+    const confirmDelete = window.confirm(`Are you sure you want to permanently delete the case "${teamCase.caseName || teamCase.title || 'Untitled Case'}"?`);
+    if (!confirmDelete) return;
     try {
-      setUpdatingTeamRequestId(request.id);
+      setUpdatingTeamCaseId(String(teamCase.id));
       setTeamError('');
       setTeamMessage('');
-
-      const normalizedDecision = decision === 'accept' ? 'approve' : 'reject';
-      // Send an explicit empty object: Axios otherwise omits the request body,
-      // which is valid for this endpoint but should not be relied upon.
-      const { data: response } = await api.patch(
-        `/teams/${displayTeam.id}/join-requests/${request.id}/${normalizedDecision}`,
-        {}
-      );
-      const data = response?.data;
-      if (!response?.success) {
-        throw new Error(response?.message || 'Failed to update team request');
-      }
-      setTeamWorkspace(data?.team || null);
-      setTeamWorkspaces(Array.isArray(data?.teams) ? data.teams : []);
-      // Keep the owner's pending-request list current even when Socket.IO is
-      // unavailable or reconnecting.
+      await api.delete(`/teams/${teamWorkspace.id}/cases/${teamCase.id}`);
+      setSelectedCaseForDetailsId('');
+      setTeamMessage('Case deleted successfully.');
       await loadTeamWorkspace();
-      setTeamMessage(response.message || (decision === 'accept' ? 'Join request accepted.' : 'Join request rejected.'));
     } catch (error) {
-      console.error('Error updating team request:', error);
-      const detailMessage = error.response?.data?.message || error.message || 'Unable to update team request';
-      setTeamError(detailMessage ? `Failed to update team request: ${detailMessage}` : 'Failed to update team request');
+      console.error('Error deleting team case:', error);
+      setTeamError(error.response?.data?.message || 'Failed to delete case');
+    } finally {
+      setUpdatingTeamCaseId('');
+    }
+  };
+
+  const handleTeamRequestDecision = async (request, action) => {
+    if (!teamWorkspace?.id || !request?.id) return;
+    try {
+      setUpdatingTeamRequestId(String(request.id));
+      setTeamError('');
+      setTeamMessage('');
+      const endpoint = action === 'accept' ? 'accept' : 'reject';
+      const { data } = await api.post(`/teams/${teamWorkspace.id}/join-requests/${request.id}/${endpoint}`);
+      if (data?.user && String(data.user._id || data.user.id) === String(user?._id || user?.id)) {
+        dispatch(updateUser(data.user));
+      }
+      setTeamMessage(action === 'accept' ? 'Join request accepted.' : 'Join request rejected.');
+      await loadTeamWorkspace();
+    } catch (error) {
+      console.error(`Error processing join request (${action}):`, error);
+      setTeamError(error.response?.data?.message || `Failed to ${action} join request`);
     } finally {
       setUpdatingTeamRequestId('');
     }
   };
 
-  const handleDeleteTeamCase = async (teamCase) => {
-    const caseName = teamCase.caseName || teamCase.caseTitle || teamCase.title || 'this case';
-    const confirmed = window.confirm(`Are you sure you want to permanently delete "${caseName}"?`);
-    if (!confirmed) return;
-
-    try {
-      setTeamError('');
-      setTeamMessage('');
-
-      await api.delete(`/teams/${displayTeam.id}/cases/${teamCase.id}`);
-      if (selectedCaseForDetailsId === String(teamCase.id)) {
-        setSelectedCaseForDetailsId('');
-      }
-      await loadTeamWorkspace();
-      setTeamMessage('Case deleted successfully.');
-    } catch (error) {
-      console.error('Error deleting case:', error);
-      setTeamError(error.response?.data?.message || 'Failed to delete case');
-    }
-  };
-
   const handleRemoveTeamMember = async (member) => {
+    if (!teamWorkspace?.id || !member) return;
     const memberId = getEntityId(member.lawyerId || member.id);
-    if (!memberId) return;
-
-    const confirmed = window.confirm(`Remove ${member.name || 'this lawyer'} from the team?`);
-    if (!confirmed) return;
-
+    if (!memberId) {
+      setTeamError('Unable to identify team member');
+      return;
+    }
+    const confirmRemove = window.confirm(`Are you sure you want to remove ${member.name || 'this member'} from the team?`);
+    if (!confirmRemove) return;
     try {
-      setRemovingTeamMemberId(String(memberId));
+      setRemovingTeamMemberId(memberId);
       setTeamError('');
       setTeamMessage('');
-
-      const { data: response } = await api.delete(`/teams/${displayTeam.id}/members/${memberId}`, {
-        // Keep this explicit so the API contract remains stable if a removal
-        // reason field is added to the UI later.
-        data: {},
-      });
-      if (!response?.success) {
-        throw new Error(response?.message || 'Failed to remove team member');
+      await api.delete(`/teams/${teamWorkspace.id}/members/${memberId}`);
+      if (selectedTeamMemberId && String(selectedTeamMemberId) === String(member.id)) {
+        setSelectedTeamMemberId('');
       }
-      setSelectedTeamMemberId('');
+      setTeamMessage(`${member.name || 'Member'} removed from the team.`);
       await loadTeamWorkspace();
-      setTeamMessage(response.message || 'Team member removed.');
     } catch (error) {
       console.error('Error removing team member:', error);
       setTeamError(error.response?.data?.message || 'Failed to remove team member');
@@ -1419,146 +617,42 @@ export default function LawyerDashboard() {
 
   const handlePublishInternship = async (event) => {
     event.preventDefault();
-
     try {
-      const payload = {
-        title: internshipForm.title.trim(),
-        description: internshipForm.description.trim(),
-        duration: internshipForm.duration.trim(),
-        location: internshipForm.location.trim(),
-        stipend: internshipForm.stipend.trim(),
-        firm: user?.address?.city || user?.address?.district || '',
-        specialization: user?.lawyerProfile?.specialization
-          ? [String(user.lawyerProfile.specialization).trim()].filter(Boolean)
-          : [],
-        skills: [],
-      };
-
-      const { data } = await api.post('/auth/lawyer/internships', payload);
-      if (data?.internship) {
-        setPublishedInternships((current) => [data.internship, ...current]);
-        setQuickStats((current) => ({
-          ...current,
-          totalInternshipsPosted: current.totalInternshipsPosted + 1,
-          activeInternships: current.activeInternships + 1,
-        }));
-      }
-      setShowInternshipForm(false);
+      setInteractionLoading(true);
+      await api.post('/auth/lawyer/internships', internshipForm);
       resetInternshipForm();
+      setShowInternshipForm(false);
+      await loadStudentInteractionPosts();
     } catch (error) {
       console.error('Error publishing internship:', error);
       alert(error.response?.data?.message || 'Failed to publish internship');
+    } finally {
+      setInteractionLoading(false);
     }
   };
 
   const handlePublishJamSession = async (event) => {
     event.preventDefault();
-
     try {
-      const payload = {
-        title: jamSessionForm.title.trim(),
-        topic: user?.lawyerProfile?.specialization || 'Legal Jam Session',
-        summary: jamSessionForm.description.trim(),
-        schedule: jamSessionForm.schedule.trim(),
-        location: jamSessionForm.location.trim(),
-      };
-
-      const { data } = await api.post('/auth/lawyer/jam-sessions', payload);
-      if (data?.jamSession) {
-        setPublishedJamSessions((current) => [data.jamSession, ...current]);
-        setQuickStats((current) => ({
-          ...current,
-          totalJamSessions: current.totalJamSessions + 1,
-        }));
-      }
-      setShowJamSessionForm(false);
+      setInteractionLoading(true);
+      await api.post('/auth/lawyer/jam-sessions', jamSessionForm);
       resetJamSessionForm();
+      setShowJamSessionForm(false);
+      await loadStudentInteractionPosts();
     } catch (error) {
       console.error('Error publishing jam session:', error);
       alert(error.response?.data?.message || 'Failed to publish jam session');
+    } finally {
+      setInteractionLoading(false);
     }
-  };
-
-  const handleJamLike = async (session) => {
-    const { data } = await api.post(`/auth/jam-sessions/${session.id}/like`);
-    return data;
-  };
-
-  const handleJamComment = async (session, text) => {
-    const { data } = await api.post(`/auth/jam-sessions/${session.id}/comments`, { text });
-    return data;
-  };
-
-  const handleInternshipLike = async (internship) => {
-    const { data } = await api.post(`/auth/lawyer/internships/${internship.id}/like`);
-    return data;
-  };
-
-  const handleInternshipComment = async (internship, text) => {
-    const { data } = await api.post(`/auth/lawyer/internships/${internship.id}/comments`, { text });
-    return data;
-  };
-
-  const handleOpenApplicantsDrawer = async (internship) => {
-    setDrawer({
-      open: true,
-      type: 'applicants',
-      title: internship.title,
-      parentId: internship.id,
-      parentLabel: 'Applicants',
-      items: internship.applicants || [],
-    });
-    setDrawerFilter('All');
-
-    // Refresh the selected internship so every application is shown, including
-    // applications received after the dashboard was initially opened.
-    try {
-      const { data } = await api.get('/auth/lawyer/student-interactions');
-      const internships = Array.isArray(data?.internships) ? data.internships : [];
-      const latestInternship = internships.find((item) => String(item.id) === String(internship.id));
-
-      if (!latestInternship) return;
-
-      setQuickStats(data?.stats || initialStats);
-      setDrawer({
-        open: true,
-        type: 'applicants',
-        title: latestInternship.title,
-        parentId: latestInternship.id,
-        parentLabel: 'Applicants',
-        items: Array.isArray(latestInternship.applicants) ? latestInternship.applicants : [],
-      });
-    } catch (error) {
-      console.error('Error refreshing internship applicants:', error);
-    }
-  };
-
-  const handleOpenParticipantsDrawer = (session) => {
-    setDrawer({
-      open: true,
-      type: 'participants',
-      title: session.title,
-      parentId: session.id,
-      parentLabel: 'Participants',
-      items: session.joinedStudents || [],
-    });
-    setDrawerFilter('All');
   };
 
   const handleToggleInternshipStatus = async (internship) => {
     try {
       setTogglingInternshipId(internship.id);
-      const { data } = await api.patch(`/auth/lawyer/internships/${internship.id}/toggle-status`);
-
-      if (data?.internship) {
-        setPublishedInternships((current) =>
-          current.map((item) => (item.id === internship.id ? { ...item, ...data.internship } : item))
-        );
-      }
-
-      if (data?.stats) {
-        setQuickStats(data.stats);
-      }
+      const nextStatus = internship.status === 'closed' ? 'open' : 'closed';
+      await api.patch(`/auth/lawyer/internships/${internship.id}/status`, { status: nextStatus });
+      await loadStudentInteractionPosts();
     } catch (error) {
       console.error('Error toggling internship status:', error);
       alert(error.response?.data?.message || 'Failed to update internship status');
@@ -1568,22 +662,13 @@ export default function LawyerDashboard() {
   };
 
   const handleDeleteInternship = async (internship) => {
-    const confirmed = window.confirm(`Delete "${internship.title}"? This will remove the offer from the dashboard and student views.`);
-    if (!confirmed) return;
+    const confirmDelete = window.confirm(`Are you sure you want to delete "${internship.title}"?`);
+    if (!confirmDelete) return;
 
     try {
       setDeletingInternshipId(internship.id);
-      const { data } = await api.delete(`/auth/lawyer/internships/${internship.id}`);
-
-      setPublishedInternships((current) => current.filter((item) => item.id !== internship.id));
-
-      if (drawer.open && drawer.parentId === internship.id) {
-        setDrawer(emptyDrawerState);
-      }
-
-      if (data?.stats) {
-        setQuickStats(data.stats);
-      }
+      await api.delete(`/auth/lawyer/internships/${internship.id}`);
+      await loadStudentInteractionPosts();
     } catch (error) {
       console.error('Error deleting internship:', error);
       alert(error.response?.data?.message || 'Failed to delete internship');
@@ -1592,103 +677,122 @@ export default function LawyerDashboard() {
     }
   };
 
-  const handleCreatePost = async ({ content, visibility, tags, images }) => {
-    if (!String(content || '').trim()) {
-      setPostError('Please add some text before posting.');
-      return;
-    }
-
+  const handleCreatePost = async (payload) => {
     try {
       setPosting(true);
       setPostError('');
-      const formData = new FormData();
-      formData.append('content', content.trim());
-      formData.append('visibility', visibility);
-      tags.forEach((tag) => formData.append('tags', tag));
-      images.forEach((image) => formData.append('images', image));
-
-      const { data } = await api.post('/posts/create', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      if (data?.post) {
-        setPublishedPosts((current) => [data.post, ...current]);
-      }
-
+      await api.post('/posts', payload);
       setShowPostComposer(false);
+      await loadOwnPosts();
     } catch (error) {
       console.error('Error creating post:', error);
-      setPostError(error.response?.data?.message || 'Failed to create post');
+      setPostError(error.response?.data?.message || 'Unable to publish this post right now.');
     } finally {
       setPosting(false);
     }
   };
 
-  const selectedNoticeFields = useMemo(
-    () => getNoticeFields(noticeForm.documentType),
-    [noticeForm.documentType]
-  );
+  const handleOpenApplicantsDrawer = async (internship) => {
+    try {
+      const { data } = await api.get(`/auth/lawyer/internships/${internship.id}/applicants`);
+      setDrawerFilter('All');
+      setDrawer({
+        open: true,
+        type: 'applicants',
+        title: internship.title,
+        parentId: internship.id,
+        parentLabel: 'Internship Role',
+        items: Array.isArray(data) ? data : [],
+      });
+    } catch (error) {
+      console.error('Error loading applicants:', error);
+      alert('Unable to load applicants for this internship right now.');
+    }
+  };
+
+  const handleOpenParticipantsDrawer = async (jamSession) => {
+    try {
+      const { data } = await api.get(`/auth/lawyer/jam-sessions/${jamSession.id}/participants`);
+      setDrawerFilter('All');
+      setDrawer({
+        open: true,
+        type: 'participants',
+        title: jamSession.title,
+        parentId: jamSession.id,
+        parentLabel: 'Jam Session',
+        items: Array.isArray(data) ? data : [],
+      });
+    } catch (error) {
+      console.error('Error loading participants:', error);
+      alert('Unable to load participants for this jam session right now.');
+    }
+  };
+
+  const handleApplicantDecision = async (applicantId, status) => {
+    if (!drawer.parentId) return;
+    try {
+      setUpdatingApplicantId(applicantId);
+      await api.patch(`/auth/lawyer/internships/${drawer.parentId}/applicants/${applicantId}`, { status });
+      setDrawer((current) => ({
+        ...current,
+        items: current.items.map((item) => (item.id === applicantId ? { ...item, status } : item)),
+      }));
+      await loadStudentInteractionPosts();
+    } catch (error) {
+      console.error('Error updating applicant status:', error);
+      alert(error.response?.data?.message || 'Failed to update applicant status');
+    } finally {
+      setUpdatingApplicantId('');
+    }
+  };
 
   const handleNoticeInput = (event) => {
-    const { name, type, checked, value } = event.target;
-    setNoticeForm((current) => ({
-      ...current,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+    const { name, value, type, checked } = event.target;
+    setNoticeForm((current) => ({ ...current, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handleNoticeNameInput = (fieldId, index, value) => {
     setNoticeForm((current) => {
-      const names = [...(current[fieldId] || [''])];
-      names[index] = value;
-      return { ...current, [fieldId]: names };
+      const currentList = Array.isArray(current[fieldId]) ? [...current[fieldId]] : [''];
+      currentList[index] = value;
+      return { ...current, [fieldId]: currentList };
     });
   };
 
   const addNoticeName = (fieldId) => {
-    setNoticeForm((current) => ({
-      ...current,
-      [fieldId]: [...(current[fieldId] || ['']), ''],
-    }));
+    setNoticeForm((current) => {
+      const currentList = Array.isArray(current[fieldId]) ? [...current[fieldId]] : [''];
+      return { ...current, [fieldId]: [...currentList, ''] };
+    });
   };
 
   const removeNoticeName = (fieldId, index) => {
     setNoticeForm((current) => {
-      const names = (current[fieldId] || ['']).filter((_, nameIndex) => nameIndex !== index);
-      return { ...current, [fieldId]: names.length ? names : [''] };
+      const currentList = Array.isArray(current[fieldId]) ? [...current[fieldId]] : [''];
+      if (currentList.length <= 1) return current;
+      currentList.splice(index, 1);
+      return { ...current, [fieldId]: currentList };
     });
   };
 
   const handleGenerateNotice = async (event) => {
     event.preventDefault();
-
-    const missingField = selectedNoticeFields.find(
-      (field) => field.required
-        && (!field.dependsOn || noticeForm[field.dependsOn])
-        && !isNoticeFieldFilled(field, noticeForm)
-    );
-
-    if (!noticeForm.documentType || missingField) {
-      setNoticeError(
-        missingField
-          ? `Please add ${missingField.label.toLowerCase()}.`
-          : 'Please select a document type and add the basic details.'
-      );
-      return;
-    }
-
     try {
       setNoticeLoading(true);
       setNoticeError('');
       setNoticeMessage('');
-      const { data } = await api.post('/ai/notice/generate', {
+      const payload = {
         documentType: noticeForm.documentType,
-        details: formatNoticeDetails(noticeForm.documentType, noticeForm),
-      });
-      setNoticeDraft(data?.draft || '');
+        clientNames: (noticeForm.clientNames || []).map((name) => name.trim()).filter(Boolean),
+        oppositePartyNames: (noticeForm.oppositePartyNames || []).map((name) => name.trim()).filter(Boolean),
+        details: noticeForm,
+      };
+      const { data } = await api.post('/notices/generate', payload);
+      setNoticeDraft(data.draft || '');
+      setNoticeMessage('Notice generated successfully.');
     } catch (error) {
       console.error('Error generating notice:', error);
-      setNoticeError(getNoticeRequestError(error, 'Failed to generate notice.'));
+      setNoticeError(getNoticeRequestError(error, 'Failed to generate legal notice.'));
     } finally {
       setNoticeLoading(false);
     }
@@ -1696,26 +800,21 @@ export default function LawyerDashboard() {
 
   const handleEditNotice = async (event) => {
     event.preventDefault();
-
-    if (!noticeDraft.trim() || !noticeEditPrompt.trim()) {
-      setNoticeError('Generate a draft and add an edit instruction first.');
-      return;
-    }
-
+    if (!noticeDraft.trim() || !noticeEditPrompt.trim()) return;
     try {
       setNoticeEditing(true);
       setNoticeError('');
       setNoticeMessage('');
-      const { data } = await api.post('/ai/notice/edit', {
-        documentType: noticeForm.documentType,
+      const { data } = await api.post('/notices/edit', {
         currentDraft: noticeDraft,
-        editInstruction: noticeEditPrompt,
+        editInstruction: noticeEditPrompt.trim(),
       });
-      setNoticeDraft(data?.draft || noticeDraft);
+      setNoticeDraft(data.updatedDraft || noticeDraft);
       setNoticeEditPrompt('');
+      setNoticeMessage('Draft updated based on your instruction.');
     } catch (error) {
       console.error('Error editing notice:', error);
-      setNoticeError(getNoticeRequestError(error, 'Failed to edit notice.'));
+      setNoticeError(getNoticeRequestError(error, 'Failed to update the notice draft.'));
     } finally {
       setNoticeEditing(false);
     }
@@ -1723,138 +822,180 @@ export default function LawyerDashboard() {
 
   const handleCopyNotice = async () => {
     if (!noticeDraft.trim()) return;
-
     try {
       await navigator.clipboard.writeText(noticeDraft);
-      setNoticeMessage('Draft copied.');
+      setNoticeMessage('Notice draft copied to clipboard.');
     } catch (error) {
       console.error('Error copying notice:', error);
-      setNoticeMessage('Select the draft text and copy it manually.');
+      setNoticeError('Failed to copy text automatically. Please copy it manually.');
     }
   };
 
-  const handleApplicantDecision = async (applicationId, status) => {
-    if (!drawer.parentId) return;
-
+  const handleConnectGoogleCalendar = async () => {
     try {
-      setUpdatingApplicantId(applicationId);
-      const { data } = await api.patch(
-        `/auth/lawyer/internships/${drawer.parentId}/applicants/${applicationId}/status`,
-        { status }
-      );
-
-      setPublishedInternships((current) =>
-        current.map((internship) =>
-          internship.id === drawer.parentId
-            ? {
-                ...internship,
-                applicants: (internship.applicants || []).map((applicant) =>
-                  applicant.id === applicationId ? { ...applicant, status } : applicant
-                ),
-              }
-            : internship
-        )
-      );
-
-      setDrawer((current) => ({
-        ...current,
-        items: current.items.map((item) =>
-          item.id === applicationId ? { ...item, status } : item
-        ),
-      }));
-
-      if (data?.stats) {
-        setQuickStats(data.stats);
-      }
+      setGoogleCalendarActionLoading(true);
+      setTeamError('');
+      const { data } = await api.get('/calendar/google/auth-url');
+      if (data?.url) window.location.href = data.url;
     } catch (error) {
-      console.error('Error updating applicant status:', error);
-      alert(error.response?.data?.message || 'Failed to update applicant');
+      console.error('Error getting Google Calendar auth URL:', error);
+      setTeamError('Failed to initiate Google Calendar connection.');
     } finally {
-      setUpdatingApplicantId('');
+      setGoogleCalendarActionLoading(false);
     }
   };
 
-  const pendingAppointments = appointments.filter((appointment) => appointment.status !== 'Accepted');
-  const acceptedClients = appointments.filter((appointment) => appointment.status === 'Accepted');
-  const pendingCount = pendingAppointments.filter((appointment) => appointment.status === 'Pending').length;
+  const handleDisconnectGoogleCalendar = async () => {
+    try {
+      setGoogleCalendarActionLoading(true);
+      setTeamError('');
+      await api.post('/calendar/google/disconnect');
+      setGoogleCalendarStatus({ connected: false, email: null });
+      setTeamMessage('Google Calendar disconnected.');
+    } catch (error) {
+      console.error('Error disconnecting Google Calendar:', error);
+    } finally {
+      setGoogleCalendarActionLoading(false);
+    }
+  };
+
+  const handleInternshipLike = async (item) => {
+    try {
+      const { data } = await api.post(`/auth/lawyer/internships/${item.id}/like`);
+      setPublishedInternships((prev) =>
+        prev.map((intern) => (intern.id === item.id ? { ...intern, likes: data.likes } : intern))
+      );
+    } catch (error) {
+      console.error('Error liking internship:', error);
+    }
+  };
+
+  const handleInternshipComment = async (item, text) => {
+    try {
+      const { data } = await api.post(`/auth/lawyer/internships/${item.id}/comment`, { text });
+      setPublishedInternships((prev) =>
+        prev.map((intern) => (intern.id === item.id ? { ...intern, comments: data.comments } : intern))
+      );
+    } catch (error) {
+      console.error('Error commenting on internship:', error);
+    }
+  };
+
+  const handleJamLike = async (item) => {
+    try {
+      const { data } = await api.post(`/auth/lawyer/jam-sessions/${item.id}/like`);
+      setPublishedJamSessions((prev) =>
+        prev.map((jam) => (jam.id === item.id ? { ...jam, likes: data.likes } : jam))
+      );
+    } catch (error) {
+      console.error('Error liking jam session:', error);
+    }
+  };
+
+  const handleJamComment = async (item, text) => {
+    try {
+      const { data } = await api.post(`/auth/lawyer/jam-sessions/${item.id}/comment`, { text });
+      setPublishedJamSessions((prev) =>
+        prev.map((jam) => (jam.id === item.id ? { ...jam, comments: data.comments } : jam))
+      );
+    } catch (error) {
+      console.error('Error commenting on jam session:', error);
+    }
+  };
+
+  // Derived Calculations
+  const pendingAppointments = useMemo(
+    () => appointments.filter((appt) => appt.status === 'Pending' || appt.status === 'Rejected'),
+    [appointments]
+  );
+
+  const acceptedClients = useMemo(
+    () => appointments.filter((appt) => appt.status === 'Accepted'),
+    [appointments]
+  );
+
+  const pendingCount = pendingAppointments.filter((a) => a.status === 'Pending').length;
   const clientCount = acceptedClients.length;
-  const lawyerTeam = user?.lawyerProfile?.team || null;
-  const hasLegacyTeam = Boolean(lawyerTeam?.teamCode);
-  const hasTeam = Boolean(teamWorkspace?.teamCode || teamWorkspaces.length || hasLegacyTeam);
-  const displayTeam = teamWorkspace || lawyerTeam || {};
-  const displayTeamRole = teamWorkspace?.role || lawyerTeam?.role;
-  const displayIsTeamOwner = displayTeamRole === 'owner';
-  const teamMembers = Array.isArray(displayTeam?.members) ? displayTeam.members : [];
-  const teamPendingRequests = Array.isArray(displayTeam?.pendingRequests) ? displayTeam.pendingRequests : [];
-  const teamCases = Array.isArray(displayTeam?.cases) ? displayTeam.cases : [];
-  const teamSize = hasTeam ? teamMembers.length + 1 : 0;
-  const currentLawyerId = getEntityId(user);
+
+  const displayTeam = useMemo(() => {
+    if (selectedTeamId && teamWorkspaces.length) {
+      const selected = teamWorkspaces.find((t) => String(t.id) === String(selectedTeamId));
+      if (selected) return selected;
+    }
+    return teamWorkspace || {};
+  }, [selectedTeamId, teamWorkspaces, teamWorkspace]);
+
+  const hasTeam = Boolean(displayTeam?.id || displayTeam?.teamCode);
+  const displayIsTeamOwner = displayTeam?.role === 'owner';
+  const teamMembers = Array.isArray(displayTeam.members) ? displayTeam.members : [];
+  const teamPendingRequests = Array.isArray(displayTeam.pendingJoinRequests) ? displayTeam.pendingJoinRequests : [];
+  const teamCases = Array.isArray(displayTeam.cases) ? displayTeam.cases : [];
+  const teamSize = (displayTeam.membersCount !== undefined && displayTeam.membersCount !== null)
+    ? Number(displayTeam.membersCount)
+    : teamMembers.length;
+
+  const currentLawyerId = user?._id || user?.id;
   const currentLawyerName = getLawyerDisplayName(user);
-  const normalizedTeamMembers = teamMembers.map((member) => {
-    const memberId = getEntityId(member.lawyerId || member.id || member._id);
-    return {
-      ...member,
-      id: memberId || member.email || member.phone || member.name,
-      lawyerId: memberId,
-      roleLabel: 'Team Member',
-      isOwner: false,
-    };
-  });
-  const currentActiveTeamTab = displayIsTeamOwner ? activeTeamTab : 'my_cases';
 
-  // For Team Owners, visibleTeamDirectory contains ONLY junior/joined members (excluding owner self profile to eliminate duplication).
-  // For Team Members, visibleTeamDirectory is empty (no team directory displayed).
-  const visibleTeamDirectory = displayIsTeamOwner ? normalizedTeamMembers : [];
+  const visibleTeamDirectory = useMemo(() => {
+    return teamMembers.map((member) => {
+      const memberId = getEntityId(member.lawyerId || member.id);
+      const isSelf = isSameId(memberId, currentLawyerId);
+      const isOwner = member.role === 'owner' || isSameId(memberId, displayTeam.ownerId);
+      const rawName = String(member.name || '').trim();
+      const displayName = isSelf ? `${rawName} (You)` : rawName;
+      return {
+        ...member,
+        name: displayName,
+        roleLabel: isOwner ? 'Team Owner' : 'Lawyer Member',
+      };
+    });
+  }, [teamMembers, currentLawyerId, displayTeam.ownerId]);
 
-  const targetMember = (displayIsTeamOwner && selectedTeamMemberId)
-    ? (visibleTeamDirectory.find((member) => String(member.id) === String(selectedTeamMemberId)) || null)
-    : null;
-  const activeTeamMember = displayIsTeamOwner ? targetMember : null;
-  const activeTeamMemberCases = activeTeamMember
-    ? teamCases.filter((teamCase) => {
-        const memberId = getEntityId(activeTeamMember.lawyerId || activeTeamMember.id);
-        const caseOwnerId = getEntityId(teamCase.addedBy);
-        if (isSameId(caseOwnerId, memberId)) return true;
-        const normCaseOwnerName = normalizeLawyerName(teamCase.addedByName);
-        const normMemberName = normalizeLawyerName(activeTeamMember.name);
-        return Boolean(normCaseOwnerName && normMemberName && normCaseOwnerName === normMemberName);
-      })
-    : [];
+  const activeTeamMember = useMemo(() => {
+    if (!selectedTeamMemberId) return null;
+    return visibleTeamDirectory.find((m) => String(m.id) === String(selectedTeamMemberId)) || null;
+  }, [selectedTeamMemberId, visibleTeamDirectory]);
+
   const activeTeamMemberId = activeTeamMember ? getEntityId(activeTeamMember.lawyerId || activeTeamMember.id) : '';
-  const canRemoveActiveTeamMember = displayIsTeamOwner
-    && activeTeamMember
-    && !activeTeamMember.isOwner
-    && Boolean(activeTeamMember.lawyerId);
 
-  const leaderId = getEntityId(
-    displayTeam.seniorLawyer
-    || displayTeam.seniorLawyerId
-    || displayTeam.owner
-    || displayTeam.ownerId
-    || (displayIsTeamOwner ? currentLawyerId : '')
-  );
-  const normLeaderName = normalizeLawyerName(
-    displayTeam.seniorLawyerName
-    || (displayIsTeamOwner ? currentLawyerName : '')
-  );
+  const activeTeamMemberCases = useMemo(() => {
+    if (!activeTeamMember) return [];
+    return teamCases.filter((teamCase) => {
+      const caseOwnerId = getEntityId(teamCase.addedBy);
+      const caseOwnerName = String(teamCase.addedByName || '').trim().toLowerCase();
+      const memberName = String(activeTeamMember.name || '').replace(/\s*\(you\)$/i, '').trim().toLowerCase();
+      if (caseOwnerId && activeTeamMemberId) {
+        return isSameId(caseOwnerId, activeTeamMemberId);
+      }
+      if (caseOwnerName && memberName) {
+        return caseOwnerName === memberName;
+      }
+      return false;
+    });
+  }, [activeTeamMember, activeTeamMemberId, teamCases]);
 
-  const ownTeamCases = teamCases
-    .map((teamCase) => ({ ...teamCase, teamName: displayTeam.firmName, teamCode: displayTeam.teamCode }))
-    .filter((teamCase) => {
+  const canRemoveActiveTeamMember = useMemo(() => {
+    if (!displayIsTeamOwner || !activeTeamMember) return false;
+    const memberRole = String(activeTeamMember.role || '').toLowerCase();
+    const isOwner = memberRole === 'owner' || isSameId(activeTeamMemberId, displayTeam.ownerId);
+    return !isOwner;
+  }, [displayIsTeamOwner, activeTeamMember, activeTeamMemberId, displayTeam.ownerId]);
+
+  const ownTeamCases = useMemo(() => {
+    return teamCases.filter((teamCase) => {
       const caseOwnerId = getEntityId(teamCase.addedBy);
       const normCaseOwnerName = normalizeLawyerName(teamCase.addedByName);
-
       if (displayIsTeamOwner) {
-        if (caseOwnerId && leaderId) {
-          return isSameId(caseOwnerId, leaderId);
+        const normLeaderName = normalizeLawyerName(displayTeam?.seniorLawyerName || currentLawyerName);
+        if (caseOwnerId && currentLawyerId) {
+          return isSameId(caseOwnerId, currentLawyerId);
         }
         if (normCaseOwnerName && normLeaderName) {
           return normCaseOwnerName === normLeaderName;
         }
         return !caseOwnerId && !normCaseOwnerName;
       }
-
-      // Joined Team Member view: display all cases belonging/assigned to logged-in lawyer
       const normCurrentName = normalizeLawyerName(currentLawyerName);
       if (caseOwnerId && currentLawyerId) {
         return isSameId(caseOwnerId, currentLawyerId);
@@ -1864,146 +1005,11 @@ export default function LawyerDashboard() {
       }
       return false;
     });
-  useEffect(() => {
-    if (!displayTeam?.id) {
-      setNextHearings([]);
-      setLoadedHearingsTeamId('');
-      return;
-    }
-    let active = true;
-    const teamId = String(displayTeam.id);
-    api.get(`/teams/${teamId}/next-hearings`)
-      .then(({ data }) => {
-        if (!active) return;
-        setNextHearings(Array.isArray(data?.cases) ? data.cases : []);
-        setLoadedHearingsTeamId(teamId);
-      })
-      .catch((error) => {
-        console.error('Error loading next hearings:', error);
-        if (active) setLoadedHearingsTeamId(teamId);
-      });
-    return () => { active = false; };
-  }, [displayTeam?.id, teamWorkspace?.updatedAt]);
+  }, [teamCases, displayIsTeamOwner, displayTeam?.seniorLawyerName, currentLawyerName, currentLawyerId]);
 
   const ownHearings = nextHearings;
-  const hearingsLoading = !teamWorkspaceLoaded
-    || teamWorkspaceLoading
-    || (Boolean(displayTeam?.id) && loadedHearingsTeamId !== String(displayTeam.id));
-
-  const loadGoogleCalendarStatus = useCallback(async () => {
-    try {
-      setGoogleCalendarLoading(true);
-      const { data } = await api.get('/calendar/google/status');
-      setGoogleCalendarStatus(data?.connected ? { connected: true, email: data.email } : { connected: false });
-    } catch (error) {
-      console.error('Error loading Google Calendar status:', error);
-      setGoogleCalendarStatus({ connected: false });
-    } finally {
-      setGoogleCalendarLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (user?.role === 'lawyer') loadGoogleCalendarStatus();
-  }, [loadGoogleCalendarStatus, searchParams, user?.role]);
-
-  const handleConnectGoogleCalendar = async () => {
-    try {
-      setGoogleCalendarActionLoading(true);
-      // The shared API client attaches the current JWT. The backend returns
-      // a signed Google consent URL only after that protected request passes.
-      const { data } = await api.get('/calendar/google/connect?response=json');
-      if (!data?.url) throw new Error('Google Calendar connection URL was not returned');
-      window.location.assign(data.url);
-    } catch (error) {
-      console.error('Error connecting Google Calendar:', error);
-      setGoogleCalendarActionLoading(false);
-    }
-  };
-
-  const handleDisconnectGoogleCalendar = async () => {
-    try {
-      setGoogleCalendarActionLoading(true);
-      await api.delete('/calendar/google/disconnect');
-      setGoogleCalendarStatus({ connected: false });
-    } catch (error) {
-      console.error('Error disconnecting Google Calendar:', error);
-    } finally {
-      setGoogleCalendarActionLoading(false);
-    }
-  };
-
-  const cards = [
-    {
-      title: 'New Appointments',
-      badge: pendingCount > 0 ? pendingCount : null,
-      icon: <FaCalendarPlus className="text-4xl text-[#15a276]" />,
-      desc: 'Review and manage incoming consultation requests.',
-      onClick: () => openFeature('appointments'),
-    },
-    {
-      title: 'Next Hearings',
-      badge: ownHearings.length > 0 ? ownHearings.length : null,
-      icon: <FaGavel className="text-4xl text-emerald-500" />,
-      desc: 'Track hearing dates from your own team cases.',
-      onClick: () => openFeature('hearings'),
-    },
-    {
-      title: 'Notice Generator',
-      icon: <FaFileSignature className="text-4xl text-[#15a276]" />,
-      desc: 'Quickly draft and send legal notices to parties.',
-      onClick: () => openFeature('notice-generator'),
-    },
-    {
-      title: 'My Clients',
-      badge: clientCount > 0 ? clientCount : null,
-      icon: <FaBriefcase className="text-4xl text-[#062552]" />,
-      desc: 'See all clients whose requests you have accepted.',
-      onClick: () => openFeature('clients'),
-    },
-    {
-      title: 'My Team',
-      badge: displayIsTeamOwner && (teamPendingRequests.length || teamMembers.length)
-        ? teamPendingRequests.length || teamMembers.length
-        : null,
-      icon: <Users className="h-10 w-10 text-amber-300" />,
-      desc: hasTeam
-        ? `${displayIsTeamOwner ? 'Created' : 'Joined'} ${displayTeam.firmName || 'your team'}.`
-        : 'Create a team or join with a senior lawyer code.',
-      onClick: () => {
-        setTeamMode(hasTeam ? 'overview' : 'create');
-        setTeamError('');
-        setTeamMessage('');
-        openFeature('team');
-      },
-    },
-    {
-      title: 'Student Interaction',
-      icon: <FaUserGraduate className="text-4xl text-cyan-400" />,
-      desc: 'Publish internships and jam sessions for students.',
-      onClick: () => openFeature('student-interactions'),
-    },
-  ];
-
-  const filteredDrawerItems = useMemo(() => {
-    if (drawerFilter === 'All') return drawer.items;
-    if (drawer.type === 'participants') return drawer.items;
-
-    return drawer.items.filter(
-      (item) => String(item.status || 'pending').toLowerCase() === drawerFilter.toLowerCase()
-    );
-  }, [drawer.items, drawer.type, drawerFilter]);
-
-  const activeDrawerFilters = drawer.type === 'participants' ? participantFilters : applicantFilters;
-
-  const hasActiveFeature = Boolean(
-    showAppointmentsModal ||
-    showClientsModal ||
-    showHearingsModal ||
-    showTeamModal ||
-    showNoticeGenerator ||
-    showStudentInteractionModal
-  );
+  const hearingsLoading = !teamWorkspaceLoaded || teamWorkspaceLoading || (Boolean(displayTeam?.id) && loadedHearingsTeamId !== String(displayTeam.id));
+  const currentActiveTeamTab = displayIsTeamOwner ? activeTeamTab : 'my_cases';
 
   const openFeature = (section) => {
     setSearchParams({ section });
@@ -2021,6 +1027,77 @@ export default function LawyerDashboard() {
     setSearchParams({}, { replace: true });
   };
 
+  const cards = [
+    {
+      title: 'New Appointments',
+      badge: pendingCount > 0 ? pendingCount : null,
+      icon: <FaCalendarPlus className="text-2xl text-[#15a276]" />,
+      desc: 'Review and manage incoming consultation requests.',
+      onClick: () => openFeature('appointments'),
+    },
+    {
+      title: 'Next Hearings',
+      badge: ownHearings.length > 0 ? ownHearings.length : null,
+      icon: <FaGavel className="text-2xl text-emerald-500" />,
+      desc: 'Track hearing dates from your own team cases.',
+      onClick: () => openFeature('hearings'),
+    },
+    {
+      title: 'Notice Generator',
+      icon: <FaFileSignature className="text-2xl text-[#15a276]" />,
+      desc: 'Quickly draft and send legal notices to parties.',
+      onClick: () => openFeature('notice-generator'),
+    },
+    {
+      title: 'My Clients',
+      badge: clientCount > 0 ? clientCount : null,
+      icon: <FaBriefcase className="text-2xl text-[#062552]" />,
+      desc: 'See all clients whose requests you have accepted.',
+      onClick: () => openFeature('clients'),
+    },
+    {
+      title: 'My Team',
+      badge: displayIsTeamOwner && (teamPendingRequests.length || teamMembers.length)
+        ? teamPendingRequests.length || teamMembers.length
+        : null,
+      icon: <Users className="h-6 w-6 text-amber-500" />,
+      desc: hasTeam
+        ? `${displayIsTeamOwner ? 'Created' : 'Joined'} ${displayTeam.firmName || 'your team'}.`
+        : 'Create a team or join with a senior lawyer code.',
+      onClick: () => {
+        setTeamMode(hasTeam ? 'overview' : 'create');
+        setTeamError('');
+        setTeamMessage('');
+        openFeature('team');
+      },
+    },
+    {
+      title: 'Student Interaction',
+      icon: <FaUserGraduate className="text-2xl text-cyan-400" />,
+      desc: 'Publish internships and jam sessions for students.',
+      onClick: () => openFeature('student-interactions'),
+    },
+  ];
+
+  const filteredDrawerItems = useMemo(() => {
+    if (drawerFilter === 'All') return drawer.items;
+    if (drawer.type === 'participants') return drawer.items;
+    return drawer.items.filter(
+      (item) => String(item.status || 'pending').toLowerCase() === drawerFilter.toLowerCase()
+    );
+  }, [drawer.items, drawer.type, drawerFilter]);
+
+  const activeDrawerFilters = drawer.type === 'participants' ? participantFilters : applicantFilters;
+
+  const hasActiveFeature = Boolean(
+    showAppointmentsModal ||
+    showClientsModal ||
+    showHearingsModal ||
+    showTeamModal ||
+    showNoticeGenerator ||
+    showStudentInteractionModal
+  );
+
   return (
     <div className="lawyer-theme lawyer-dashboard-workspace min-h-screen bg-[#f3f8fb] text-[#062552] relative">
       <AppHeader variant="lawyer" profileTo="/profile" showBrandName />
@@ -2028,1701 +1105,142 @@ export default function LawyerDashboard() {
       <div className="max-w-6xl mx-auto p-6 md:p-8">
         {hasActiveFeature ? (
           <div>
-            {showAppointmentsModal && (
-              <ModalShell title="Incoming Appointments" icon={<FaCalendarPlus className="text-[#15a276]" />} onClose={closeAllFeatures}>
-                {loadingAppointments ? (
-                  <EmptyBlock icon={<FaCalendarPlus size={24} />} message="Loading appointment requests..." />
-                ) : pendingAppointments.length === 0 ? (
-                  <EmptyBlock icon={<FaCalendarPlus size={24} />} message="No pending or rejected appointment requests right now." />
-                ) : (
-                  <div className="grid grid-cols-1 gap-4">
-                    {pendingAppointments.slice().reverse().map((appt) => (
-                      <div key={appt.id} className="bg-white border border-[#d7e9ef] hover:border-[#15a276]/50 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm transition-all text-[#062552]">
-                        <div>
-                          <h3 className="font-bold text-lg text-[#062552]">{appt.userName}</h3>
-                          <p className="text-xs text-[#5f7488] mb-2">Requested on: {new Date(appt.timestamp).toLocaleString()}</p>
-                          <StatusPill status={appt.status} />
-                        </div>
-                        {appt.status === 'Pending' ? (
-                          <div className="flex gap-3 w-full sm:w-auto mt-3 sm:mt-0 shadow-sm">
-                            <button onClick={() => updateStatus(appt.id, 'Accepted')} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2 bg-[#15a276] hover:bg-[#118b66] text-white rounded-xl font-bold transition-transform active:scale-95">
-                              <FaCheck /> Accept
-                            </button>
-                            <button onClick={() => updateStatus(appt.id, 'Rejected')} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl font-bold transition-transform active:scale-95 border border-red-200">
-                              <FaTimes /> Reject
-                            </button>
-                          </div>
-                        ) : appt.status === 'Rejected' ? (
-                          <p className="text-xs text-red-600 font-medium">Request rejected</p>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </ModalShell>
-            )}
-
-      {showClientsModal && (
-        <ModalShell title="My Clients" icon={<FaBriefcase className="text-[#062552]" />} onClose={closeAllFeatures}>
-          {loadingAppointments ? (
-            <EmptyBlock icon={<FaBriefcase size={24} />} message="Loading accepted clients..." />
-          ) : acceptedClients.length === 0 ? (
-            <EmptyBlock icon={<FaBriefcase size={24} />} message="No accepted clients yet." />
-          ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {acceptedClients.slice().reverse().map((client) => (
-                <div key={client.id} className="bg-white border border-[#d7e9ef] hover:border-[#15a276]/50 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm transition-all text-[#062552]">
-                  <div>
-                    <h3 className="font-bold text-lg text-[#062552]">{client.userName}</h3>
-                    <p className="text-xs text-[#5f7488] mb-2">Accepted on: {new Date(client.timestamp).toLocaleString()}</p>
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200">
-                      <FaCircle className="text-[8px]" /> Accepted Client
-                    </span>
-                  </div>
-                  <div className="flex flex-col items-stretch sm:items-end gap-2 w-full sm:w-auto">
-                    <p className="text-xs text-[#5f7488] font-medium">Client communication unlocked</p>
-                    <button
-                      onClick={() => handleOpenChat(client)}
-                      className="verdits-primary-action px-5 py-2 rounded-xl font-bold shadow transition-transform active:scale-95"
-                    >
-                      Go to Chat
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </ModalShell>
-      )}
-
-      {showHearingsModal && (
-        <ModalShell title="Next Hearings" icon={<FaGavel className="text-[#062552]" />} onClose={closeAllFeatures}>
-          <div className="lawyer-team-workspace space-y-4">
-            <div className="rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
-              <h3 className="text-lg font-bold text-[#062552]">Google Calendar</h3>
-              {googleCalendarLoading ? (
-                <p className="mt-2 text-sm text-[#5f7488]">Checking connection...</p>
-              ) : googleCalendarStatus.connected ? (
-                <div className="mt-2">
-                  <p className="text-sm font-semibold text-[#15a276]">✓ Google Calendar Connected</p>
-                  <p className="mt-1 text-sm text-[#5f7488]">Connected Email: {googleCalendarStatus.email}</p>
-                  <button
-                    type="button"
-                    onClick={handleDisconnectGoogleCalendar}
-                    disabled={googleCalendarActionLoading}
-                    className="mt-4 rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-bold text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {googleCalendarActionLoading ? 'Disconnecting...' : 'Disconnect'}
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleConnectGoogleCalendar}
-                  disabled={googleCalendarActionLoading}
-                  className="mt-4 rounded-xl bg-[#15a276] px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {googleCalendarActionLoading ? 'Connecting...' : '📅 Connect Google Calendar'}
-                </button>
-              )}
-            </div>
-
-            <div className="rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
-              <h3 className="text-lg font-bold text-[#062552]">My Hearings</h3>
-              <p className="mt-1 text-sm text-[#5f7488]">
-                Hearing dates from cases added by you. Other team members' matters are not shown here.
-              </p>
-            </div>
-
-            {hearingsLoading ? (
-              <EmptyBlock icon={<FaGavel size={24} />} message="Loading hearings..." />
-            ) : ownHearings.length === 0 ? (
-              <EmptyBlock icon={<FaGavel size={24} />} message="No hearings scheduled from your team cases yet." />
-            ) : (
-              <div className="grid grid-cols-1 gap-4">
-                {ownHearings.map((hearing) => (
-                  <div key={`${hearing.id}-${hearing.teamCode || 'team'}`} className="rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm hover:border-[#15a276]/50 transition-all text-[#062552]">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold uppercase tracking-wide text-amber-700">{hearing.teamName || 'Team Case'}</p>
-                        <h3 className="mt-2 text-xl font-bold text-[#062552]">{hearing.caseTitle || 'Untitled Case'}</h3>
-                        <p className="mt-1 text-sm text-[#5f7488]">Client: {hearing.clientName || 'Not added'}</p>
-                      </div>
-                      <span className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
-                        {formatDate(hearing.hearingDate)}
-                      </span>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
-                      <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-3">
-                        <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Court</p>
-                        <p className="mt-1 font-semibold text-[#062552]">{hearing.courtName || 'Not added'}</p>
-                      </div>
-                      <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-3">
-                        <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Status</p>
-                        <p className="mt-1 font-semibold text-[#062552]">{getTeamCaseStatusLabel(hearing.status)}</p>
-                      </div>
-                      <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-3">
-                        <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Team Code</p>
-                        <p className="mt-1 font-mono font-semibold text-[#062552]">{hearing.teamCode || 'Not added'}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </ModalShell>
-      )}
-
-      {showTeamModal && (
-        <ModalShell
-          title="My Team"
-          icon={<Users className="h-6 w-6 text-[#15a276]" />}
-          onClose={closeAllFeatures}
-        >
-          <div className="lawyer-team-workspace text-[#062552]">
-            {hasTeam ? (
-              <div className="space-y-5">
-              <div className="rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-amber-300">
-                      {displayIsTeamOwner ? 'Team you own' : 'Joined team'}
-                    </p>
-                    <h3 className="mt-2 text-2xl font-bold text-white">{displayTeam.firmName || 'My Team'}</h3>
-                    <p className="mt-2 text-sm text-zinc-400">Team Owner: {displayTeam.seniorLawyerName || 'Not added'}</p>
-                  </div>
-                  <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-3 text-sm">
-                    <p className="text-[#5f7488]">Team size</p>
-                    <p className="mt-1 text-xl font-bold text-[#062552]">
-                      {teamSize}/{displayTeam.maxTeamSize || teamSize}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                  <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-3">
-                    <KeyRound className="h-5 w-5 shrink-0 text-[#15a276]" />
-                    <span className="min-w-0 flex-1 font-mono text-lg font-bold tracking-wider text-[#062552]">
-                      {displayTeam.teamCode}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleCopyTeamCode}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 font-bold px-5 py-3 transition border border-[#d6b85b] shadow-sm"
-                  >
-                    <Copy size={18} />
-                    Copy Code
-                  </button>
-                </div>
-              </div>
-
-              {teamWorkspaceLoading ? (
-                <p className="rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-sm font-semibold text-[#5f7488]">
-                  Refreshing team workspace...
-                </p>
-              ) : null}
-
-              <div className="rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <h3 className="text-base font-bold text-[#062552]">Your Teams</h3>
-                    <p className="mt-1 text-xs text-[#5f7488]">Switch between teams, create another team, or request to join a team.</p>
-                  </div>
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTeamMode('create');
-                        setTeamError('');
-                        setTeamMessage('');
-                      }}
-                      className="rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-4 py-2.5 text-sm font-bold transition shadow-sm border border-[#d6b85b]"
-                    >
-                      Create Team
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTeamMode('join');
-                        setTeamError('');
-                        setTeamMessage('');
-                      }}
-                      className="rounded-xl border border-[#d7e9ef] bg-white px-4 py-2.5 text-sm font-bold text-[#062552] transition hover:bg-[#f3f8fb]"
-                    >
-                      Join Team
-                    </button>
-                  </div>
-                </div>
-
-                {teamWorkspaces.length ? (
-                  <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {teamWorkspaces.map((team) => {
-                      const isSelectedTeam = String(team.id) === String(displayTeam.id);
-                      return (
-                        <button
-                          key={team.id || team.teamCode}
-                          type="button"
-                          onClick={() => {
-                            handleSelectTeam(String(team.id));
-                            setTeamMode('overview');
-                          }}
-                          className={`rounded-xl border p-4 text-left transition ${
-                            isSelectedTeam
-                              ? 'border-[#15a276] bg-[#e8f7f2] shadow-sm'
-                              : 'border-[#d7e9ef] bg-white hover:border-[#15a276]/50'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <h4 className="truncate font-bold text-[#062552]">{team.firmName || 'Lawyer Team'}</h4>
-                              <p className="mt-1 text-xs font-semibold text-[#5f7488]">{team.role === 'owner' ? 'Created by you' : 'Joined team'}</p>
-                            </div>
-                            <span className="rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-2.5 py-1 text-[11px] font-bold text-[#5f7488]">
-                              {team.teamCode}
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </div>
-
-              {teamMode === 'create' ? (
-                <form onSubmit={handleCreateTeam} className="space-y-4 rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <input
-                      name="firmName"
-                      value={createTeamForm.firmName}
-                      onChange={handleCreateTeamInput}
-                      placeholder="Firm name"
-                      className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
-                      required
-                    />
-                    <input
-                      name="seniorLawyerName"
-                      value={createTeamForm.seniorLawyerName}
-                      onChange={handleCreateTeamInput}
-                      placeholder="Team Owner name"
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
-                      required
-                    />
-                    <input
-                      type="number"
-                      min="2"
-                      name="maxTeamSize"
-                      value={createTeamForm.maxTeamSize}
-                      onChange={handleCreateTeamInput}
-                      className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
-                      required
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={teamLoading}
-                    className="verdits-primary-action inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-bold transition disabled:cursor-not-allowed"
-                  >
-                    <Users size={18} />
-                    {teamLoading ? 'Creating...' : 'Create Team'}
-                  </button>
-                </form>
-              ) : null}
-
-              {teamMode === 'join' ? (
-                <form onSubmit={handleJoinTeam} className="space-y-4 rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
-                  <div>
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#5f7488]">Team code</label>
-                    <input
-                      name="teamCode"
-                      value={joinTeamForm.teamCode}
-                      onChange={handleJoinTeamInput}
-                      placeholder="Enter team code"
-                      className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
-                      required
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={teamLoading}
-                    className="verdits-primary-action inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-bold transition disabled:cursor-not-allowed"
-                  >
-                    <UserPlus size={18} />
-                        {teamLoading ? 'Sending...' : 'Request to Join'}
-                  </button>
-                </form>
-              ) : null}
-
-              {/* Sub-workspace Navigation Tabs */}
-              <div className="rounded-2xl border border-[#d7e9ef] bg-white p-2 shadow-sm flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveTeamTab('my_cases')}
-                  className={`rounded-xl px-5 py-3 text-sm font-bold transition ${
-                    currentActiveTeamTab === 'my_cases'
-                      ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
-                      : 'bg-transparent text-[#5f7488] hover:bg-[#f8fbfc] hover:text-[#062552]'
-                  }`}
-                >
-                  My Cases ({ownTeamCases.length})
-                </button>
-
-                {displayIsTeamOwner ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTeamTab('my_team')}
-                      className={`rounded-xl px-5 py-3 text-sm font-bold transition ${
-                        currentActiveTeamTab === 'my_team'
-                          ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
-                          : 'bg-transparent text-[#5f7488] hover:bg-[#f8fbfc] hover:text-[#062552]'
-                      }`}
-                    >
-                      My Team ({visibleTeamDirectory.length})
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setActiveTeamTab('join_requests')}
-                      className={`relative rounded-xl px-5 py-3 text-sm font-bold transition ${
-                        currentActiveTeamTab === 'join_requests'
-                          ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
-                          : 'bg-transparent text-[#5f7488] hover:bg-[#f8fbfc] hover:text-[#062552]'
-                      }`}
-                    >
-                      Join Requests
-                      {teamPendingRequests.length > 0 ? (
-                        <span className="ml-2 rounded-full bg-red-500 px-2 py-0.5 text-xs text-white">
-                          {teamPendingRequests.length}
-                        </span>
-                      ) : null}
-                    </button>
-                  </>
-                ) : null}
-              </div>
-
-              {/* My Cases Tab View (Shown when currentActiveTeamTab === 'my_cases') */}
-              {currentActiveTeamTab === 'my_cases' ? (
-                <div className="space-y-5">
-                  <div className="flex flex-col gap-3 rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <h3 className="text-lg font-bold text-[#062552]">My Personal Cases</h3>
-                      <p className="mt-1 text-sm text-[#5f7488]">
-                        Cases added by you for this team.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowTeamCaseForm((current) => !current)}
-                      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition shadow-sm border ${
-                        showTeamCaseForm
-                          ? 'bg-red-600 hover:bg-red-700 text-white border-red-700'
-                          : 'bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 border-[#d6b85b]'
-                      }`}
-                    >
-                      {showTeamCaseForm ? <FaTimes /> : <FaPlus />}
-                      {showTeamCaseForm ? 'Close Form' : 'Add Case'}
-                    </button>
-                  </div>
-
-                  {showTeamCaseForm ? (
-                    <form onSubmit={handleAddTeamCase} className="grid grid-cols-1 gap-4 rounded-xl border border-zinc-800 bg-zinc-950 p-5 md:grid-cols-2">
-                      <p className="text-sm font-semibold text-zinc-400 md:col-span-2">
-                        This case will be saved under your lawyer profile in the team.
-                      </p>
-                      <div>
-                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Client Name</label>
-                        <input
-                          name="clientName"
-                          value={teamCaseForm.clientName}
-                          onChange={handleTeamCaseInput}
-                          placeholder="Client name"
-                          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Client Phone</label>
-                        <input
-                          name="clientPhone"
-                          value={teamCaseForm.clientPhone}
-                          onChange={handleTeamCaseInput}
-                          placeholder="Client phone number"
-                          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Client Address</label>
-                        <input
-                          name="clientAddress"
-                          value={teamCaseForm.clientAddress}
-                          onChange={handleTeamCaseInput}
-                          placeholder="Client address"
-                          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Case Name</label>
-                        <input
-                          name="caseName"
-                          value={teamCaseForm.caseName}
-                          onChange={handleTeamCaseInput}
-                          placeholder="Case name"
-                          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Court Name</label>
-                        <input
-                          name="courtName"
-                          value={teamCaseForm.courtName}
-                          onChange={handleTeamCaseInput}
-                          placeholder="Court name"
-                          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Starting Date</label>
-                        <input
-                          type="date"
-                          name="startingDate"
-                          value={teamCaseForm.startingDate}
-                          onChange={handleTeamCaseInput}
-                          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Next Hearing Date</label>
-                        <input
-                          type="date"
-                          name="nextHearingDate"
-                          value={teamCaseForm.nextHearingDate}
-                          onChange={handleTeamCaseInput}
-                          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Brief Info About the Case</label>
-                        <textarea
-                          name="briefInfo"
-                          value={teamCaseForm.briefInfo}
-                          onChange={handleTeamCaseInput}
-                          placeholder="Brief info about the case"
-                          rows="4"
-                          className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
-                          required
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Status</label>
-                        <select
-                          name="status"
-                          value={teamCaseForm.status}
-                          onChange={handleTeamCaseInput}
-                          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
-                        >
-                          {teamCaseStatuses.map((status) => (
-                            <option key={status.value} value={status.value} className="text-zinc-950">
-                              {status.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="md:col-span-2 flex justify-end">
-                        <button
-                          type="submit"
-                          disabled={savingTeamCase}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-5 py-3 font-bold transition border border-[#d6b85b] shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          <FaCheck />
-                          {savingTeamCase ? 'Saving...' : 'Save Case'}
-                        </button>
-                      </div>
-                    </form>
-                  ) : null}
-
-                  {selectedCaseForDetailsId && ownTeamCases.some((item) => String(item.id) === String(selectedCaseForDetailsId)) ? (() => {
-                    const selectedCase = ownTeamCases.find((item) => String(item.id) === String(selectedCaseForDetailsId));
-                    return (
-                      <CaseDetailsView
-                        selectedCase={selectedCase}
-                        displayTeam={displayTeam}
-                        onBack={() => setSelectedCaseForDetailsId('')}
-                        teamCaseStatuses={teamCaseStatuses}
-                        updatingTeamCaseId={updatingTeamCaseId}
-                        handleUpdateTeamCaseStatus={handleUpdateTeamCaseStatus}
-                        handleDeleteTeamCase={handleDeleteTeamCase}
-                        loadTeamWorkspace={loadTeamWorkspace}
-                        formatDate={formatDate}
-                      />
-                    );
-                  })() : ownTeamCases.length === 0 ? (
-                    <EmptyBlock icon={<FaBriefcase size={24} />} message="No cases added by you yet." />
-                  ) : (
-                    <div className="space-y-4">
-                      {ownTeamCases.map((teamCase) => (
-                        <div
-                          key={teamCase.id}
-                          onClick={() => setSelectedCaseForDetailsId(String(teamCase.id))}
-                          className="group cursor-pointer rounded-xl border border-zinc-800 bg-zinc-950 p-5 transition hover:border-[#15a276]"
-                        >
-                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                            <div>
-                              <h4 className="text-lg font-bold text-white group-hover:text-[#15a276] transition">
-                                {teamCase.caseName || teamCase.caseTitle || teamCase.title || 'Untitled Case'}
-                              </h4>
-                              <p className="mt-1 text-sm text-zinc-400">
-                                Client: <span className="font-semibold text-blue-300 underline">{teamCase.clientName || 'Not added'}</span>
-                              </p>
-                              <p className="mt-1 text-xs text-zinc-500">Added on {formatDate(teamCase.createdAt) || 'recently'}</p>
-                            </div>
-                            <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
-                              <select
-                                value={teamCase.status || 'new'}
-                                onChange={(event) => handleUpdateTeamCaseStatus(teamCase, event.target.value)}
-                                disabled={updatingTeamCaseId === teamCase.id}
-                                className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-amber-300 disabled:opacity-60"
-                              >
-                                {teamCaseStatuses.map((status) => (
-                                  <option key={status.value} value={status.value} className="text-zinc-950">
-                                    {status.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-
-                          <p className="mt-4 text-sm leading-7 text-zinc-300">{teamCase.briefInfo || teamCase.caseDetails || 'No brief info added.'}</p>
-
-                          <div className="mt-4 flex items-center justify-between border-t border-zinc-900 pt-3 text-sm">
-                            <div className="flex items-center gap-4 text-xs text-zinc-400">
-                              <span>Court: <strong className="text-zinc-200">{teamCase.courtName || 'Not added'}</strong></span>
-                              <span>Starting: <strong className="text-zinc-200">{formatDate(teamCase.startingDate || teamCase.hearingDate) || 'Not added'}</strong></span>
-                            </div>
-                            <span className="text-xs font-bold text-[#15a276] group-hover:underline flex items-center gap-1">
-                              View Case Details &rarr;
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : null}
-
-              {/* Tab 3: My Team (Owner Only Tab) */}
-              {currentActiveTeamTab === 'my_team' && displayIsTeamOwner ? (
-                !activeTeamMember ? (
-                  /* Step 1: Full-Width Team Directory View */
-                  <div className="space-y-5">
-                    <div className="rounded-2xl border border-[#d7e9ef] bg-white p-6 shadow-sm">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-[#eef5f8] pb-4">
-                        <div>
-                          <h3 className="text-xl font-bold text-[#062552]">Team Directory</h3>
-                          <p className="mt-1 text-sm text-[#5f7488]">
-                            Select a lawyer to view their profile and assigned cases.
-                          </p>
-                        </div>
-                        <span className="shrink-0 self-start sm:self-auto rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-1.5 text-sm font-bold text-[#5f7488]">
-                          {visibleTeamDirectory.length} {visibleTeamDirectory.length === 1 ? 'Lawyer' : 'Lawyers'}
-                        </span>
-                      </div>
-
-                      {visibleTeamDirectory.length === 0 ? (
-                        <EmptyBlock icon={<UserPlus size={24} />} message="No team members in directory." />
-                      ) : (
-                        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                          {visibleTeamDirectory.map((member) => {
-                            const memberId = getEntityId(member.lawyerId || member.id);
-                            const isSelfMember = isSameId(memberId, currentLawyerId);
-                            const canViewMemberDetails = displayIsTeamOwner || isSelfMember;
-                            const memberCasesCount = teamCases.filter((teamCase) => {
-                              const caseOwnerId = getEntityId(teamCase.addedBy);
-                              const caseOwnerName = String(teamCase.addedByName || '').trim().toLowerCase();
-                              const memberName = String(member.name || '').replace(/\s*\(you\)$/i, '').trim().toLowerCase();
-                              return (caseOwnerId && memberId && caseOwnerId === memberId)
-                                || (caseOwnerName && memberName && caseOwnerName === memberName);
-                            }).length;
-
-                            return (
-                              <div
-                                key={member.id || member.phone || member.email}
-                                onClick={canViewMemberDetails ? () => setSelectedTeamMemberId(String(member.id)) : undefined}
-                                className={`rounded-2xl border p-5 shadow-sm transition ${
-                                  canViewMemberDetails
-                                    ? 'group cursor-pointer border-[#d7e9ef] bg-white hover:border-[#15a276] hover:shadow-md'
-                                    : 'cursor-default border-[#e2edf1] bg-[#f8fbfc] opacity-90'
-                                }`}
-                              >
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="min-w-0">
-                                    <h4 className={`truncate text-base font-bold transition ${
-                                      canViewMemberDetails ? 'text-[#062552] group-hover:text-[#15a276]' : 'text-[#5f7488]'
-                                    }`}>
-                                      {member.name || 'Lawyer'}
-                                    </h4>
-                                    <p className="mt-1 truncate text-xs text-[#5f7488]">
-                                      {member.email || member.phone || 'Contact not shared'}
-                                    </p>
-                                  </div>
-                                  {canViewMemberDetails ? (
-                                    <span className="shrink-0 rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-2.5 py-1 text-xs font-bold text-[#5f7488]">
-                                      {memberCasesCount} {memberCasesCount === 1 ? 'case' : 'cases'}
-                                    </span>
-                                  ) : (
-                                    <span className="shrink-0 rounded-full border border-gray-200 bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-500">
-                                      Private
-                                    </span>
-                                  )}
-                                </div>
-
-                                <div className="mt-4 flex items-center justify-between border-t border-[#f0f6f8] pt-3">
-                                  <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                                    {member.roleLabel}
-                                  </span>
-                                  {canViewMemberDetails ? (
-                                    <span className="text-xs font-bold text-[#15a276] group-hover:underline flex items-center gap-1">
-                                      View Cases &rarr;
-                                    </span>
-                                  ) : null}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  /* Step 2: Dedicated Member Details View */
-                  <div className="space-y-5">
-                    {/* Navigation Header with Back Button */}
-                    <div className="flex flex-col gap-3 rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedTeamMemberId('')}
-                        className="inline-flex items-center gap-2 rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-2 text-xs font-bold text-[#062552] transition hover:bg-[#eef5f8] self-start sm:self-auto"
-                      >
-                        <FaArrowLeft />
-                        Back to Team Directory
-                      </button>
-
-                      <div className="flex items-center gap-3">
-                        {canRemoveActiveTeamMember ? (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveTeamMember(activeTeamMember)}
-                            disabled={removingTeamMemberId === activeTeamMemberId}
-                            className="inline-flex items-center justify-center rounded-xl border border-red-200 bg-red-50 px-3.5 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {removingTeamMemberId === activeTeamMemberId ? 'Removing...' : 'Remove Member'}
-                          </button>
-                        ) : null}
-                        <span className="rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-3 py-1 text-xs font-bold text-[#5f7488]">
-                          {activeTeamMemberCases.length} {activeTeamMemberCases.length === 1 ? 'case assigned' : 'cases assigned'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Member Profile Header */}
-                    <div className="rounded-2xl border border-[#d7e9ef] bg-white p-6 shadow-sm">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <div className="flex items-center gap-3">
-                            <h3 className="text-xl font-bold text-[#062552]">{activeTeamMember.name || 'Lawyer'}</h3>
-                            <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                              {activeTeamMember.roleLabel}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-sm text-[#5f7488]">
-                            Email: {activeTeamMember.email || 'Not shared'} | Phone: {activeTeamMember.phone || 'Not shared'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Assigned Cases List */}
-                    <div className="space-y-4">
-                      <h4 className="text-base font-bold text-[#062552]">Assigned Cases</h4>
-                      {activeTeamMemberCases.length === 0 ? (
-                        <EmptyBlock icon={<FaBriefcase size={24} />} message="No cases added by this lawyer yet." />
-                      ) : (
-                        <div className="space-y-4">
-                          {activeTeamMemberCases.map((teamCase) => (
-                            <div key={teamCase.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
-                              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                                <div>
-                                  <h4 className="text-lg font-bold text-white">{teamCase.caseName || teamCase.caseTitle || 'Untitled Case'}</h4>
-                                  <p className="mt-1 text-sm text-zinc-400">Client: {teamCase.clientName || 'Not added'}</p>
-                                  <p className="mt-1 text-xs text-zinc-500">Added on {formatDate(teamCase.createdAt) || 'recently'}</p>
-                                </div>
-                                {teamCase.canEdit ? (
-                                  <select
-                                    value={teamCase.status || 'new'}
-                                    onChange={(event) => handleUpdateTeamCaseStatus(teamCase, event.target.value)}
-                                    disabled={updatingTeamCaseId === teamCase.id}
-                                    className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-amber-300 disabled:opacity-60"
-                                  >
-                                    {teamCaseStatuses.map((status) => (
-                                      <option key={status.value} value={status.value} className="text-zinc-950">
-                                        {status.label}
-                                      </option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <span className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-400">
-                                    {getTeamCaseStatusLabel(teamCase.status)}
-                                  </span>
-                                )}
-                              </div>
-
-                              <p className="mt-4 text-sm leading-7 text-zinc-300">{teamCase.briefInfo || teamCase.caseDetails || 'No brief info added.'}</p>
-
-                              <div className="mt-4 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
-                                <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                                  <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Court</p>
-                                  <p className="mt-1 text-zinc-200">{teamCase.courtName || 'Not added'}</p>
-                                </div>
-                                <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                                  <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Starting Date</p>
-                                  <p className="mt-1 text-zinc-200">{formatDate(teamCase.startingDate || teamCase.hearingDate) || 'Not added'}</p>
-                                </div>
-                                <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
-                                  <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Status</p>
-                                  <p className="mt-1 text-zinc-200">{getTeamCaseStatusLabel(teamCase.status)}</p>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              ) : null}
-
-              {/* Tab 3: Join Requests (Owner Tab) */}
-              {currentActiveTeamTab === 'join_requests' && displayIsTeamOwner ? (
-                <div className="rounded-2xl border border-[#d7e9ef] bg-white p-6 shadow-sm max-w-3xl">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <h3 className="text-lg font-bold text-[#062552]">Join Requests</h3>
-                      <p className="mt-1 text-sm text-[#5f7488]">Review requests from lawyers wanting to join your team.</p>
-                    </div>
-                    <span className="rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-3 py-1 text-sm font-bold text-[#5f7488]">
-                      {teamPendingRequests.length} pending
-                    </span>
-                  </div>
-                  {teamPendingRequests.length === 0 ? (
-                    <p className="mt-5 rounded-xl border border-dashed border-[#d7e9ef] bg-[#f8fbfc] p-6 text-center text-sm font-semibold text-[#5f7488]">
-                      No pending join requests.
-                    </p>
-                  ) : (
-                    <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-                      {teamPendingRequests.map((request) => (
-                        <div key={request.id} className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-5">
-                          <h4 className="font-bold text-[#062552] text-base">{request.name || 'Lawyer'}</h4>
-                          <p className="mt-1 text-xs text-[#5f7488]">{request.email || request.phone || 'Contact not shared'}</p>
-                          <p className="mt-2 text-xs text-[#5f7488]">Requested {formatDate(request.requestedAt) || 'recently'}</p>
-                          <div className="mt-4 grid grid-cols-2 gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleTeamRequestDecision(request, 'accept')}
-                              disabled={updatingTeamRequestId === request.id}
-                              className="rounded-lg bg-[#15a276] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#118b66] disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              {updatingTeamRequestId === request.id ? 'Saving...' : 'Accept'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleTeamRequestDecision(request, 'reject')}
-                              disabled={updatingTeamRequestId === request.id}
-                              className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              Reject
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : null}
-            </div>
-          ) : (
-              <div className="space-y-5">
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTeamMode('create');
-                    setTeamError('');
-                    setTeamMessage('');
-                  }}
-                  className={`rounded-xl px-4 py-3 font-bold transition ${
-                    teamMode === 'create'
-                      ? 'bg-amber-300 text-zinc-950'
-                      : 'border border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-amber-300/50'
-                  }`}
-                >
-                  Create a team
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTeamMode('join');
-                    setTeamError('');
-                    setTeamMessage('');
-                  }}
-                  className={`rounded-xl px-4 py-3 font-bold transition ${
-                    teamMode === 'join'
-                      ? 'bg-amber-300 text-zinc-950'
-                      : 'border border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-amber-300/50'
-                  }`}
-                >
-                  Join a team
-                </button>
-              </div>
-
-              {teamMode === 'create' ? (
-                <form onSubmit={handleCreateTeam} className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-950 p-5">
-                  <div>
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Firm name</label>
-                    <input
-                      name="firmName"
-                      value={createTeamForm.firmName}
-                      onChange={handleCreateTeamInput}
-                      placeholder="Firm name"
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Team Owner name</label>
-                    <input
-                      name="seniorLawyerName"
-                      value={createTeamForm.seniorLawyerName}
-                      onChange={handleCreateTeamInput}
-                      placeholder="Team Owner name"
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Maximum team size</label>
-                    <input
-                      type="number"
-                      min="2"
-                      name="maxTeamSize"
-                      value={createTeamForm.maxTeamSize}
-                      onChange={handleCreateTeamInput}
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
-                      required
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={teamLoading}
-                    className="verdits-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 font-bold transition disabled:cursor-not-allowed"
-                  >
-                    <Users size={18} />
-                    {teamLoading ? 'Creating...' : 'Create Team'}
-                  </button>
-                </form>
-              ) : (
-                <form onSubmit={handleJoinTeam} className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-950 p-5">
-                  <div>
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Team code</label>
-                    <input
-                      name="teamCode"
-                      value={joinTeamForm.teamCode}
-                      onChange={handleJoinTeamInput}
-                      placeholder="Enter team code"
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 font-mono text-lg font-bold tracking-wider text-white outline-none focus:border-amber-300"
-                      required
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={teamLoading}
-                    className="verdits-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 font-bold transition disabled:cursor-not-allowed"
-                  >
-                    <UserPlus size={18} />
-                    {teamLoading ? 'Sending request...' : 'Request to Join'}
-                  </button>
-                </form>
-              )}
-              </div>
-            )}
-
-            {teamError ? (
-              <p className="mt-5 rounded-xl border border-red-900/50 bg-red-950/50 px-4 py-3 text-sm text-red-100">{teamError}</p>
-            ) : null}
-            {teamMessage ? (
-              <p className="mt-5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-200">{teamMessage}</p>
-            ) : null}
-          </div>
-        </ModalShell>
-      )}
-
-      {showStudentInteractionModal && (
-        <ModalShell
-          title="Student Interaction"
-          icon={<FaUserGraduate className="text-cyan-400" />}
-          onClose={closeAllFeatures}
-        >
-          <div className="flex flex-col gap-4">
-            <p className="text-sm text-[#5f7488]">Create, manage, and track all student engagement from one dashboard module.</p>
-            
-            {/* Top Horizontal Tab Navigation */}
-            <div className="flex flex-wrap items-center gap-2 border-b border-[#d7e9ef] pb-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setStudentInteractionTab('internships');
-                  setShowJamSessionForm(false);
-                }}
-                className={`rounded-xl px-5 py-3 text-sm font-bold transition ${
-                  studentInteractionTab === 'internships'
-                    ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
-                    : 'bg-white text-[#43556a] hover:bg-[#e8f7f2] hover:text-[#15a276] border border-[#d7e9ef]'
-                }`}
-              >
-                Internships
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setStudentInteractionTab('jamSessions');
-                  setShowInternshipForm(false);
-                }}
-                className={`rounded-xl px-5 py-3 text-sm font-bold transition ${
-                  studentInteractionTab === 'jamSessions'
-                    ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
-                    : 'bg-white text-[#43556a] hover:bg-[#e8f7f2] hover:text-[#15a276] border border-[#d7e9ef]'
-                }`}
-              >
-                Jam Sessions
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setStudentInteractionTab('posts');
-                  setShowInternshipForm(false);
-                  setShowJamSessionForm(false);
-                }}
-                className={`rounded-xl px-5 py-3 text-sm font-bold transition ${
-                  studentInteractionTab === 'posts'
-                    ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
-                    : 'bg-white text-[#43556a] hover:bg-[#e8f7f2] hover:text-[#15a276] border border-[#d7e9ef]'
-                }`}
-              >
-                Posts
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setStudentInteractionTab('followers');
-                  setShowInternshipForm(false);
-                  setShowJamSessionForm(false);
-                }}
-                className={`rounded-xl px-5 py-3 text-sm font-bold transition inline-flex items-center gap-2 ${
-                  studentInteractionTab === 'followers'
-                    ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
-                    : 'bg-white text-[#43556a] hover:bg-[#e8f7f2] hover:text-[#15a276] border border-[#d7e9ef]'
-                }`}
-              >
-                Followers
-                {followerStudents.length > 0 ? (
-                  <span className="rounded-full bg-zinc-950 px-2 py-0.5 text-xs text-white">
-                    {followerStudents.length}
-                  </span>
-                ) : null}
-              </button>
-            </div>
-
-            <div className="min-h-[600px] border border-[#d7e9ef] rounded-2xl overflow-hidden bg-white shadow-sm text-[#062552]">
-
-              <div className="relative flex-1 grid min-h-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px]">
-                <div className="overflow-y-auto p-6">
-                  {studentInteractionTab === 'internships' ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <h3 className="text-xl font-bold">Posted Internships</h3>
-                          <p className="text-sm text-zinc-400 mt-1">Track posted roles, applicant volume, and open or close intake without leaving the dashboard.</p>
-                        </div>
-                      </div>
-
-                      {interactionLoading ? (
-                        <EmptyBlock icon={<FaBriefcase size={24} />} message="Loading internships..." />
-                      ) : publishedInternships.length === 0 ? (
-                        <EmptyBlock icon={<FaBriefcase size={24} />} message="No internships published yet." />
-                      ) : (
-                        publishedInternships.map((internship) => (
-                          <div key={internship.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-5">
-                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                              <div>
-                                <div className="flex flex-wrap items-center gap-3">
-                                  <h4 className="text-lg font-bold text-white">{internship.title}</h4>
-                                  <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
-                                    internship.status === 'closed'
-                                      ? 'bg-red-500/10 text-red-300 border-red-500/20'
-                                      : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
-                                  }`}>
-                                    {internship.status === 'closed' ? 'Closed' : 'Open'}
-                                  </span>
-                                </div>
-                                <p className="text-sm text-zinc-400 mt-1">{internship.location || 'Location not specified'}</p>
-                              </div>
-                              <span className="text-xs font-bold bg-[#15a276]/10 text-[#19b98d] border border-[#15a276]/20 px-3 py-1 rounded-full">
-                                {new Date(internship.createdAt).toLocaleDateString()}
-                              </span>
-                            </div>
-
-                            <p className="text-sm text-zinc-300 mt-4 leading-7">{internship.description || 'No description added.'}</p>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-4 text-xs text-zinc-400">
-                              <div>Location: {internship.location || 'Not specified'}</div>
-                              <div>Duration: {internship.duration || 'Not specified'}</div>
-                              <div>Stipend: {internship.stipend || 'Not specified'}</div>
-                              <div>{internship.applicationCount || 0} Applied</div>
-                            </div>
-
-                            <div className="mt-5 rounded-xl border border-zinc-800 bg-white p-4 text-zinc-950">
-                              <ReactionBar
-                                item={internship}
-                                itemLabel="internship"
-                                compact
-                                onLike={handleInternshipLike}
-                                onComment={handleInternshipComment}
-                              />
-                            </div>
-
-                            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                              <button
-                                type="button"
-                                onClick={() => handleOpenApplicantsDrawer(internship)}
-                                className="verdits-primary-action inline-flex items-center justify-center gap-2 rounded-lg border border-[#d6b85b] px-4 py-3 font-semibold transition"
-                              >
-                                <Users size={16} />
-                                View Applicants
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleToggleInternshipStatus(internship)}
-                                disabled={togglingInternshipId === internship.id}
-                                className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-3 font-semibold transition ${
-                                  internship.status === 'closed'
-                                    ? 'verdits-primary-action'
-                                    : 'verdits-danger-action'
-                                } disabled:cursor-not-allowed disabled:opacity-60`}
-                              >
-                                {togglingInternshipId === internship.id
-                                  ? 'Updating...'
-                                  : internship.status === 'closed'
-                                    ? 'Reopen Internship'
-                                    : 'Close Internship'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteInternship(internship)}
-                                disabled={deletingInternshipId === internship.id}
-                                className="verdits-danger-secondary inline-flex items-center justify-center gap-2 rounded-lg border border-red-900/60 px-4 py-3 font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                {deletingInternshipId === internship.id ? 'Deleting...' : 'Delete'}
-                              </button>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  ) : studentInteractionTab === 'jamSessions' ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <h3 className="text-xl font-bold">Posted Jam Sessions</h3>
-                          <p className="text-sm text-zinc-400 mt-1">Monitor participation and review everyone who joined from the same dashboard workspace.</p>
-                        </div>
-                      </div>
-
-                      {interactionLoading ? (
-                        <EmptyBlock icon={<FaUserGraduate size={24} />} message="Loading jam sessions..." />
-                      ) : publishedJamSessions.length === 0 ? (
-                        <EmptyBlock icon={<FaUserGraduate size={24} />} message="No jam sessions published yet." />
-                      ) : (
-                        publishedJamSessions.map((session) => (
-                          <div key={session.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-5">
-                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                              <div>
-                                <h4 className="text-lg font-bold text-white">{session.title}</h4>
-                                <p className="text-sm text-zinc-400 mt-1">{session.location || 'Location not specified'}</p>
-                              </div>
-                              <span className="text-xs font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-3 py-1 rounded-full">
-                                {new Date(session.createdAt).toLocaleDateString()}
-                              </span>
-                            </div>
-
-                            <p className="text-sm text-zinc-300 mt-4 leading-7">{session.summary || 'No description added.'}</p>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-4 text-xs text-zinc-400">
-                              <div>Schedule: {session.schedule || 'Not specified'}</div>
-                              <div>Date: {new Date(session.createdAt).toLocaleDateString()}</div>
-                              <div>Location: {session.location || 'Not specified'}</div>
-                              <div>{session.participantCount || 0} Participants</div>
-                            </div>
-
-                            <div className="mt-5 rounded-xl border border-zinc-800 bg-white p-4 text-zinc-950">
-                              <ReactionBar
-                                item={session}
-                                itemLabel="jam session"
-                                compact
-                                onLike={handleJamLike}
-                                onComment={handleJamComment}
-                              />
-                            </div>
-
-                            <div className="mt-5">
-                              <button
-                                type="button"
-                                onClick={() => handleOpenParticipantsDrawer(session)}
-                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 font-semibold text-white hover:border-cyan-500/40"
-                              >
-                                <Users size={16} />
-                                View Participants
-                              </button>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  ) : studentInteractionTab === 'posts' ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <h3 className="text-xl font-bold">Published Posts</h3>
-                          <p className="text-sm text-zinc-400 mt-1">General social posts from your account appear here and flow into the personalized student feed.</p>
-                        </div>
-                      </div>
-
-                      {postLoading ? (
-                        <EmptyBlock icon={<FaUserGraduate size={24} />} message="Loading posts..." />
-                      ) : publishedPosts.length === 0 ? (
-                        <EmptyBlock icon={<FaUserGraduate size={24} />} message="No posts published yet." />
-                      ) : (
-                        publishedPosts.map((post) => (
-                          <FeedPostCard key={`lawyer-post-${post.id}`} post={post} />
-                        ))
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-5">
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <h3 className="text-xl font-bold text-[#062552]">Student Followers</h3>
-                          <p className="text-sm text-[#5f7488] mt-1">Students who are currently following your profile and updates.</p>
-                        </div>
-                        <span className="shrink-0 rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-1.5 text-sm font-bold text-[#5f7488]">
-                          {followerStudents.length} {followerStudents.length === 1 ? 'Follower' : 'Followers'}
-                        </span>
-                      </div>
-
-                      {interactionLoading ? (
-                        <EmptyBlock icon={<Users size={24} />} message="Loading followers..." />
-                      ) : followerStudents.length === 0 ? (
-                        <EmptyBlock icon={<Users size={24} />} message="No student followers yet." />
-                      ) : (
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                          {followerStudents.map((follower) => {
-                            const followerId = follower.id || follower._id;
-                            return (
-                              <div
-                                key={followerId}
-                                className="rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm transition hover:border-[#15a276] hover:shadow-md flex flex-col justify-between"
-                              >
-                                <div>
-                                  <div className="flex items-center gap-4">
-                                    {follower.profileImage ? (
-                                      <img
-                                        src={follower.profileImage}
-                                        alt={follower.name}
-                                        className="h-14 w-14 rounded-full object-cover border border-[#d7e9ef]"
-                                      />
-                                    ) : (
-                                      <div className="h-14 w-14 rounded-full bg-gradient-to-br from-[#8de2c6] to-[#15a276] text-white font-bold text-lg flex items-center justify-center border border-[#d7e9ef]">
-                                        {follower.name ? follower.name.charAt(0).toUpperCase() : 'S'}
-                                      </div>
-                                    )}
-                                    <div className="min-w-0 flex-1">
-                                      <h4 className="truncate text-base font-bold text-[#062552]">{follower.name}</h4>
-                                      <p className="truncate text-xs font-semibold text-[#15a276]">
-                                        {follower.collegeName || 'Law Student'}
-                                      </p>
-                                      {follower.currentYear ? (
-                                        <p className="text-[11px] text-[#5f7488]">{follower.currentYear}</p>
-                                      ) : null}
-                                    </div>
-                                  </div>
-
-                                  <div className="mt-4 border-t border-[#f0f6f8] pt-3 text-xs text-[#5f7488] space-y-1">
-                                    {follower.email ? (
-                                      <p className="truncate">Email: <span className="font-semibold text-[#062552]">{follower.email}</span></p>
-                                    ) : null}
-                                    {follower.phone ? (
-                                      <p>Phone: <span className="font-semibold text-[#062552]">{follower.phone}</span></p>
-                                    ) : null}
-                                  </div>
-                                </div>
-
-                                <div className="mt-4 border-t border-[#f0f6f8] pt-3 flex items-center justify-end">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setShowStudentInteractionModal(false);
-                                      navigate(`/student-profile/${followerId}`);
-                                    }}
-                                    className="inline-flex items-center gap-1.5 rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-2 text-xs font-bold text-[#062552] transition hover:bg-[#15a276] hover:text-white"
-                                  >
-                                    View Profile &rarr;
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="border-t xl:border-t-0 xl:border-l border-zinc-800 bg-zinc-950/30 p-6 overflow-y-auto">
-                  {studentInteractionTab === 'internships' ? (
-                    <div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowInternshipForm((current) => !current);
-                          setShowJamSessionForm(false);
-                        }}
-                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#15a276] hover:bg-[#19b98d] text-zinc-950 font-bold px-5 py-3 transition"
-                      >
-                        <FaPlus />
-                        New Internship
-                      </button>
-
-                      {showInternshipForm && (
-                        <form onSubmit={handlePublishInternship} className="mt-5 space-y-4">
-                          <input name="title" value={internshipForm.title} onChange={handleInternshipInput} placeholder="Internship title" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-[#15a276]" required />
-                          <textarea name="description" value={internshipForm.description} onChange={handleInternshipInput} placeholder="Description" rows="4" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-[#15a276]" required />
-                          <input name="location" value={internshipForm.location} onChange={handleInternshipInput} placeholder="Location" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-[#15a276]" />
-                          <input name="duration" value={internshipForm.duration} onChange={handleInternshipInput} placeholder="Duration" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-[#15a276]" />
-                          <input name="stipend" value={internshipForm.stipend} onChange={handleInternshipInput} placeholder="Stipend" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-[#15a276]" />
-                          <button type="submit" className="w-full rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 font-bold px-5 py-3 border border-[#d6b85b] shadow-sm transition">
-                            Publish Internship
-                          </button>
-                        </form>
-                      )}
-                    </div>
-                  ) : studentInteractionTab === 'jamSessions' ? (
-                    <div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowJamSessionForm((current) => !current);
-                          setShowInternshipForm(false);
-                        }}
-                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-zinc-950 font-bold px-5 py-3 transition"
-                      >
-                        <FaPlus />
-                        New Jam Session
-                      </button>
-
-                      {showJamSessionForm && (
-                        <form onSubmit={handlePublishJamSession} className="mt-5 space-y-4">
-                          <input name="title" value={jamSessionForm.title} onChange={handleJamSessionInput} placeholder="Session title" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-cyan-400" required />
-                          <textarea name="description" value={jamSessionForm.description} onChange={handleJamSessionInput} placeholder="Description" rows="5" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-cyan-400" required />
-                          <input name="schedule" value={jamSessionForm.schedule} onChange={handleJamSessionInput} placeholder="Schedule" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-cyan-400" />
-                          <input name="location" value={jamSessionForm.location} onChange={handleJamSessionInput} placeholder="Location / online" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-cyan-400" />
-                          <button type="submit" className="w-full rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 font-bold px-5 py-3 border border-[#d6b85b] shadow-sm transition">
-                            Publish Jam Session
-                          </button>
-                        </form>
-                      )}
-                    </div>
-                  ) : studentInteractionTab === 'posts' ? (
-                    <div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPostError('');
-                          setShowPostComposer(true);
-                        }}
-                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-bold px-5 py-3 transition"
-                      >
-                        <FaPlus />
-                        New Post
-                      </button>
-                      <p className="mt-4 text-sm leading-7 text-zinc-400">
-                        Share general updates, insights, and media posts. These appear instantly in the social feed and are ranked by network relevance and recency.
-                      </p>
-                    </div>
-                  ) : (
-                    <div>
-                      <div className="rounded-2xl border border-[#d7e9ef] bg-[#f8fbfc] p-5">
-                        <h4 className="text-base font-bold text-[#062552]">Followers Overview</h4>
-                        <p className="mt-2 text-xs leading-6 text-[#5f7488]">
-                          Students who follow you receive real-time notifications whenever you publish new internships, jam sessions, or educational posts.
-                        </p>
-                        <div className="mt-4 rounded-xl border border-[#d7e9ef] bg-white p-4">
-                          <p className="text-xs font-semibold text-[#5f7488]">Total Followers</p>
-                          <p className="mt-1 text-2xl font-bold text-[#062552]">{followerStudents.length}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {drawer.open ? (
-                <div className="absolute inset-y-0 right-0 z-20 w-full max-w-[420px] border-l border-zinc-800 bg-zinc-950 p-6 shadow-2xl overflow-y-auto">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">{drawer.parentLabel}</p>
-                      <h3 className="text-xl font-bold text-white mt-2">{drawer.title}</h3>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setDrawer(emptyDrawerState)}
-                      className="rounded-full bg-zinc-900 p-2 text-zinc-400 hover:text-red-400"
-                    >
-                      <FaTimes size={16} />
-                    </button>
-                  </div>
-
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {activeDrawerFilters.map((filter) => (
-                      <button
-                        key={filter}
-                        type="button"
-                        onClick={() => setDrawerFilter(filter)}
-                        className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                          drawerFilter === filter
-                            ? 'bg-white text-zinc-950'
-                            : 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
-                        }`}
-                      >
-                        {filter}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="mt-6 space-y-4">
-                    {filteredDrawerItems.length === 0 ? (
-                      <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/40 p-5 text-sm text-zinc-500">
-                        No records match this filter.
-                      </div>
-                    ) : (
-                      filteredDrawerItems.map((item) => (
-                        <div key={item.id} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="font-semibold text-white">{item.name}</p>
-                              <p className="text-xs text-zinc-400 mt-1">{item.email || 'No email shared'}</p>
-                              <p className="text-xs text-zinc-500 mt-2">
-                                {item.collegeName || 'College not shared'}
-                                {item.yearOfStudy ? ` | ${item.yearOfStudy}` : ''}
-                              </p>
-                            </div>
-                            <span className={`text-[11px] font-bold px-2 py-1 rounded-full border ${
-                              drawer.type === 'participants'
-                                ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20'
-                                : item.status === 'accepted'
-                                  ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
-                                  : item.status === 'rejected'
-                                    ? 'bg-red-500/10 text-red-300 border-red-500/20'
-                                    : 'bg-[#15a276]/10 text-[#8de2c6] border-[#15a276]/20'
-                            }`}>
-                              {drawer.type === 'participants' ? 'Joined' : capitalize(item.status || 'pending')}
-                            </span>
-                          </div>
-
-                          {item.coverMessage ? (
-                            <p className="mt-3 text-xs leading-6 text-zinc-300">{item.coverMessage}</p>
-                          ) : null}
-
-                          {drawer.type === 'applicants' ? (
-                            <div className="mt-4 space-y-4">
-                              <div className="grid grid-cols-1 gap-2 text-xs text-zinc-300">
-                                <ApplicantDetail label="Phone" value={item.phone} />
-                                <ApplicantDetail label="Degree" value={item.degree} />
-                                <ApplicantDetail label="Year" value={item.yearOfStudy} />
-                                <ApplicantDetail label="Applied" value={formatDate(item.submittedAt)} />
-                              </div>
-
-                              {item.skills?.length ? (
-                                <div>
-                                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Skills</p>
-                                  <div className="mt-2 flex flex-wrap gap-2">
-                                    {item.skills.map((skill) => (
-                                      <span key={skill} className="rounded-full bg-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-200">
-                                        {skill}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              ) : null}
-
-                              <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 p-3">
-                                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Resume and links</p>
-                                <div className="mt-3 space-y-2">
-                                  {item.resumeLink ? <ApplicantLink href={item.resumeLink} label="Open resume link" /> : null}
-                                  {item.resumeUrl ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => setResumePreview({
-                                        url: item.resumeUrl,
-                                        fileName: item.resumeFileName || `${item.name || 'Applicant'} resume`,
-                                      })}
-                                      className="block w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-left text-xs font-bold text-blue-300 transition hover:border-blue-500/50 hover:text-blue-200"
-                                    >
-                                      View uploaded resume
-                                    </button>
-                                  ) : null}
-                                  {item.linkedIn ? <ApplicantLink href={item.linkedIn} label="Open LinkedIn" /> : null}
-                                  {item.portfolio ? <ApplicantLink href={item.portfolio} label="Open portfolio" /> : null}
-                                  {item.resumeFileName ? (
-                                    <p className="text-xs text-zinc-400">Attached file name: {item.resumeFileName}</p>
-                                  ) : null}
-                                  {!item.resumeLink && !item.resumeUrl && !item.linkedIn && !item.portfolio && !item.resumeFileName ? (
-                                    <p className="text-xs text-zinc-500">No resume or external links shared.</p>
-                                  ) : null}
-                                </div>
-                              </div>
-
-                              <div className="flex gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => handleApplicantDecision(item.id, 'accepted')}
-                                  disabled={updatingApplicantId === item.id || item.status === 'accepted'}
-                                  className="verdits-primary-action flex-1 rounded-lg px-4 py-2 text-sm font-bold transition disabled:cursor-not-allowed"
-                                >
-                                  {updatingApplicantId === item.id ? 'Saving...' : 'Accept'}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleApplicantDecision(item.id, 'rejected')}
-                                  disabled={updatingApplicantId === item.id || item.status === 'rejected'}
-                                  className="verdits-danger-action flex-1 rounded-lg border border-red-900/60 px-4 py-2 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                  {updatingApplicantId === item.id ? 'Saving...' : 'Reject'}
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <p className="mt-4 text-xs text-zinc-500">
-                              Joined on {new Date(item.joinedAt).toLocaleDateString()}
-                            </p>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </div>
-          </div>
-        </ModalShell>
-      )}
-
-      {resumePreview ? (
-        <ResumePreviewModal
-          resume={resumePreview}
-          onClose={() => setResumePreview(null)}
-        />
-      ) : null}
-
-      {showNoticeGenerator ? (
-        <ModalShell
-          title="AI Notice Generator"
-          icon={<FaFileSignature className="text-[#15a276]" />}
-          onClose={closeAllFeatures}
-        >
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-            <form onSubmit={handleGenerateNotice} className="space-y-5">
-              <div>
-                <label className="block text-sm font-bold text-[#062552] mb-2">Document Type</label>
-                <select
-                  name="documentType"
-                  value={noticeForm.documentType}
-                  onChange={handleNoticeInput}
-                  className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
-                >
-                  {noticeDocumentTypes.map((type) => (
-                    <option key={type} value={type} className="text-[#062552]">{type}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-[#062552] mb-2">Basic Information</label>
-                <div className="max-h-[48vh] space-y-4 overflow-y-auto pr-2">
-                  {selectedNoticeFields.map((field) => {
-                    if (field.dependsOn && !noticeForm[field.dependsOn]) return null;
-
-                    if (field.type === 'checkbox') {
-                      return (
-                        <label
-                          key={field.id}
-                          className="flex items-start gap-3 rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-sm font-semibold text-[#062552]"
-                        >
-                          <input
-                            type="checkbox"
-                            name={field.id}
-                            checked={Boolean(noticeForm[field.id])}
-                            onChange={handleNoticeInput}
-                            className="mt-1 h-4 w-4 rounded border-gray-300 accent-[#15a276]"
-                          />
-                          {field.label}
-                        </label>
-                      );
-                    }
-
-                    if (field.type === 'names') {
-                      const names = noticeForm[field.id] || [''];
-
-                      return (
-                        <div key={field.id}>
-                          <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#5f7488]">
-                            {field.label}{field.required ? ' *' : ''}
-                          </label>
-                          <div className="space-y-2">
-                            {names.map((name, index) => (
-                              <div key={`${field.id}-${index}`} className="flex gap-2">
-                                <input
-                                  value={name}
-                                  onChange={(event) => handleNoticeNameInput(field.id, index, event.target.value)}
-                                  placeholder={`${field.label} ${index + 1}`}
-                                  className="min-w-0 flex-1 rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
-                                />
-                                {names.length > 1 ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => removeNoticeName(field.id, index)}
-                                    className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#d7e9ef] bg-white text-[#062552] transition hover:border-red-600 hover:bg-red-50 hover:text-red-700"
-                                    aria-label={`Remove ${field.label.toLowerCase()}`}
-                                  >
-                                    <FaTimes />
-                                  </button>
-                                ) : null}
-                              </div>
-                            ))}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => addNoticeName(field.id)}
-                            className="mt-2 inline-flex items-center gap-2 rounded-lg border border-[#d7e9ef] bg-white px-3 py-2 text-xs font-bold text-[#062552] transition hover:border-[#15a276] hover:bg-[#e8f7f2]"
-                          >
-                            <FaPlus />
-                            {field.addLabel || 'Add another name'}
-                          </button>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div key={field.id}>
-                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#5f7488]">
-                          {field.label}{field.required ? ' *' : ''}
-                        </label>
-                        {field.type === 'textarea' ? (
-                          <textarea
-                            name={field.id}
-                            value={noticeForm[field.id] || ''}
-                            onChange={handleNoticeInput}
-                            rows={field.rows || 3}
-                            placeholder={field.placeholder || field.label}
-                            className="w-full resize-none rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
-                          />
-                        ) : (
-                          <input
-                            type={field.type}
-                            name={field.id}
-                            value={noticeForm[field.id] || ''}
-                            onChange={handleNoticeInput}
-                            placeholder={field.placeholder || field.label}
-                            className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {noticeError ? (
-                <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{noticeError}</p>
-              ) : null}
-
-              <button
-                type="submit"
-                disabled={noticeLoading}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#15a276] px-5 py-3 font-bold text-white transition hover:bg-[#118b66] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <FaMagic />
-                {noticeLoading ? 'Generating...' : 'Generate Document'}
-              </button>
-            </form>
-
-            <div className="min-w-0 space-y-5">
-              <div>
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <label className="block text-sm font-bold text-[#062552]">Generated Draft</label>
-                  <button
-                    type="button"
-                    onClick={handleCopyNotice}
-                    disabled={!noticeDraft.trim()}
-                    className="rounded-lg border border-[#d7e9ef] px-3 py-2 text-xs font-bold text-[#062552] transition hover:border-[#15a276] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Copy
-                  </button>
-                </div>
-                <textarea
-                  value={noticeDraft}
-                  onChange={(event) => setNoticeDraft(event.target.value)}
-                  rows="18"
-                  placeholder="Your generated notice will appear here."
-                  className="w-full resize-none rounded-xl border border-[#d7e9ef] bg-white px-4 py-4 font-mono text-sm leading-7 text-[#062552] outline-none focus:border-[#15a276]"
-                />
-              </div>
-
-              <form onSubmit={handleEditNotice} className="space-y-3">
-                <label className="block text-sm font-bold text-[#062552]">Edit With AI</label>
-                <div className="flex flex-col gap-3 lg:flex-row">
-                  <input
-                    value={noticeEditPrompt}
-                    onChange={(event) => setNoticeEditPrompt(event.target.value)}
-                    placeholder="Example: make it stronger, add 15-day compliance deadline, simplify paragraph 3"
-                    className="min-w-0 flex-1 rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
-                  />
-                  <button
-                    type="submit"
-                    disabled={noticeEditing || !noticeDraft.trim()}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-5 py-3 font-bold transition disabled:cursor-not-allowed disabled:opacity-60 border border-[#d6b85b] shadow-sm"
-                  >
-                    <FaMagic />
-                    {noticeEditing ? 'Editing...' : 'Apply Edit'}
-                  </button>
-                </div>
-              </form>
-
-              {noticeMessage ? <p className="text-sm font-semibold text-[#15a276]">{noticeMessage}</p> : null}
-            </div>
-          </div>
-        </ModalShell>
-      ) : null}
+            <LawyerAppointmentsModal
+              show={showAppointmentsModal}
+              onClose={closeAllFeatures}
+              loadingAppointments={loadingAppointments}
+              pendingAppointments={pendingAppointments}
+              updateStatus={updateStatus}
+            />
+
+            <LawyerClientsModal
+              show={showClientsModal}
+              onClose={closeAllFeatures}
+              loadingAppointments={loadingAppointments}
+              acceptedClients={acceptedClients}
+              handleOpenChat={handleOpenChat}
+            />
+
+            <LawyerNextHearingsModal
+              show={showHearingsModal}
+              onClose={closeAllFeatures}
+              googleCalendarLoading={googleCalendarLoading}
+              googleCalendarStatus={googleCalendarStatus}
+              googleCalendarActionLoading={googleCalendarActionLoading}
+              handleConnectGoogleCalendar={handleConnectGoogleCalendar}
+              handleDisconnectGoogleCalendar={handleDisconnectGoogleCalendar}
+              hearingsLoading={hearingsLoading}
+              ownHearings={ownHearings}
+            />
+
+            <LawyerTeamModal
+              show={showTeamModal}
+              onClose={closeAllFeatures}
+              hasTeam={hasTeam}
+              displayIsTeamOwner={displayIsTeamOwner}
+              displayTeam={displayTeam}
+              teamSize={teamSize}
+              handleCopyTeamCode={handleCopyTeamCode}
+              teamWorkspaceLoading={teamWorkspaceLoading}
+              teamWorkspaces={teamWorkspaces}
+              handleSelectTeam={handleSelectTeam}
+              teamMode={teamMode}
+              setTeamMode={setTeamMode}
+              setTeamError={setTeamError}
+              setTeamMessage={setTeamMessage}
+              createTeamForm={createTeamForm}
+              handleCreateTeamInput={handleCreateTeamInput}
+              handleCreateTeam={handleCreateTeam}
+              teamLoading={teamLoading}
+              joinTeamForm={joinTeamForm}
+              handleJoinTeamInput={handleJoinTeamInput}
+              handleJoinTeam={handleJoinTeam}
+              setActiveTeamTab={setActiveTeamTab}
+              currentActiveTeamTab={currentActiveTeamTab}
+              ownTeamCases={ownTeamCases}
+              visibleTeamDirectory={visibleTeamDirectory}
+              teamPendingRequests={teamPendingRequests}
+              showTeamCaseForm={showTeamCaseForm}
+              setShowTeamCaseForm={setShowTeamCaseForm}
+              teamCaseForm={teamCaseForm}
+              handleTeamCaseInput={handleTeamCaseInput}
+              handleAddTeamCase={handleAddTeamCase}
+              savingTeamCase={savingTeamCase}
+              teamCaseStatuses={teamCaseStatuses}
+              selectedCaseForDetailsId={selectedCaseForDetailsId}
+              setSelectedCaseForDetailsId={setSelectedCaseForDetailsId}
+              updatingTeamCaseId={updatingTeamCaseId}
+              handleUpdateTeamCaseStatus={handleUpdateTeamCaseStatus}
+              handleDeleteTeamCase={handleDeleteTeamCase}
+              loadTeamWorkspace={loadTeamWorkspace}
+              activeTeamMember={activeTeamMember}
+              setSelectedTeamMemberId={setSelectedTeamMemberId}
+              currentLawyerId={currentLawyerId}
+              teamCases={teamCases}
+              canRemoveActiveTeamMember={canRemoveActiveTeamMember}
+              handleRemoveTeamMember={handleRemoveTeamMember}
+              removingTeamMemberId={removingTeamMemberId}
+              activeTeamMemberId={activeTeamMemberId}
+              activeTeamMemberCases={activeTeamMemberCases}
+              updatingTeamRequestId={updatingTeamRequestId}
+              handleTeamRequestDecision={handleTeamRequestDecision}
+            />
+
+            <LawyerNoticeGeneratorModal
+              show={showNoticeGenerator}
+              onClose={closeAllFeatures}
+              noticeForm={noticeForm}
+              handleNoticeInput={handleNoticeInput}
+              handleNoticeNameInput={handleNoticeNameInput}
+              addNoticeName={addNoticeName}
+              removeNoticeName={removeNoticeName}
+              noticeError={noticeError}
+              noticeLoading={noticeLoading}
+              handleGenerateNotice={handleGenerateNotice}
+              noticeDraft={noticeDraft}
+              setNoticeDraft={setNoticeDraft}
+              handleCopyNotice={handleCopyNotice}
+              noticeEditPrompt={noticeEditPrompt}
+              setNoticeEditPrompt={setNoticeEditPrompt}
+              handleEditNotice={handleEditNotice}
+              noticeEditing={noticeEditing}
+              noticeMessage={noticeMessage}
+            />
+
+            <LawyerStudentInteractionModal
+              show={showStudentInteractionModal}
+              onClose={closeAllFeatures}
+              studentInteractionTab={studentInteractionTab}
+              setStudentInteractionTab={setStudentInteractionTab}
+              setShowInternshipForm={setShowInternshipForm}
+              setShowJamSessionForm={setShowJamSessionForm}
+              followerStudents={followerStudents}
+              interactionLoading={interactionLoading}
+              publishedInternships={publishedInternships}
+              handleInternshipLike={handleInternshipLike}
+              handleInternshipComment={handleInternshipComment}
+              handleOpenApplicantsDrawer={handleOpenApplicantsDrawer}
+              handleToggleInternshipStatus={handleToggleInternshipStatus}
+              togglingInternshipId={togglingInternshipId}
+              handleDeleteInternship={handleDeleteInternship}
+              deletingInternshipId={deletingInternshipId}
+              publishedJamSessions={publishedJamSessions}
+              handleJamLike={handleJamLike}
+              handleJamComment={handleJamComment}
+              handleOpenParticipantsDrawer={handleOpenParticipantsDrawer}
+              postLoading={postLoading}
+              publishedPosts={publishedPosts}
+              showInternshipForm={showInternshipForm}
+              handlePublishInternship={handlePublishInternship}
+              internshipForm={internshipForm}
+              handleInternshipInput={handleInternshipInput}
+              showJamSessionForm={showJamSessionForm}
+              handlePublishJamSession={handlePublishJamSession}
+              jamSessionForm={jamSessionForm}
+              handleJamSessionInput={handleJamSessionInput}
+              setPostError={setPostError}
+              setShowPostComposer={setShowPostComposer}
+            />
           </div>
         ) : (
           <div>
@@ -3738,18 +1256,20 @@ export default function LawyerDashboard() {
                 <div
                   key={idx}
                   onClick={card.onClick}
-                  className="relative min-h-[340px] bg-white border border-[#d7e9ef] px-5 py-6 rounded-2xl hover:border-[#15a276]/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-md cursor-pointer shadow-sm text-[#062552]"
+                  className="lawyer-dashboard-card group bg-white border border-[#d7e9ef] hover:border-[#15a276] rounded-2xl p-6 transition-all duration-300 hover:shadow-xl cursor-pointer flex flex-col relative overflow-hidden"
                 >
-                  {card.badge > 0 && (
-                    <div className="absolute top-4 right-4 bg-[#15a276] text-white text-xs font-bold h-6 w-6 flex items-center justify-center rounded-full shadow animate-pulse">
-                      {card.badge}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-14 h-14 rounded-full bg-[#f8fbfc] border border-[#d7e9ef] flex items-center justify-center group-hover:bg-[#e8f7f2] group-hover:border-[#15a276]/30 transition-colors shrink-0">
+                      {card.icon}
                     </div>
-                  )}
-                  <div className="bg-[#e8f7f2] w-16 h-16 rounded-full flex items-center justify-center mb-6 text-[#15a276]">
-                    {card.icon}
+                    {card.badge && (
+                      <span className="badge-pill bg-[#15a276] text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">
+                        {card.badge}
+                      </span>
+                    )}
                   </div>
-                  <h2 className="mb-2 text-[18px] font-bold leading-8 text-[#062552] [word-break:keep-all]">{card.title}</h2>
-                  <p className="break-words text-sm leading-6 text-[#5f7488]">{card.desc}</p>
+                  <h2 className="mb-2 text-lg font-bold leading-tight text-[#062552]">{card.title}</h2>
+                  <p className="break-words text-sm leading-relaxed text-[#5f7488]">{card.desc}</p>
                 </div>
               ))}
             </div>
@@ -3829,9 +1349,35 @@ export default function LawyerDashboard() {
                 )}
               </div>
             </section>
+
+            {teamError ? (
+              <p className="mt-5 rounded-xl border border-red-900/50 bg-red-950/50 px-4 py-3 text-sm text-red-100">{teamError}</p>
+            ) : null}
+            {teamMessage ? (
+              <p className="mt-5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-200">{teamMessage}</p>
+            ) : null}
           </div>
         )}
       </div>
+
+      <ApplicantDrawer
+        drawer={drawer}
+        drawerFilter={drawerFilter}
+        setDrawerFilter={setDrawerFilter}
+        activeDrawerFilters={activeDrawerFilters}
+        filteredDrawerItems={filteredDrawerItems}
+        onClose={() => setDrawer(emptyDrawerState)}
+        setResumePreview={setResumePreview}
+        updatingApplicantId={updatingApplicantId}
+        handleApplicantDecision={handleApplicantDecision}
+      />
+
+      {resumePreview ? (
+        <ResumePreviewModal
+          resume={resumePreview}
+          onClose={() => setResumePreview(null)}
+        />
+      ) : null}
 
       <PostComposerModal
         key={showPostComposer ? 'lawyer-post-open' : 'lawyer-post-closed'}
@@ -3848,217 +1394,4 @@ export default function LawyerDashboard() {
       />
     </div>
   );
-}
-
-function FeaturePageShell({ title, icon, onClose, children }) {
-  return (
-    <div className="w-full animate-in fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-4 border-b border-[#dbe2ef]">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onClose}
-            type="button"
-            className="flex items-center gap-2 rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-4 py-2.5 text-sm font-bold transition shadow-sm cursor-pointer border border-[#d6b85b]"
-          >
-            <FaArrowLeft size={16} />
-            <span>Back to Dashboard</span>
-          </button>
-          <div className="h-6 w-px bg-[#dbe2ef] hidden sm:block" />
-          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3 text-[#062552]">
-            {icon} {title}
-          </h1>
-        </div>
-        <button
-          onClick={onClose}
-          type="button"
-          className="self-end sm:self-auto text-[#5f7488] hover:text-[#062552] bg-white border border-[#d7e9ef] hover:bg-gray-100 rounded-full transition p-2.5 shadow-sm cursor-pointer"
-          aria-label="Close feature page"
-        >
-          <FaTimes size={18} />
-        </button>
-      </div>
-
-      <div className="w-full">{children}</div>
-    </div>
-  );
-}
-
-const ModalShell = FeaturePageShell;
-
-function EmptyBlock({ icon, message }) {
-  return (
-    <div className="text-center py-16 border border-dashed border-[#d7e9ef] rounded-2xl bg-white shadow-sm">
-      <div className="w-16 h-16 bg-[#e8f7f2] text-[#15a276] rounded-full flex items-center justify-center mx-auto mb-4">
-        {icon}
-      </div>
-      <p className="text-[#5f7488] font-medium">{message}</p>
-    </div>
-  );
-}
-
-function StatusPill({ status }) {
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full border ${
-        status === 'Pending'
-          ? 'bg-[#15a276]/10 text-[#15a276] border-[#15a276]/20'
-          : status === 'Accepted'
-            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-            : 'bg-red-500/10 text-red-500 border-red-500/20'
-      }`}
-    >
-      <FaCircle className="text-[8px]" /> {status}
-    </span>
-  );
-}
-
-function ApplicantDetail({ label, value }) {
-  return (
-    <div className="flex items-start justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-950/50 px-3 py-2">
-      <span className="text-zinc-500">{label}</span>
-      <span className="max-w-[190px] text-right font-semibold text-zinc-200">{value || 'Not shared'}</span>
-    </div>
-  );
-}
-
-function ResumePreviewModal({ resume, onClose }) {
-  const resumeUrl = normalizeExternalUrl(resume.url);
-  const fileName = resume.fileName || 'Uploaded resume';
-  const filePath = `${fileName} ${resumeUrl.split('?')[0]}`.toLowerCase();
-  const isImage = /\.(png|jpe?g|webp|gif)\b/.test(filePath);
-  const isPdf = /\.pdf\b/.test(filePath);
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState('');
-  const [previewLoading, setPreviewLoading] = useState(isPdf);
-  const [previewError, setPreviewError] = useState('');
-
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') onClose();
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
-
-  useEffect(() => {
-    if (!isPdf) return undefined;
-
-    const controller = new AbortController();
-    let objectUrl = '';
-
-    const loadPdf = async () => {
-      try {
-        setPreviewLoading(true);
-        setPreviewError('');
-
-        const response = await fetch(resumeUrl, { signal: controller.signal });
-        if (!response.ok) throw new Error('Unable to load this PDF');
-
-        const fileBlob = await response.blob();
-        const pdfBlob = fileBlob.type === 'application/pdf'
-          ? fileBlob
-          : new Blob([fileBlob], { type: 'application/pdf' });
-
-        objectUrl = URL.createObjectURL(pdfBlob);
-        setPdfPreviewUrl(objectUrl);
-      } catch (error) {
-        if (error.name !== 'AbortError') {
-          setPreviewError('The PDF could not be displayed. Please try again.');
-        }
-      } finally {
-        if (!controller.signal.aborted) setPreviewLoading(false);
-      }
-    };
-
-    loadPdf();
-
-    return () => {
-      controller.abort();
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [isPdf, resumeUrl]);
-
-  const officePreviewUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(resumeUrl)}`;
-
-  return (
-    <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Preview ${fileName}`}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <div className="flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900 shadow-2xl">
-        <div className="flex items-center justify-between gap-4 border-b border-zinc-800 bg-zinc-950 px-5 py-4">
-          <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#15a276]">Resume preview</p>
-            <h3 className="mt-1 truncate font-semibold text-white">{fileName}</h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="shrink-0 rounded-full bg-zinc-800 p-2 text-zinc-300 transition hover:bg-zinc-700 hover:text-white"
-            aria-label="Close resume preview"
-          >
-            <FaTimes size={18} />
-          </button>
-        </div>
-
-        <div className="min-h-0 flex-1 bg-zinc-800">
-          {previewLoading ? (
-            <div className="flex h-full items-center justify-center text-sm font-semibold text-zinc-300">
-              Loading PDF preview...
-            </div>
-          ) : previewError ? (
-            <div className="flex h-full items-center justify-center p-6 text-center text-sm font-semibold text-red-300">
-              {previewError}
-            </div>
-          ) : isImage ? (
-            <div className="flex h-full items-center justify-center overflow-auto p-4">
-              <img src={resumeUrl} alt={fileName} className="max-h-full max-w-full object-contain" />
-            </div>
-          ) : (
-            <iframe
-              src={isPdf ? pdfPreviewUrl : officePreviewUrl}
-              title={fileName}
-              className="h-full w-full border-0 bg-white"
-            />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ApplicantLink({ href, label }) {
-  const safeHref = normalizeExternalUrl(href);
-
-  return (
-    <a
-      href={safeHref}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="block rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-bold text-blue-300 transition hover:border-blue-500/50 hover:text-blue-200"
-    >
-      {label}
-    </a>
-  );
-}
-
-function normalizeExternalUrl(url) {
-  return String(url || '').startsWith('http') ? url : `https://${url}`;
-}
-
-function formatDate(value) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString();
-}
-
-function capitalize(value) {
-  const text = String(value || '');
-  return text ? text.charAt(0).toUpperCase() + text.slice(1) : '';
 }
