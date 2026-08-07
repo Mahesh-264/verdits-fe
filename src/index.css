@@ -96,18 +96,6 @@ body {
   background-color: rgba(241, 209, 95, 0.16) !important;
 }
 
-[class*="bg-[#062552]"],
-[class*="bg-[#0b3b70]"],
-[class*="bg-[#114a38]"] {
-  background-color: var(--verdicts-charcoal) !important;
-}
-
-[class*="hover:bg-[#0b3b70]"]:hover,
-[class*="hover:bg-[#118b66]"]:hover,
-[class*="hover:bg-[#176049]"]:hover {
-  background-color: var(--verdicts-graphite) !important;
-}
-
 [class*="bg-[#15a276]"],
 [class*="bg-[#19b98d]"],
 [class*="bg-emerald-500"],
@@ -118,8 +106,77 @@ body {
 }
 
 [class*="hover:bg-[#15a276]"]:hover,
-[class*="hover:bg-emerald-700"]:hover {
+[class*="hover:bg-emerald-700"]:hover,
+[class*="hover:bg-[#118b66]"]:hover,
+[class*="hover:bg-[#118460]"]:hover,
+[class*="hover:bg-[#10835e]"]:hover,
+[class*="hover:bg-[#12845f]"]:hover,
+[class*="hover:bg-[#19b98d]"]:hover,
+[class*="hover:bg-[#176049]"]:hover,
+[class*="hover:bg-[#007b64]"]:hover {
   background-color: var(--verdicts-gold-dark) !important;
+  color: var(--verdicts-ink) !important;
+}
+
+/* Stable action colours: these must not inherit broad theme hover rules. */
+.verdits-primary-action {
+  background-color: var(--verdicts-gold) !important;
+  color: var(--verdicts-ink) !important;
+}
+
+.verdits-primary-action:hover {
+  background-color: #dfbb45 !important;
+  color: var(--verdicts-ink) !important;
+}
+
+.verdits-primary-action:disabled {
+  background-color: #e6d79a !important;
+  color: #6f633f !important;
+  opacity: 1 !important;
+}
+
+.verdits-icon-action {
+  background-color: #365c8d !important;
+  color: var(--verdicts-ivory) !important;
+}
+
+.verdits-icon-action:hover {
+  background-color: #24466f !important;
+  color: var(--verdicts-ivory) !important;
+}
+
+.verdits-danger-action {
+  background-color: #b4232a !important;
+  color: var(--verdicts-ivory) !important;
+}
+
+.verdits-danger-action:hover {
+  background-color: #8f1820 !important;
+  color: var(--verdicts-ivory) !important;
+}
+
+.verdits-danger-secondary {
+  background-color: #c88178 !important;
+  color: #38120f !important;
+}
+
+.verdits-danger-secondary:hover {
+  background-color: #a95f57 !important;
+  color: var(--verdicts-ivory) !important;
+}
+
+/* Keep label contrast stable when a button changes its surface on hover. */
+[class*="hover:bg-[#fff2bf]"]:hover,
+[class*="hover:bg-[#d6a400]"]:hover,
+[class*="hover:bg-cyan-300"]:hover,
+[class*="hover:bg-zinc-200"]:hover {
+  color: var(--verdicts-ink) !important;
+}
+
+[class*="hover:bg-red-"]:hover,
+[class*="hover:bg-zinc-700"]:hover,
+[class*="hover:bg-zinc-800"]:hover {
+  color: var(--verdicts-ivory) !important;
 }
 
 [class*="text-[#062552]"],
