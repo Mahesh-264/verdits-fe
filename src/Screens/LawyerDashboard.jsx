@@ -331,7 +331,8 @@ export default function LawyerDashboard() {
   useEffect(() => {
     if (!showTeamModal) return;
     refreshCurrentUser();
-  }, [refreshCurrentUser, showTeamModal]);
+    loadTeamWorkspace(selectedTeamIdRef.current);
+  }, [refreshCurrentUser, loadTeamWorkspace, showTeamModal]);
 
   useEffect(() => {
     if (user?.role !== 'lawyer') return undefined;
@@ -918,62 +919,115 @@ export default function LawyerDashboard() {
   const clientCount = acceptedClients.length;
 
   const displayTeam = useMemo(() => {
-    if (selectedTeamId && teamWorkspaces.length) {
-      const selected = teamWorkspaces.find((t) => String(t.id) === String(selectedTeamId));
-      if (selected) return selected;
-    }
-    return teamWorkspace || {};
-  }, [selectedTeamId, teamWorkspaces, teamWorkspace]);
+    if (!teamWorkspace) return {};
+    return teamWorkspace;
+  }, [teamWorkspace]);
 
   const hasTeam = Boolean(displayTeam?.id || displayTeam?.teamCode);
   const displayIsTeamOwner = displayTeam?.role === 'owner';
   const teamMembers = Array.isArray(displayTeam.members) ? displayTeam.members : [];
-  const teamPendingRequests = Array.isArray(displayTeam.pendingJoinRequests) ? displayTeam.pendingJoinRequests : [];
-  const teamCases = Array.isArray(displayTeam.cases) ? displayTeam.cases : [];
+  
+  const teamPendingRequests = useMemo(() => {
+    if (Array.isArray(displayTeam.pendingJoinRequests)) return displayTeam.pendingJoinRequests;
+    if (Array.isArray(displayTeam.pendingRequests)) return displayTeam.pendingRequests;
+    return [];
+  }, [displayTeam.pendingJoinRequests, displayTeam.pendingRequests]);
+
+  const teamCases = useMemo(() => {
+    return Array.isArray(displayTeam.cases) ? displayTeam.cases : [];
+  }, [displayTeam.cases]);
+
   const teamSize = (displayTeam.membersCount !== undefined && displayTeam.membersCount !== null)
     ? Number(displayTeam.membersCount)
-    : teamMembers.length;
+    : (teamMembers.length + 1);
 
   const currentLawyerId = user?._id || user?.id;
   const currentLawyerName = getLawyerDisplayName(user);
 
   const visibleTeamDirectory = useMemo(() => {
-    return teamMembers.map((member) => {
-      const memberId = getEntityId(member.lawyerId || member.id);
+    const rawMembers = Array.isArray(displayTeam.members) ? [...displayTeam.members] : [];
+    const ownerId = getEntityId(displayTeam.seniorLawyer || displayTeam.ownerId || displayTeam.owner);
+    const ownerName = String(displayTeam.seniorLawyerName || (displayIsTeamOwner ? currentLawyerName : 'Team Owner')).trim();
+    
+    const directory = [];
+    const ownerIndexInMembers = rawMembers.findIndex((m) => {
+      const mId = getEntityId(m.lawyerId || m.id || m._id);
+      return (mId && ownerId && isSameId(mId, ownerId)) || m.role === 'owner';
+    });
+
+    if (ownerIndexInMembers >= 0) {
+      const ownerMember = rawMembers[ownerIndexInMembers];
+      const isSelfOwner = displayIsTeamOwner || isSameId(ownerId, currentLawyerId);
+      directory.push({
+        ...ownerMember,
+        id: String(ownerMember.id || ownerMember._id || ownerId || 'owner-id'),
+        lawyerId: ownerId || currentLawyerId,
+        name: isSelfOwner ? `${ownerName} (You)` : ownerName,
+        role: 'owner',
+        roleLabel: 'Team Owner',
+      });
+    } else if (ownerName || ownerId) {
+      const isSelfOwner = displayIsTeamOwner || isSameId(ownerId, currentLawyerId);
+      directory.push({
+        id: String(ownerId || 'team-owner-dir-id'),
+        lawyerId: ownerId || currentLawyerId,
+        name: isSelfOwner ? `${ownerName} (You)` : ownerName,
+        email: displayTeam.ownerEmail || (isSelfOwner ? user?.email : '') || 'Not shared',
+        phone: displayTeam.ownerPhone || (isSelfOwner ? user?.phone : '') || 'Not shared',
+        role: 'owner',
+        roleLabel: 'Team Owner',
+      });
+    }
+
+    rawMembers.forEach((member, index) => {
+      if (index === ownerIndexInMembers) return;
+      const memberId = getEntityId(member.lawyerId || member.id || member._id);
       const isSelf = isSameId(memberId, currentLawyerId);
-      const isOwner = member.role === 'owner' || isSameId(memberId, displayTeam.ownerId);
-      const rawName = String(member.name || '').trim();
+      const isOwner = member.role === 'owner' || (ownerId && isSameId(memberId, ownerId));
+      const rawName = String(member.name || '').replace(/\s*\(you\)$/i, '').trim();
       const displayName = isSelf ? `${rawName} (You)` : rawName;
-      return {
+
+      directory.push({
         ...member,
+        id: String(member.id || member._id || memberId),
+        lawyerId: memberId,
         name: displayName,
         roleLabel: isOwner ? 'Team Owner' : 'Lawyer Member',
-      };
+      });
     });
-  }, [teamMembers, currentLawyerId, displayTeam.ownerId]);
+
+    return directory;
+  }, [displayTeam, currentLawyerId, currentLawyerName, displayIsTeamOwner, user?.email, user?.phone]);
 
   const activeTeamMember = useMemo(() => {
     if (!selectedTeamMemberId) return null;
-    return visibleTeamDirectory.find((m) => String(m.id) === String(selectedTeamMemberId)) || null;
+    return visibleTeamDirectory.find((m) => 
+      String(m.id) === String(selectedTeamMemberId) || 
+      isSameId(m.id || m.lawyerId, selectedTeamMemberId)
+    ) || null;
   }, [selectedTeamMemberId, visibleTeamDirectory]);
 
   const activeTeamMemberId = activeTeamMember ? getEntityId(activeTeamMember.lawyerId || activeTeamMember.id) : '';
 
   const activeTeamMemberCases = useMemo(() => {
     if (!activeTeamMember) return [];
+    const targetMemberId = getEntityId(activeTeamMember.lawyerId || activeTeamMember.id);
+    const targetMemberName = normalizeLawyerName(activeTeamMember.name);
+
     return teamCases.filter((teamCase) => {
-      const caseOwnerId = getEntityId(teamCase.addedBy);
-      const caseOwnerName = String(teamCase.addedByName || '').trim().toLowerCase();
-      const memberName = String(activeTeamMember.name || '').replace(/\s*\(you\)$/i, '').trim().toLowerCase();
-      if (caseOwnerId && activeTeamMemberId) {
-        return isSameId(caseOwnerId, activeTeamMemberId);
+      const caseOwnerId = getEntityId(teamCase.addedBy || teamCase.ownerId);
+      if (caseOwnerId && targetMemberId && isSameId(caseOwnerId, targetMemberId)) {
+        return true;
       }
-      if (caseOwnerName && memberName) {
-        return caseOwnerName === memberName;
+
+      const caseOwnerName = normalizeLawyerName(teamCase.addedByName || teamCase.addedBy);
+      if (caseOwnerName && targetMemberName && caseOwnerName === targetMemberName) {
+        return true;
       }
+
       return false;
     });
-  }, [activeTeamMember, activeTeamMemberId, teamCases]);
+  }, [activeTeamMember, teamCases]);
 
   const canRemoveActiveTeamMember = useMemo(() => {
     if (!displayIsTeamOwner || !activeTeamMember) return false;
@@ -983,26 +1037,28 @@ export default function LawyerDashboard() {
   }, [displayIsTeamOwner, activeTeamMember, activeTeamMemberId, displayTeam.ownerId]);
 
   const ownTeamCases = useMemo(() => {
+    if (!Array.isArray(teamCases)) return [];
     return teamCases.filter((teamCase) => {
-      const caseOwnerId = getEntityId(teamCase.addedBy);
+      if (teamCase.canEdit) return true;
+
+      const caseOwnerId = getEntityId(teamCase.addedBy || teamCase.ownerId);
+      if (caseOwnerId && currentLawyerId && isSameId(caseOwnerId, currentLawyerId)) {
+        return true;
+      }
+
       const normCaseOwnerName = normalizeLawyerName(teamCase.addedByName);
-      if (displayIsTeamOwner) {
-        const normLeaderName = normalizeLawyerName(displayTeam?.seniorLawyerName || currentLawyerName);
-        if (caseOwnerId && currentLawyerId) {
-          return isSameId(caseOwnerId, currentLawyerId);
-        }
-        if (normCaseOwnerName && normLeaderName) {
-          return normCaseOwnerName === normLeaderName;
-        }
-        return !caseOwnerId && !normCaseOwnerName;
-      }
       const normCurrentName = normalizeLawyerName(currentLawyerName);
-      if (caseOwnerId && currentLawyerId) {
-        return isSameId(caseOwnerId, currentLawyerId);
+      if (normCaseOwnerName && normCurrentName && normCaseOwnerName === normCurrentName) {
+        return true;
       }
-      if (normCaseOwnerName && normCurrentName) {
-        return normCaseOwnerName === normCurrentName;
+
+      if (displayIsTeamOwner) {
+        const normLeaderName = normalizeLawyerName(displayTeam?.seniorLawyerName);
+        if (normCaseOwnerName && normLeaderName && normCaseOwnerName === normLeaderName) {
+          return true;
+        }
       }
+
       return false;
     });
   }, [teamCases, displayIsTeamOwner, displayTeam?.seniorLawyerName, currentLawyerName, currentLawyerId]);
