@@ -131,9 +131,12 @@ export default function LawyerDashboard() {
   const [jamSessionForm, setJamSessionForm] = useState({
     title: '',
     description: '',
+    scheduleDate: '',
+    scheduleTime: '',
     schedule: '',
     location: '',
   });
+  const [deletingPostId, setDeletingPostId] = useState('');
 
   // Notice Generator State
   const [noticeForm, setNoticeForm] = useState(initialNoticeForm);
@@ -409,7 +412,14 @@ export default function LawyerDashboard() {
   };
 
   const resetJamSessionForm = () => {
-    setJamSessionForm({ title: '', description: '', schedule: '', location: '' });
+    setJamSessionForm({
+      title: '',
+      description: '',
+      scheduleDate: '',
+      scheduleTime: '',
+      schedule: '',
+      location: '',
+    });
   };
 
   const handleInternshipInput = (event) => {
@@ -417,9 +427,42 @@ export default function LawyerDashboard() {
     setInternshipForm((current) => ({ ...current, [name]: value }));
   };
 
+  const formatJamSchedule = (dateStr, timeStr) => {
+    if (!dateStr) return timeStr || '';
+    const dateObj = new Date(`${dateStr}T${timeStr || '00:00'}`);
+    if (Number.isNaN(dateObj.getTime())) return `${dateStr} ${timeStr || ''}`.trim();
+
+    const formattedDate = dateObj.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+
+    if (!timeStr) return formattedDate;
+
+    const [hours, minutes] = timeStr.split(':');
+    const tempDate = new Date();
+    tempDate.setHours(parseInt(hours || '0', 10), parseInt(minutes || '0', 10));
+    const formattedTime = tempDate.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+
+    return `${formattedDate} at ${formattedTime}`;
+  };
+
   const handleJamSessionInput = (event) => {
     const { name, value } = event.target;
-    setJamSessionForm((current) => ({ ...current, [name]: value }));
+    setJamSessionForm((current) => {
+      const updated = { ...current, [name]: value };
+      if (name === 'scheduleDate' || name === 'scheduleTime') {
+        const dateStr = name === 'scheduleDate' ? value : current.scheduleDate;
+        const timeStr = name === 'scheduleTime' ? value : current.scheduleTime;
+        updated.schedule = formatJamSchedule(dateStr, timeStr);
+      }
+      return updated;
+    });
   };
 
   const handleCreateTeamInput = (event) => {
@@ -691,6 +734,25 @@ export default function LawyerDashboard() {
       setPostError(error.response?.data?.message || 'Unable to publish this post right now.');
     } finally {
       setPosting(false);
+    }
+  };
+
+  const handleDeletePost = async (post) => {
+    if (!post || !post.id) return;
+    const confirmDelete = window.confirm('Are you sure you want to delete this post?');
+    if (!confirmDelete) return;
+
+    try {
+      setDeletingPostId(post.id);
+      await api.delete(`/posts/${post.id}`);
+      setPublishedPosts((prev) => prev.filter((item) => String(item.id) !== String(post.id)));
+      await loadStudentInteractionPosts();
+      await loadOwnPosts();
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      alert(error.response?.data?.message || 'Failed to delete post');
+    } finally {
+      setDeletingPostId('');
     }
   };
 
@@ -1356,6 +1418,8 @@ export default function LawyerDashboard() {
               handleJamSessionInput={handleJamSessionInput}
               setPostError={setPostError}
               setShowPostComposer={setShowPostComposer}
+              handleDeletePost={handleDeletePost}
+              deletingPostId={deletingPostId}
             />
           </div>
         ) : (

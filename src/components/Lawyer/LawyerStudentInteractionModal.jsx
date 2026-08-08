@@ -39,6 +39,8 @@ export default function LawyerStudentInteractionModal({
   handleJamSessionInput,
   setPostError,
   setShowPostComposer,
+  handleDeletePost,
+  deletingPostId,
 }) {
   const navigate = useNavigate();
 
@@ -290,7 +292,12 @@ export default function LawyerStudentInteractionModal({
                     <EmptyBlock icon={<FaUserGraduate size={24} />} message="No posts published yet." />
                   ) : (
                     publishedPosts.map((post) => (
-                      <FeedPostCard key={`lawyer-post-${post.id}`} post={post} />
+                      <FeedPostCard
+                        key={`lawyer-post-${post.id}`}
+                        post={post}
+                        onDelete={handleDeletePost}
+                        deleting={deletingPostId === post.id}
+                      />
                     ))
                   )}
                 </div>
@@ -419,9 +426,34 @@ export default function LawyerStudentInteractionModal({
                   {showJamSessionForm && (
                     <form onSubmit={handlePublishJamSession} className="mt-5 space-y-4">
                       <input name="title" value={jamSessionForm.title} onChange={handleJamSessionInput} placeholder="Session title" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-cyan-400" required />
-                      <textarea name="description" value={jamSessionForm.description} onChange={handleJamSessionInput} placeholder="Description" rows="5" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-cyan-400" required />
-                      <input name="schedule" value={jamSessionForm.schedule} onChange={handleJamSessionInput} placeholder="Schedule" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-cyan-400" />
-                      <input name="location" value={jamSessionForm.location} onChange={handleJamSessionInput} placeholder="Location / online" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-cyan-400" />
+                      <textarea name="description" value={jamSessionForm.description} onChange={handleJamSessionInput} placeholder="Description" rows="4" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-cyan-400" required />
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-zinc-400 mb-1">Session Date *</label>
+                          <input
+                            type="date"
+                            name="scheduleDate"
+                            value={jamSessionForm.scheduleDate || ''}
+                            onChange={handleJamSessionInput}
+                            className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-zinc-400 mb-1">Session Time *</label>
+                          <input
+                            type="time"
+                            name="scheduleTime"
+                            value={jamSessionForm.scheduleTime || ''}
+                            onChange={handleJamSessionInput}
+                            className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <input name="location" value={jamSessionForm.location} onChange={handleJamSessionInput} placeholder="Location / online link" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-cyan-400" />
                       <button type="submit" className="w-full rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 font-bold px-5 py-3 border border-[#d6b85b] shadow-sm transition">
                         Publish Jam Session
                       </button>

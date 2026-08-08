@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { BriefcaseBusiness, CalendarDays, Clock3, IndianRupee, MapPin, Users, X } from 'lucide-react';
+import { useSelector } from 'react-redux';
+import { BriefcaseBusiness, CalendarDays, Clock3, IndianRupee, MapPin, Trash2, Users, X } from 'lucide-react';
 import api from '../../api/axios.jsx';
 import ReactionBar from './ReactionBar.jsx';
 
@@ -15,7 +16,8 @@ const typeLabels = {
   jam: 'Jam Session',
 };
 
-export default function FeedPostCard({ post, onApply, onJoin }) {
+export default function FeedPostCard({ post, onApply, onJoin, onDelete, deleting }) {
+  const { user } = useSelector((state) => state.auth);
   const [selectedImage, setSelectedImage] = useState(null);
   const creatorName = post.creatorName || post.lawyerName || 'User';
   const creatorRole = post.creatorRole || 'user';
@@ -82,6 +84,21 @@ export default function FeedPostCard({ post, onApply, onJoin }) {
               <p className="mt-2 text-sm text-[#6d7a92]">{post.postedAt || post.time}</p>
             </div>
           </div>
+
+          {Boolean(onDelete && user && (
+            String(post.createdBy || post.lawyerId || post.createdBy?._id) === String(user._id || user.id)
+          )) ? (
+            <button
+              type="button"
+              onClick={() => onDelete(post)}
+              disabled={deleting}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-red-200/80 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 transition-all hover:bg-red-600 hover:text-white hover:border-red-600 select-none touch-manipulation active:scale-[0.98] disabled:opacity-50"
+              aria-label="Delete post"
+            >
+              <Trash2 size={14} />
+              {deleting ? 'Deleting...' : 'Delete'}
+            </button>
+          ) : null}
         </div>
 
         {post.title ? <h2 className="text-[24px] font-semibold tracking-tight text-[#102144]">{post.title}</h2> : null}

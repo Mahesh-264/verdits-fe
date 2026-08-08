@@ -175,9 +175,11 @@ body {
   }
 
   [class*="hover:bg-red-"]:hover,
+  [class*="hover:bg-red-"]:hover svg,
   [class*="hover:bg-zinc-700"]:hover,
   [class*="hover:bg-zinc-800"]:hover {
     color: var(--verdicts-ivory) !important;
+    stroke: var(--verdicts-ivory) !important;
   }
 }
 

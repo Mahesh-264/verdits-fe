@@ -416,16 +416,10 @@ export default function StudentApplications() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between border-t border-[#e3e8f3] pt-4">
+                    <div className="border-t border-[#e3e8f3] pt-4">
                       <span className="text-xs text-[#7d8aa5]">
                         Joined on {formatAppliedTime(session.joinedAt)}
                       </span>
-                      <Link
-                        to={`/student-explore?tab=jamSessions&itemId=${session.id}`}
-                        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#062552] hover:text-[#d6a400] transition-colors"
-                      >
-                        View Session Details <ExternalLink size={15} />
-                      </Link>
                     </div>
                   </div>
                 </article>

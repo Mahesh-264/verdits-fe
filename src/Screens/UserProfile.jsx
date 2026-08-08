@@ -441,8 +441,9 @@ const UserProfile = () => {
 
           {!isEditing ? (
             <button
+              type="button"
               onClick={handleLogout}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-red-500 py-4 font-bold text-white shadow-lg transition active:scale-95"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-red-600 hover:bg-red-700 py-4 font-bold text-white shadow-lg transition-colors select-none touch-manipulation active:scale-[0.98]"
             >
               <LogOut size={20} />
               Logout
