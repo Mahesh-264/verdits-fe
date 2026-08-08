@@ -570,20 +570,21 @@ export default function LawyerDashboard() {
 
   const handleTeamRequestDecision = async (request, action) => {
     if (!teamWorkspace?.id || !request?.id) return;
+    const isApprove = action === 'accept' || action === 'approve';
+    const decision = isApprove ? 'approve' : 'reject';
     try {
       setUpdatingTeamRequestId(String(request.id));
       setTeamError('');
       setTeamMessage('');
-      const endpoint = action === 'accept' ? 'accept' : 'reject';
-      const { data } = await api.post(`/teams/${teamWorkspace.id}/join-requests/${request.id}/${endpoint}`);
+      const { data } = await api.patch(`/teams/${teamWorkspace.id}/join-requests/${request.id}/${decision}`);
       if (data?.user && String(data.user._id || data.user.id) === String(user?._id || user?.id)) {
         dispatch(updateUser(data.user));
       }
-      setTeamMessage(action === 'accept' ? 'Join request accepted.' : 'Join request rejected.');
+      setTeamMessage(isApprove ? 'Join request accepted.' : 'Join request rejected.');
       await loadTeamWorkspace();
     } catch (error) {
       console.error(`Error processing join request (${action}):`, error);
-      setTeamError(error.response?.data?.message || `Failed to ${action} join request`);
+      setTeamError(error.response?.data?.message || `Failed to ${isApprove ? 'accept' : 'reject'} join request`);
     } finally {
       setUpdatingTeamRequestId('');
     }
