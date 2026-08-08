@@ -78,13 +78,13 @@ export default function StudentProfile() {
   const internships = getInternships(profileUser?.studentProfile?.internships);
   const certificates = getCertificates(profileUser?.studentProfile?.certificates);
   const currentYearLabel = profileUser?.studentProfile?.currentYear || 'Not added yet';
-  const ProfilePageLayout = ({ children }) => (
+  const renderLayout = (content) => (
     isLawyerViewingStudent ? (
       <main className="min-h-screen bg-[#f3f8fb] px-4 py-6 text-[#062552] md:px-6 md:py-8">
-        <div className="mx-auto max-w-[1200px]">{children}</div>
+        <div className="mx-auto max-w-[1200px]">{content}</div>
       </main>
     ) : (
-      <StudentLayout>{children}</StudentLayout>
+      <StudentLayout>{content}</StudentLayout>
     )
   );
 
@@ -228,28 +228,24 @@ export default function StudentProfile() {
   };
 
   if (isLoadingProfile) {
-    return (
-      <ProfilePageLayout>
-        <div className="rounded-[28px] border border-[#dbe2ef] bg-white p-8 text-[#5e6c87] shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
-          Loading student profile...
-        </div>
-      </ProfilePageLayout>
+    return renderLayout(
+      <div className="rounded-[28px] border border-[#dbe2ef] bg-white p-8 text-[#5e6c87] shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
+        Loading student profile...
+      </div>
     );
   }
 
   if (!profileUser) {
-    return (
-      <ProfilePageLayout>
-        <div className="rounded-[28px] border border-[#dbe2ef] bg-white p-8 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
-          <h1 className="text-2xl font-semibold">Student profile not found</h1>
-          <p className="mt-2 text-[#5e6c87]">This student may no longer be available in your network list.</p>
-        </div>
-      </ProfilePageLayout>
+    return renderLayout(
+      <div className="rounded-[28px] border border-[#dbe2ef] bg-white p-8 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
+        <h1 className="text-2xl font-semibold">Student profile not found</h1>
+        <p className="mt-2 text-[#5e6c87]">This student may no longer be available in your network list.</p>
+      </div>
     );
   }
 
-  return (
-    <ProfilePageLayout>
+  return renderLayout(
+    <>
       <div className="space-y-8">
         {!isOwnProfile && (
           <button
@@ -297,7 +293,7 @@ export default function StudentProfile() {
                 <button
                   type="button"
                   onClick={() => openEditor('full')}
-                  className="rounded-2xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-6 py-4 text-[18px] font-bold transition shadow-sm border border-[#d6b85b]"
+                  className="rounded-2xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-6 py-4 text-[18px] font-bold transition-colors shadow-sm border border-[#d6b85b] select-none touch-manipulation active:scale-[0.98]"
                 >
                   Edit Profile
                 </button>
@@ -885,6 +881,6 @@ export default function StudentProfile() {
           </div>
         </div>
       )}
-    </ProfilePageLayout>
+    </>
   );
 }

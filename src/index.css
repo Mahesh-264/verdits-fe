@@ -166,17 +166,19 @@ body {
 }
 
 /* Keep label contrast stable when a button changes its surface on hover. */
-[class*="hover:bg-[#fff2bf]"]:hover,
-[class*="hover:bg-[#d6a400]"]:hover,
-[class*="hover:bg-cyan-300"]:hover,
-[class*="hover:bg-zinc-200"]:hover {
-  color: var(--verdicts-ink) !important;
-}
+@media (hover: hover) and (pointer: fine) {
+  [class*="hover:bg-[#fff2bf]"]:hover,
+  [class*="hover:bg-[#d6a400]"]:hover,
+  [class*="hover:bg-cyan-300"]:hover,
+  [class*="hover:bg-zinc-200"]:hover {
+    color: var(--verdicts-ink) !important;
+  }
 
-[class*="hover:bg-red-"]:hover,
-[class*="hover:bg-zinc-700"]:hover,
-[class*="hover:bg-zinc-800"]:hover {
-  color: var(--verdicts-ivory) !important;
+  [class*="hover:bg-red-"]:hover,
+  [class*="hover:bg-zinc-700"]:hover,
+  [class*="hover:bg-zinc-800"]:hover {
+    color: var(--verdicts-ivory) !important;
+  }
 }
 
 [class*="text-[#062552]"],

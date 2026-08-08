@@ -430,8 +430,9 @@ const UserProfile = () => {
             </button>
           ) : (
             <button
+              type="button"
               onClick={() => setIsEditing(true)}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#15a276] py-4 font-bold text-white shadow-lg transition hover:bg-[#fff2bf] active:scale-95"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#15a276] py-4 font-bold text-white shadow-lg transition-colors hover:bg-[#12845f] active:scale-[0.98] select-none touch-manipulation"
             >
               <Edit2 size={20} />
               Edit Profile
