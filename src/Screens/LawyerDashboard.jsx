@@ -693,22 +693,19 @@ export default function LawyerDashboard() {
     }
   };
 
-  const handleOpenApplicantsDrawer = async (internship) => {
-    try {
-      const { data } = await api.get(`/auth/lawyer/internships/${internship.id}/applicants`);
-      setDrawerFilter('All');
-      setDrawer({
-        open: true,
-        type: 'applicants',
-        title: internship.title,
-        parentId: internship.id,
-        parentLabel: 'Internship Role',
-        items: Array.isArray(data) ? data : [],
-      });
-    } catch (error) {
-      console.error('Error loading applicants:', error);
-      alert('Unable to load applicants for this internship right now.');
-    }
+  const handleOpenApplicantsDrawer = (internship) => {
+    // Applicants are returned with the lawyer's student-interactions payload.
+    // Opening from that source avoids a second request and keeps the drawer
+    // available even when the selected internship has no applicants.
+    setDrawerFilter('All');
+    setDrawer({
+      open: true,
+      type: 'applicants',
+      title: internship.title,
+      parentId: internship.id,
+      parentLabel: 'Internship Role',
+      items: Array.isArray(internship.applicants) ? internship.applicants : [],
+    });
   };
 
   const handleOpenParticipantsDrawer = async (jamSession) => {
@@ -733,7 +730,7 @@ export default function LawyerDashboard() {
     if (!drawer.parentId) return;
     try {
       setUpdatingApplicantId(applicantId);
-      await api.patch(`/auth/lawyer/internships/${drawer.parentId}/applicants/${applicantId}`, { status });
+      await api.patch(`/auth/lawyer/internships/${drawer.parentId}/applicants/${applicantId}/status`, { status });
       setDrawer((current) => ({
         ...current,
         items: current.items.map((item) => (item.id === applicantId ? { ...item, status } : item)),

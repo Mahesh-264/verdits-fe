@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/axios.jsx';
 import { updateUser } from '../redux/authSlice.jsx';
-import ReactionBar from '../components/feed/ReactionBar.jsx';
 import StudentLayout from './StudentLayout.jsx';
 
 const getDisplayName = (user) => {
@@ -68,6 +67,7 @@ export default function StudentProfile() {
   const [formData, setFormData] = useState(() => getInitialFormState(user));
 
   const isOwnProfile = !profileId || String(profileId) === String(user?._id || user?.id);
+  const isLawyerViewingStudent = user?.role === 'lawyer' && !isOwnProfile;
   const profileUser = isOwnProfile ? user : viewedStudent;
   const studentName = useMemo(() => getDisplayName(profileUser), [profileUser]);
   const collegeName = profileUser?.studentProfile?.collegeName || 'National Law School of India University, Bangalore';
@@ -78,13 +78,15 @@ export default function StudentProfile() {
   const internships = getInternships(profileUser?.studentProfile?.internships);
   const certificates = getCertificates(profileUser?.studentProfile?.certificates);
   const currentYearLabel = profileUser?.studentProfile?.currentYear || 'Not added yet';
-  const profileReactionItem = useMemo(() => ({
-    id: profileUser?._id || profileUser?.id || 'student-profile',
-    title: `${studentName}'s student profile`,
-    likesCount: profileUser?.studentProfile?.profileLikesCount || 0,
-    commentsCount: profileUser?.studentProfile?.profileCommentsCount || 0,
-    comments: [],
-  }), [profileUser, studentName]);
+  const ProfilePageLayout = ({ children }) => (
+    isLawyerViewingStudent ? (
+      <main className="min-h-screen bg-[#f3f8fb] px-4 py-6 text-[#062552] md:px-6 md:py-8">
+        <div className="mx-auto max-w-[1200px]">{children}</div>
+      </main>
+    ) : (
+      <StudentLayout>{children}</StudentLayout>
+    )
+  );
 
   useEffect(() => {
     const loadViewedStudent = async () => {
@@ -227,27 +229,27 @@ export default function StudentProfile() {
 
   if (isLoadingProfile) {
     return (
-      <StudentLayout>
+      <ProfilePageLayout>
         <div className="rounded-[28px] border border-[#dbe2ef] bg-white p-8 text-[#5e6c87] shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
           Loading student profile...
         </div>
-      </StudentLayout>
+      </ProfilePageLayout>
     );
   }
 
   if (!profileUser) {
     return (
-      <StudentLayout>
+      <ProfilePageLayout>
         <div className="rounded-[28px] border border-[#dbe2ef] bg-white p-8 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
           <h1 className="text-2xl font-semibold">Student profile not found</h1>
           <p className="mt-2 text-[#5e6c87]">This student may no longer be available in your network list.</p>
         </div>
-      </StudentLayout>
+      </ProfilePageLayout>
     );
   }
 
   return (
-    <StudentLayout>
+    <ProfilePageLayout>
       <div className="space-y-8">
         {!isOwnProfile && (
           <button
@@ -302,9 +304,6 @@ export default function StudentProfile() {
               ) : null}
             </div>
 
-            <div className="mt-8 border-t border-[#e9eef7] pt-5">
-              <ReactionBar item={profileReactionItem} itemLabel="student profile" compact />
-            </div>
           </div>
         </section>
 
@@ -886,6 +885,6 @@ export default function StudentProfile() {
           </div>
         </div>
       )}
-    </StudentLayout>
+    </ProfilePageLayout>
   );
 }
