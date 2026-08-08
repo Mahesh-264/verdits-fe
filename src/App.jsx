@@ -31,6 +31,7 @@ import StudentProfile from './Screens/StudentProfile.jsx';
 import StudentExplore from './Screens/StudentExplore.jsx';
 import StudentNetwork from './Screens/StudentNetwork.jsx';
 import StudentJamSessions from './Screens/StudentJamSessions.jsx';
+import StudentApplications from './Screens/StudentApplications.jsx';
 
 // --- ROLE-BASED HUB ---
 const DashboardHub = () => {
@@ -236,6 +237,12 @@ export default function App() {
         <Route path="/student-jam" element={
           <ProtectedRoute allowedRoles={['student']}>
             <StudentJamSessions />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/student-applications" element={
+          <ProtectedRoute allowedRoles={['student']}>
+            <StudentApplications />
           </ProtectedRoute>
         } />
 

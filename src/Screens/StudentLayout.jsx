@@ -1,7 +1,7 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Compass, Home, LogOut, Search, User, Users } from 'lucide-react';
+import { Briefcase, Compass, Home, LogOut, Search, User, Users } from 'lucide-react';
 import { updateUser } from '../redux/authSlice';
 import api from '../api/axios.jsx';
 import BrandLogo from '../components/BrandLogo.jsx';
@@ -12,6 +12,7 @@ const navItems = [
   { label: 'Home', path: '/student-home', Icon: Home },
   { label: 'Explore', path: '/student-explore', Icon: Compass },
   { label: 'Network', path: '/student-network', Icon: Users },
+  { label: 'Your Applications', path: '/student-applications', Icon: Briefcase },
 ];
 
 export default function StudentLayout({ children }) {
@@ -141,7 +142,7 @@ export default function StudentLayout({ children }) {
 
             <nav className="flex items-center gap-2 overflow-x-auto xl:flex-1 xl:justify-center">
               {navItems.map((item) => {
-                const isActive = location.pathname === item.path;
+                const isActive = location.pathname.startsWith(item.path);
 
                 return (
                   <Link
