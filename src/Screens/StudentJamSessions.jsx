@@ -139,11 +139,11 @@ export default function StudentJamSessions() {
               </div>
 
               <div className="border-t border-[#e3e8f3] px-6 py-5 md:px-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <button type="button" className="inline-flex items-center gap-2 text-[18px] font-semibold text-[#062552] hover:text-[#15a276] transition">
+                <button type="button" className="inline-flex items-center gap-2 text-[18px] font-semibold text-[#062552] hover:text-[#d6a400] transition">
                   <Users size={18} />
                   Join Session
                 </button>
-                <button type="button" className="inline-flex items-center gap-2 text-[18px] font-semibold text-[#062552] hover:text-[#15a276] transition">
+                <button type="button" className="inline-flex items-center gap-2 text-[18px] font-semibold text-[#062552] hover:text-[#d6a400] transition">
                   <MessageSquare size={18} />
                   View Comments
                 </button>

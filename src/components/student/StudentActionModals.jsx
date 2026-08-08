@@ -226,7 +226,7 @@ export function InternshipApplicationModal({
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-2xl bg-[#f1d15f] hover:bg-[#d6a400] px-6 py-3 font-bold text-zinc-950 transition border border-[#d6b85b] shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-2xl bg-[#f1d15f] hover:bg-[#d6a400] px-6 py-3 font-bold text-zinc-950 transition-colors border border-[#d6b85b] shadow-sm select-none touch-manipulation active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? 'Submitting...' : 'Submit Application'}
             </button>
@@ -323,7 +323,7 @@ export function JamJoinModal({
       <div className="w-full max-w-lg rounded-[32px] bg-white p-6 shadow-[0_24px_60px_rgba(8,17,36,0.26)]">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#0e8f5b]">Join Jam Session</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#15a276]">Join Jam Session</p>
             <h2 className="mt-2 text-[24px] font-semibold text-[#0b1f44]">{session.title}</h2>
             <p className="mt-2 text-sm text-[#5e6c87]">{session.lawyerName}</p>
           </div>
@@ -336,7 +336,7 @@ export function JamJoinModal({
           </button>
         </div>
 
-        <div className="mt-6 rounded-[28px] bg-[#f6fbf8] p-5">
+        <div className="mt-6 rounded-[28px] bg-[#f8faff] p-5">
           <p className="text-sm leading-7 text-[#35506a]">
             Confirm your participation and we’ll mark you as joined right away. No long form needed.
           </p>
@@ -365,7 +365,7 @@ export function JamJoinModal({
             type="button"
             onClick={() => onSubmit({ name, email })}
             disabled={submitting}
-            className="inline-flex items-center gap-2 rounded-2xl bg-[#114a38] px-6 py-3 font-semibold text-white transition hover:bg-[#176049] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-2xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 font-bold border border-[#d6b85b] px-6 py-3 transition-colors shadow-sm select-none touch-manipulation active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Check size={16} />
             {submitting ? 'Joining...' : 'Confirm Join'}

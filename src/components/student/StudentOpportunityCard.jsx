@@ -16,12 +16,12 @@ const typeStyles = {
   internship: {
     badge: 'bg-[#e8f1ff] text-[#15a276]',
     button: 'bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 font-bold border border-[#d6b85b] shadow-sm',
-    joined: 'bg-[#e9fff1] text-[#14804a]',
+    joined: 'bg-[#fffde6] text-[#755617] border border-[#ead79c]',
   },
   jam: {
     badge: 'bg-[#eafbf4] text-[#0e8f5b]',
     button: 'bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 font-bold border border-[#d6b85b] shadow-sm',
-    joined: 'bg-[#e9fff1] text-[#14804a]',
+    joined: 'bg-[#fffde6] text-[#755617] border border-[#ead79c]',
   },
 };
 
@@ -218,7 +218,7 @@ export default function StudentOpportunityCard({
             type="button"
             onClick={() => (isInternship ? onApply?.(post) : onJoin?.(post))}
             disabled={isCompleted}
-            className={`inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-4 text-base font-semibold transition ${
+            className={`inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-4 text-base font-semibold transition-colors select-none touch-manipulation active:scale-[0.98] ${
               isCompleted
                 ? `${styles.joined} cursor-not-allowed`
                 : styles.button

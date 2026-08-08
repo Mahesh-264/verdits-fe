@@ -159,12 +159,10 @@ export default function FeedPostCard({ post, onApply, onJoin }) {
               type="button"
               onClick={() => (isInternship ? onApply?.(post) : onJoin?.(post))}
               disabled={isDisabled}
-              className={`self-start rounded-2xl px-5 py-3 text-sm font-semibold transition ${
+              className={`self-start rounded-2xl px-5 py-3 text-sm font-semibold transition-colors select-none touch-manipulation active:scale-[0.98] ${
                 isDisabled
-                  ? 'cursor-not-allowed bg-[#e9fff1] text-[#14804a]'
-                  : isInternship
-                    ? 'bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 font-bold border border-[#d6b85b] shadow-sm'
-                    : 'bg-[#114a38] text-white hover:bg-[#176049]'
+                  ? 'cursor-not-allowed bg-[#fffde6] text-[#755617] border border-[#ead79c]'
+                  : 'bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 font-bold border border-[#d6b85b] shadow-sm'
               }`}
             >
               {actionLabel}

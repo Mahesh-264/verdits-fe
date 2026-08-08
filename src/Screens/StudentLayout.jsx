@@ -10,7 +10,6 @@ import useSessionLogout from '../hooks/useSessionLogout.js';
 
 const navItems = [
   { label: 'Home', path: '/student-home', Icon: Home },
-  { label: 'Profile', path: '/student-profile', Icon: User },
   { label: 'Explore', path: '/student-explore', Icon: Compass },
   { label: 'Network', path: '/student-network', Icon: Users },
 ];
@@ -191,15 +190,6 @@ export default function StudentLayout({ children }) {
                   {showProfileMenu ? profileMenu : null}
                 </div>
               </div>
-
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="inline-flex items-center gap-2 rounded-2xl border border-[#ead79c] bg-[#fffaf0] px-4 py-3 text-sm font-semibold text-[#755617] transition hover:bg-[#fff2cb]"
-              >
-                <LogOut size={16} />
-                Logout
-              </button>
             </div>
           </div>
         </div>
