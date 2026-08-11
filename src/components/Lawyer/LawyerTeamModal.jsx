@@ -379,13 +379,25 @@ export default function LawyerTeamModal({
                       />
                     </div>
                     <div>
-                      <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Next Hearing Date</label>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Hearing Date</label>
                       <input
                         type="date"
-                        name="nextHearingDate"
-                        value={teamCaseForm.nextHearingDate}
+                        name="hearingDate"
+                        value={teamCaseForm.hearingDate}
                         onChange={handleTeamCaseInput}
                         className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Hearing Time</label>
+                      <input
+                        type="time"
+                        name="hearingTime"
+                        value={teamCaseForm.hearingTime}
+                        onChange={handleTeamCaseInput}
+                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
+                        required
                       />
                     </div>
                     <div className="md:col-span-2">

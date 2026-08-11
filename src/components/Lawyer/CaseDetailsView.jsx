@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { FaArrowLeft, FaCheck, FaPencilAlt, FaPlus, FaTimes, FaTrash } from 'react-icons/fa';
+import { FaArrowLeft, FaCheck, FaPencilAlt, FaTimes, FaTrash } from 'react-icons/fa';
 import api from '../../api/axios';
+import { formatTime, toDateInput, toTimeInput } from '../../utils/lawyerUtils';
 
 const CaseDetailsView = ({
   selectedCase,
@@ -30,6 +31,18 @@ const CaseDetailsView = ({
   const [savingHearingHistory, setSavingHearingHistory] = useState(false);
   const [caseDetailsMessage, setCaseDetailsMessage] = useState('');
   const [caseDetailsError, setCaseDetailsError] = useState('');
+  const nextTemporaryHearingKey = useRef(0);
+  const hearingHistoryVersion = useRef(0);
+  const createManualHistoryRow = () => ({
+    tempKey: `new-hearing-${++nextTemporaryHearingKey.current}`,
+    isManualHistory: true,
+    courtName: caseRecord?.courtName || '',
+    hearingDate: '',
+    hearingTime: '',
+    hearingDetails: '',
+    nextHearingDate: '',
+    nextHearingTime: '',
+  });
 
   const currentStatusObject = teamCaseStatuses.find((item) => item.value === (caseRecord.status || 'new'));
   const statusLabel = currentStatusObject ? currentStatusObject.label : (caseRecord.status || 'New');
@@ -39,28 +52,25 @@ const CaseDetailsView = ({
       return caseRecord.hearingHistory.map((item) => ({
         id: item.id,
         courtName: item.courtName || '',
-        hearingDate: item.hearingDate ? new Date(item.hearingDate).toISOString().split('T')[0] : '',
+        hearingDate: toDateInput(item.hearingDate),
+        hearingTime: item.hearingTime || toTimeInput(item.hearingDate),
         hearingDetails: item.hearingDetails || '',
-        nextHearing: item.nextHearing ? new Date(item.nextHearing).toISOString().split('T')[0] : '',
+        nextHearingDate: toDateInput(item.nextHearingDate || item.nextHearing),
+        nextHearingTime: item.nextHearingTime || toTimeInput(item.nextHearingDate || item.nextHearing),
+        isManualHistory: Boolean(item.isHistorical),
       }));
     }
-    return canEditCase ? [
-      {
-        courtName: caseRecord.courtName || '',
-        hearingDate: '',
-        hearingDetails: '',
-        nextHearing: caseRecord.nextHearingDate ? new Date(caseRecord.nextHearingDate).toISOString().split('T')[0] : '',
-      },
-    ] : [];
-  }, [caseRecord, canEditCase]);
+    return [];
+  }, [caseRecord]);
 
   const [localHearingHistory, setLocalHearingHistory] = useState(getInitialHearingHistory);
 
   useEffect(() => {
     let active = true;
+    const requestVersion = hearingHistoryVersion.current;
     api.get(`/teams/${displayTeam.id}/cases/${selectedCase.id}`)
       .then(({ data }) => {
-        if (active && data?.case) {
+        if (active && requestVersion === hearingHistoryVersion.current && data?.case) {
           setCaseDetails((prev) => ({
             ...(prev || selectedCase),
             ...data.case,
@@ -69,7 +79,7 @@ const CaseDetailsView = ({
       })
       .catch((error) => console.error('Error loading case details:', error));
     return () => { active = false; };
-  }, [displayTeam.id, selectedCase.id]);
+  }, [displayTeam.id, selectedCase, selectedCase.id]);
 
   useEffect(() => {
     setEditingPhone(caseRecord.clientPhone || '');
@@ -116,36 +126,22 @@ const CaseDetailsView = ({
     });
   };
 
-  const handleAddHearingRow = () => {
-    if (!canEditCase) return;
-    let newCourtName = caseRecord?.courtName || '';
-    let newHearingDate = '';
-
-    if (localHearingHistory.length > 0) {
-      const lastRow = localHearingHistory[localHearingHistory.length - 1];
-      newCourtName = lastRow.courtName || newCourtName;
-      newHearingDate = lastRow.nextHearing || '';
-    }
-
-    setLocalHearingHistory((prev) => [
-      ...prev,
-      {
-        courtName: newCourtName,
-        hearingDate: newHearingDate,
-        hearingDetails: '',
-        nextHearing: '',
-      },
-    ]);
-  };
-
   const handleRemoveHearingRow = (index) => {
     if (!canEditCase) return;
     setLocalHearingHistory((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleAddHearingRow = () => {
+    if (!canEditCase) return;
+    setLocalHearingHistory((rows) => [...rows, createManualHistoryRow()]);
+  };
+
   const handleSaveHearingHistory = async () => {
     if (!canEditCase) return;
     try {
+      // Ignore an older details request while this save makes the backend's
+      // returned hearing IDs the single source of truth.
+      hearingHistoryVersion.current += 1;
       setSavingHearingHistory(true);
       setCaseDetailsError('');
       setCaseDetailsMessage('');
@@ -163,9 +159,12 @@ const CaseDetailsView = ({
           setLocalHearingHistory(data.case.hearingHistory.map((item) => ({
             id: item.id || item._id,
             courtName: item.courtName || '',
-            hearingDate: item.hearingDate ? new Date(item.hearingDate).toISOString().split('T')[0] : '',
+            hearingDate: toDateInput(item.hearingDate),
+            hearingTime: item.hearingTime || toTimeInput(item.hearingDate),
             hearingDetails: item.hearingDetails || '',
-            nextHearing: item.nextHearing ? new Date(item.nextHearing).toISOString().split('T')[0] : (item.nextHearingDate ? new Date(item.nextHearingDate).toISOString().split('T')[0] : ''),
+            nextHearingDate: toDateInput(item.nextHearingDate || item.nextHearing),
+            nextHearingTime: item.nextHearingTime || toTimeInput(item.nextHearingDate || item.nextHearing),
+            isManualHistory: Boolean(item.isHistorical),
           })));
         }
       }
@@ -343,9 +342,9 @@ const CaseDetailsView = ({
               <button
                 type="button"
                 onClick={handleAddHearingRow}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#15a276] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#118460]"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#15a276] bg-white px-3 py-1.5 text-xs font-bold text-[#15a276] transition hover:bg-[#e8f7f2]"
               >
-                <FaPlus size={12} /> Add Hearing
+                + Add Hearing Row
               </button>
               <button
                 type="button"
@@ -365,21 +364,23 @@ const CaseDetailsView = ({
               <tr>
                 <th className="px-4 py-3 min-w-[160px]">Court Name</th>
                 <th className="px-4 py-3 min-w-[140px]">Hearing Date</th>
+                <th className="px-4 py-3 min-w-[110px]">Hearing Time</th>
                 <th className="px-4 py-3 min-w-[200px]">Hearing Details</th>
-                <th className="px-4 py-3 min-w-[140px]">Next Hearing</th>
+                <th className="px-4 py-3 min-w-[140px]">Next Hearing Date</th>
+                <th className="px-4 py-3 min-w-[110px]">Next Hearing Time</th>
                 {canEditCase ? <th className="px-2 py-3 w-10"></th> : null}
               </tr>
             </thead>
             <tbody className="divide-y divide-[#eef5f8] text-[#062552]">
               {localHearingHistory.length === 0 ? (
                 <tr>
-                  <td colSpan={canEditCase ? 5 : 4} className="px-4 py-4 text-center text-xs text-[#5f7488]">
+                  <td colSpan={canEditCase ? 7 : 6} className="px-4 py-4 text-center text-xs text-[#5f7488]">
                     No hearing history recorded yet.
                   </td>
                 </tr>
               ) : (
                 localHearingHistory.map((row, index) => (
-                  <tr key={`hearing-row-${index}`} className="hover:bg-[#f8fbfc]">
+                  <tr key={row.id || row.tempKey} className="hover:bg-[#f8fbfc]">
                     <td className="px-4 py-2.5">
                       {canEditCase ? (
                         <input
@@ -407,6 +408,21 @@ const CaseDetailsView = ({
                     </td>
                     <td className="px-4 py-2.5">
                       {canEditCase ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="time"
+                            value={row.hearingTime}
+                            onChange={(e) => handleHearingHistoryChange(index, 'hearingTime', e.target.value)}
+                            className="min-w-0 flex-1 rounded-md border border-[#d7e9ef] bg-white px-2 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]"
+                          />
+                          <button type="button" onClick={() => handleHearingHistoryChange(index, 'hearingTime', '')} className="rounded border border-[#d7e9ef] px-1.5 py-1 text-xs font-bold text-[#5f7488] hover:bg-[#f8fbfc]">Clear</button>
+                        </div>
+                      ) : (
+                        <span className="font-semibold text-[#062552]">{formatTime(`${row.hearingDate}T${row.hearingTime}`) || 'Not provided'}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {canEditCase ? (
                         <input
                           type="text"
                           value={row.hearingDetails}
@@ -419,16 +435,10 @@ const CaseDetailsView = ({
                       )}
                     </td>
                     <td className="px-4 py-2.5">
-                      {canEditCase ? (
-                        <input
-                          type="date"
-                          value={row.nextHearing}
-                          onChange={(e) => handleHearingHistoryChange(index, 'nextHearing', e.target.value)}
-                          className="w-full rounded-md border border-[#d7e9ef] bg-white px-2 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]"
-                        />
-                      ) : (
-                        <span className="font-semibold text-[#062552]">{formatDate(row.nextHearing) || 'Not provided'}</span>
-                      )}
+                      {canEditCase ? <input type="date" value={row.nextHearingDate} onChange={(e) => handleHearingHistoryChange(index, 'nextHearingDate', e.target.value)} className="w-full rounded-md border border-[#d7e9ef] bg-white px-2 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]" /> : <span className="font-semibold text-[#062552]">{formatDate(row.nextHearingDate) || 'Not provided'}</span>}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {canEditCase ? <div className="flex items-center gap-1"><input type="time" value={row.nextHearingTime} onChange={(e) => handleHearingHistoryChange(index, 'nextHearingTime', e.target.value)} className="min-w-0 flex-1 rounded-md border border-[#d7e9ef] bg-white px-2 py-1 text-xs font-semibold text-[#062552] outline-none focus:border-[#15a276]" /><button type="button" onClick={() => handleHearingHistoryChange(index, 'nextHearingTime', '')} className="rounded border border-[#d7e9ef] px-1.5 py-1 text-xs font-bold text-[#5f7488] hover:bg-[#f8fbfc]">Clear</button></div> : <span className="font-semibold text-[#062552]">{formatTime(`${row.nextHearingDate}T${row.nextHearingTime}`) || 'Not provided'}</span>}
                     </td>
                     {canEditCase ? (
                       <td className="px-2 py-2.5 text-center">

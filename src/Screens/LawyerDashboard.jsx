@@ -20,6 +20,7 @@ import {
   applicantFilters,
   emptyDrawerState,
   formatDate,
+  formatTime,
   getEntityId,
   getLawyerDisplayName,
   getNoticeRequestError,
@@ -65,8 +66,6 @@ export default function LawyerDashboard() {
   const [loadingAppointments, setLoadingAppointments] = useState(false);
 
   // Next Hearings State
-  const [nextHearings, setNextHearings] = useState([]);
-  const [loadedHearingsTeamId, setLoadedHearingsTeamId] = useState('');
   const [googleCalendarStatus, setGoogleCalendarStatus] = useState({ connected: false, email: null });
   const [googleCalendarLoading, setGoogleCalendarLoading] = useState(false);
   const [googleCalendarActionLoading, setGoogleCalendarActionLoading] = useState(false);
@@ -80,7 +79,7 @@ export default function LawyerDashboard() {
   const [teamMessage, setTeamMessage] = useState('');
   const [teamWorkspace, setTeamWorkspace] = useState(null);
   const [teamWorkspaces, setTeamWorkspaces] = useState([]);
-  const [selectedTeamId, setSelectedTeamIdState] = useState('');
+  const [, setSelectedTeamIdState] = useState('');
   const selectedTeamIdRef = useRef('');
 
   const setSelectedTeamId = useCallback((id) => {
@@ -559,8 +558,9 @@ export default function LawyerDashboard() {
         clientAddress: teamCaseForm.clientAddress.trim(),
         caseName: teamCaseForm.caseName.trim(),
         courtName: teamCaseForm.courtName.trim(),
-        startingDate: teamCaseForm.startingDate ? new Date(teamCaseForm.startingDate).toISOString() : undefined,
-        nextHearingDate: teamCaseForm.nextHearingDate ? new Date(teamCaseForm.nextHearingDate).toISOString() : undefined,
+        startingDate: teamCaseForm.startingDate || undefined,
+        hearingDate: teamCaseForm.hearingDate || undefined,
+        hearingTime: teamCaseForm.hearingTime || undefined,
         briefInfo: teamCaseForm.briefInfo.trim(),
         status: teamCaseForm.status,
       });
@@ -896,7 +896,7 @@ export default function LawyerDashboard() {
     try {
       setGoogleCalendarActionLoading(true);
       setTeamError('');
-      const { data } = await api.get('/calendar/google/auth-url');
+      const { data } = await api.get('/calendar/google/connect?response=json');
       if (data?.url) window.location.href = data.url;
     } catch (error) {
       console.error('Error getting Google Calendar auth URL:', error);
@@ -910,7 +910,7 @@ export default function LawyerDashboard() {
     try {
       setGoogleCalendarActionLoading(true);
       setTeamError('');
-      await api.post('/calendar/google/disconnect');
+      await api.delete('/calendar/google/disconnect');
       setGoogleCalendarStatus({ connected: false, email: null });
       setTeamMessage('Google Calendar disconnected.');
     } catch (error) {
@@ -1137,7 +1137,9 @@ export default function LawyerDashboard() {
       // 1. Extract from hearingHistory array if present
       if (Array.isArray(teamCase.hearingHistory) && teamCase.hearingHistory.length > 0) {
         teamCase.hearingHistory.forEach((hearing, idx) => {
-          const rawDate = hearing.nextHearingDate || hearing.nextHearing || hearing.hearingDate;
+          // A hearing without a successor is the active/upcoming hearing.
+          if (hearing.nextHearingDate || hearing.nextHearing) return;
+          const rawDate = hearing.hearingDate;
           if (!rawDate) return;
 
           const dateObj = new Date(rawDate);
@@ -1158,8 +1160,8 @@ export default function LawyerDashboard() {
         });
       }
 
-      // 2. Extract top-level case hearing dates (nextHearingDate or hearingDate)
-      const topDate = teamCase.nextHearingDate || teamCase.hearingDate;
+      // Workspace case data keeps nextHearingAt as the active hearing's date.
+      const topDate = teamCase.hearingDate || teamCase.nextHearingDate;
       if (topDate) {
         const topDateObj = new Date(topDate);
         if (!Number.isNaN(topDateObj.getTime())) {
@@ -1516,7 +1518,7 @@ export default function LawyerDashboard() {
                         <div className="mt-4 pt-3 border-t border-[#d7e9ef] flex items-center justify-between text-xs">
                           <div>
                             <p className="text-[#5f7488] font-medium">Hearing Date</p>
-                            <p className="font-bold text-[#15a276] mt-0.5">{formatDate(hearing.hearingDate)}</p>
+                            <p className="font-bold text-[#15a276] mt-0.5">{formatDate(hearing.hearingDate)} · {formatTime(hearing.hearingDate)}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-[#5f7488] font-medium">Court</p>
