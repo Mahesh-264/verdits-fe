@@ -88,7 +88,7 @@ export default function LawyerDashboard() {
     setSelectedTeamIdState(nextId);
   }, []);
 
-  const [activeTeamTab, setActiveTeamTab] = useState('my_team');
+  const [activeTeamTab, setActiveTeamTab] = useState('my_cases');
   const [showTeamCaseForm, setShowTeamCaseForm] = useState(false);
   const [selectedTeamMemberId, setSelectedTeamMemberId] = useState('');
   const [selectedCaseForDetailsId, setSelectedCaseForDetailsId] = useState('');
@@ -660,6 +660,27 @@ export default function LawyerDashboard() {
     }
   };
 
+  const handleLeaveTeam = async () => {
+    if (!teamWorkspace?.id || !currentLawyerId) return;
+    if (!window.confirm(`Leave ${teamWorkspace.firmName || 'this team'}?`)) return;
+    try {
+      setRemovingTeamMemberId(String(currentLawyerId));
+      setTeamError('');
+      setTeamMessage('');
+      await api.delete(`/teams/${teamWorkspace.id}/members/${currentLawyerId}`);
+      setSelectedTeamMemberId('');
+      setSelectedCaseForDetailsId('');
+      setActiveTeamTab('my_cases');
+      setTeamMessage('You left the team.');
+      await loadTeamWorkspace();
+    } catch (error) {
+      console.error('Error leaving team:', error);
+      setTeamError(error.response?.data?.message || 'Failed to leave team');
+    } finally {
+      setRemovingTeamMemberId('');
+    }
+  };
+
   const handlePublishInternship = async (event) => {
     event.preventDefault();
     try {
@@ -1189,7 +1210,11 @@ export default function LawyerDashboard() {
   }, [ownTeamCases, displayTeam?.firmName, displayTeam?.teamCode]);
 
   const hearingsLoading = !teamWorkspaceLoaded || teamWorkspaceLoading;
-  const currentActiveTeamTab = displayIsTeamOwner ? activeTeamTab : 'my_cases';
+  // Both owners and joined members can browse the directory. Backend case
+  // permissions remain the source of truth for what each person can open/edit.
+  const currentActiveTeamTab = activeTeamTab === 'join_requests' && !displayIsTeamOwner
+    ? 'my_cases'
+    : activeTeamTab;
 
   const openFeature = (section) => {
     setSearchParams({ section });
@@ -1359,6 +1384,7 @@ export default function LawyerDashboard() {
               teamCases={teamCases}
               canRemoveActiveTeamMember={canRemoveActiveTeamMember}
               handleRemoveTeamMember={handleRemoveTeamMember}
+              handleLeaveTeam={handleLeaveTeam}
               removingTeamMemberId={removingTeamMemberId}
               activeTeamMemberId={activeTeamMemberId}
               activeTeamMemberCases={activeTeamMemberCases}
