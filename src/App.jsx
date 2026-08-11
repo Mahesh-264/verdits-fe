@@ -13,6 +13,7 @@ import Register from './pages/Register.jsx';
 import VerifyOtp from './pages/VerifyOtp.jsx';
 import ForgotPassword from './pages/ForgotPassword.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
+import PendingApproval from './pages/PendingApproval.jsx';
 
 // Existing Pages
 import Chat from './pages/Chat.jsx';
@@ -40,10 +41,13 @@ const DashboardHub = () => {
   if (!user) return <Navigate to="/" replace />;
   if (user.role === 'admin') return <Navigate to="/admin-dash" />;
 
-  // 🟢 LOGIC UPDATE: 
-  // If role is 'lawyer', they go to Lawyer Dashboard.
-  // If role is 'user', they go to the new UserHome (to book lawyers).
-  if (user.role === 'lawyer') return <Navigate to="/lawyer-dash" />;
+  if (user.role === 'lawyer') {
+    const isApproved = user.accountStatus === 'active' && user.lawyerProfile?.isVerified === true;
+    if (!isApproved) {
+      return <Navigate to="/pending-approval" replace />;
+    }
+    return <Navigate to="/lawyer-dash" />;
+  }
   if (user.role === 'student') return <Navigate to="/student-home" />;
 
   return <Navigate to="/user-home" />;
@@ -57,6 +61,14 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   if (!initialized) return <div className="min-h-screen" aria-busy="true" />;
   if (!isAuthenticated) return <Navigate to="/" replace state={{ from: `${location.pathname}${location.search}` }} />;
   if (allowedRoles && !allowedRoles.includes(user.role)) return <Navigate to="/dashboard" replace />;
+  
+  if (
+    user?.role === 'lawyer' &&
+    location.pathname !== '/pending-approval' &&
+    (user?.accountStatus !== 'active' || user?.lawyerProfile?.isVerified === false)
+  ) {
+    return <Navigate to="/pending-approval" replace />;
+  }
 
   return children;
 };
@@ -128,6 +140,7 @@ export default function App() {
         <Route path="/verify-otp" element={<VerifyOtp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/pending-approval" element={<PendingApproval />} />
 
         {/* --- Intelligent Redirector --- */}
         <Route
