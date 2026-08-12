@@ -47,6 +47,7 @@ export default function LawyerTeamModal({
   loadTeamWorkspace,
   activeTeamMember,
   setSelectedTeamMemberId,
+  onSelectTeamMember,
   teamCases,
   canRemoveActiveTeamMember,
   handleRemoveTeamMember,
@@ -54,10 +55,23 @@ export default function LawyerTeamModal({
   removingTeamMemberId,
   activeTeamMemberId,
   activeTeamMemberCases,
+  memberOwnedTeam,
+  memberOwnedTeamLoading,
+  memberOwnedTeamError,
+  loadSelectedMemberProfile,
   updatingTeamRequestId,
   handleTeamRequestDecision,
 }) {
+  const [memberDetailTab, setMemberDetailTab] = React.useState('cases');
+
+  React.useEffect(() => {
+    setMemberDetailTab('cases');
+  }, [activeTeamMemberId]);
+
   if (!show) return null;
+
+  const ownedTeamMembers = Array.isArray(memberOwnedTeam?.members) ? memberOwnedTeam.members : [];
+  const ownedTeamRegularMembers = ownedTeamMembers.filter((member) => member.role === 'member');
 
   return (
     <ModalShell
@@ -212,7 +226,7 @@ export default function LawyerTeamModal({
             ) : null}
 
             {/* Sub-workspace Navigation Tabs */}
-            <div className="rounded-2xl border border-[#d7e9ef] bg-white p-2 shadow-sm flex flex-wrap items-center gap-2">
+            {!activeTeamMember ? <div className="rounded-2xl border border-[#d7e9ef] bg-white p-2 shadow-sm flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => setActiveTeamTab('my_cases')}
@@ -225,17 +239,19 @@ export default function LawyerTeamModal({
                 My Cases ({ownTeamCases.length})
               </button>
 
-              <button
-                    type="button"
-                    onClick={() => setActiveTeamTab('my_team')}
-                    className={`rounded-xl px-5 py-3 text-sm font-bold transition ${
-                      currentActiveTeamTab === 'my_team'
-                        ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
-                        : 'bg-transparent text-[#5f7488] hover:bg-[#f8fbfc] hover:text-[#062552]'
-                    }`}
-                  >
-                    Members ({visibleTeamDirectory.length})
-                  </button>
+              {displayIsTeamOwner ? (
+                <button
+                  type="button"
+                  onClick={() => setActiveTeamTab('my_team')}
+                  className={`rounded-xl px-5 py-3 text-sm font-bold transition ${
+                    currentActiveTeamTab === 'my_team'
+                      ? 'bg-[#f1d15f] text-zinc-950 shadow-sm border border-[#d6b85b]'
+                      : 'bg-transparent text-[#5f7488] hover:bg-[#f8fbfc] hover:text-[#062552]'
+                  }`}
+                >
+                  Members ({visibleTeamDirectory.length})
+                </button>
+              ) : null}
 
               {displayIsTeamOwner ? (
                 <>
@@ -257,7 +273,7 @@ export default function LawyerTeamModal({
                   </button>
                 </>
               ) : null}
-            </div>
+            </div> : null}
 
             {/* My Cases Tab View */}
             {currentActiveTeamTab === 'my_cases' ? (
@@ -490,7 +506,7 @@ export default function LawyerTeamModal({
                       <div>
                         <h3 className="text-xl font-bold text-[#062552]">Team Directory</h3>
                         <p className="mt-1 text-sm text-[#5f7488]">
-                          Select a lawyer to view cases they added to this team.
+                          Select a lawyer to view their cases and their own team.
                         </p>
                       </div>
                       <span className="shrink-0 self-start sm:self-auto rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-1.5 text-sm font-bold text-[#5f7488]">
@@ -506,17 +522,14 @@ export default function LawyerTeamModal({
                           const memberId = getEntityId(member.lawyerId || member.id);
                           const canViewMemberDetails = true;
                           const memberCasesCount = teamCases.filter((teamCase) => {
-                            const caseOwnerId = getEntityId(teamCase.addedBy);
-                            const caseOwnerName = String(teamCase.addedByName || '').trim().toLowerCase();
-                            const memberName = String(member.name || '').replace(/\s*\(you\)$/i, '').trim().toLowerCase();
-                            return (caseOwnerId && memberId && caseOwnerId === memberId)
-                              || (caseOwnerName && memberName && caseOwnerName === memberName);
+                            const caseOwnerId = getEntityId(teamCase.addedBy || teamCase.ownerId);
+                            return caseOwnerId && memberId && String(caseOwnerId) === String(memberId);
                           }).length;
 
                           return (
                             <div
                               key={member.id || member.phone || member.email}
-                              onClick={canViewMemberDetails ? () => setSelectedTeamMemberId(String(member.id)) : undefined}
+                              onClick={canViewMemberDetails ? () => onSelectTeamMember(member) : undefined}
                               className={`rounded-2xl border p-5 shadow-sm transition ${
                                 canViewMemberDetails
                                   ? 'group cursor-pointer border-[#d7e9ef] bg-white hover:border-[#15a276] hover:shadow-md'
@@ -546,12 +559,15 @@ export default function LawyerTeamModal({
                               </div>
 
                               <div className="mt-4 flex items-center justify-between border-t border-[#f0f6f8] pt-3">
-                          <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                                <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
                                   {member.roleLabel}
+                                </span>
+                                <span className="text-xs font-bold text-[#5f7488]">
+                                  Has Team: {member.hasTeam ? 'Yes' : 'No'}
                                 </span>
                                 {canViewMemberDetails ? (
                                   <span className="text-xs font-bold text-[#15a276] group-hover:underline flex items-center gap-1">
-                                    View Cases &rarr;
+                                    View Details &rarr;
                                   </span>
                                 ) : null}
                               </div>
@@ -607,10 +623,26 @@ export default function LawyerTeamModal({
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <h4 className="text-base font-bold text-[#062552]">Cases added by {activeTeamMember.name || 'this lawyer'}</h4>
-                    {selectedCaseForDetailsId && teamCases.some((item) => String(item.id) === String(selectedCaseForDetailsId)) ? (() => {
-                      const selectedCase = teamCases.find((item) => String(item.id) === String(selectedCaseForDetailsId));
+                  <div className="flex flex-wrap gap-2 rounded-2xl border border-[#d7e9ef] bg-white p-2 shadow-sm">
+                    <button type="button" onClick={() => setMemberDetailTab('cases')} className={`rounded-xl px-5 py-3 text-sm font-bold transition ${memberDetailTab === 'cases' ? 'border border-[#d6b85b] bg-[#f1d15f] text-zinc-950 shadow-sm' : 'text-[#5f7488] hover:bg-[#f8fbfc] hover:text-[#062552]'}`}>
+                      {activeTeamMember.name || 'Lawyer'}'s Cases
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMemberDetailTab('team');
+                        loadSelectedMemberProfile();
+                      }}
+                      className={`rounded-xl px-5 py-3 text-sm font-bold transition ${memberDetailTab === 'team' ? 'border border-[#d6b85b] bg-[#f1d15f] text-zinc-950 shadow-sm' : 'text-[#5f7488] hover:bg-[#f8fbfc] hover:text-[#062552]'}`}
+                    >
+                      {activeTeamMember.name || 'Lawyer'}'s Team
+                    </button>
+                  </div>
+
+                  {memberDetailTab === 'cases' ? <div className="space-y-4">
+                    <h4 className="text-base font-bold text-[#062552]">{activeTeamMember.name || 'This lawyer'}'s Cases</h4>
+                    {selectedCaseForDetailsId && activeTeamMemberCases.some((item) => String(item.id) === String(selectedCaseForDetailsId)) ? (() => {
+                      const selectedCase = activeTeamMemberCases.find((item) => String(item.id) === String(selectedCaseForDetailsId));
                       return (
                         <CaseDetailsView
                           selectedCase={selectedCase}
@@ -664,7 +696,51 @@ export default function LawyerTeamModal({
                         ))}
                       </div>
                     )}
-                  </div>
+                  </div> : null}
+
+                  {memberDetailTab === 'team' && memberOwnedTeamLoading ? (
+                    <p className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-3 text-sm font-semibold text-[#5f7488]">
+                      Loading {activeTeamMember.name || 'lawyer'}'s team members...
+                    </p>
+                  ) : memberDetailTab === 'team' && memberOwnedTeamError ? (
+                    <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm font-semibold text-red-700">
+                      {memberOwnedTeamError}
+                      <button type="button" onClick={loadSelectedMemberProfile} className="ml-3 rounded-lg border border-red-200 bg-white px-3 py-1 text-xs font-bold text-red-700">
+                        Retry
+                      </button>
+                    </div>
+                  ) : memberDetailTab === 'team' && memberOwnedTeam ? (
+                    <div className="rounded-2xl border border-[#d7e9ef] bg-white p-6 shadow-sm">
+                      <div className="flex flex-col gap-2 border-b border-[#eef5f8] pb-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <h4 className="text-lg font-bold text-[#062552]">{activeTeamMember.name || 'This lawyer'}'s Team</h4>
+                          <p className="mt-1 text-sm text-[#5f7488]">{memberOwnedTeam.firmName || 'Team'}{memberOwnedTeam.seniorLawyerName ? ` · Created by ${memberOwnedTeam.seniorLawyerName}` : ''}</p>
+                        </div>
+                        <span className="self-start rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-3 py-1 text-xs font-bold text-[#5f7488] sm:self-auto">
+                          {ownedTeamRegularMembers.length} {ownedTeamRegularMembers.length === 1 ? 'member' : 'members'}
+                        </span>
+                      </div>
+                      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          {ownedTeamMembers.filter((member) => member.role === 'owner').map((member) => (
+                            <div key={member.id || member.lawyerId} className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                              <p className="font-bold text-[#062552]">{member.name || activeTeamMember.name || 'Lawyer'}</p>
+                              <p className="mt-1 text-xs font-bold text-emerald-700">Team Owner</p>
+                            </div>
+                          ))}
+                          {ownedTeamMembers.filter((member) => member.role === 'member').length === 0 ? (
+                            <EmptyBlock icon={<UserPlus size={24} />} message="No team members" />
+                          ) : ownedTeamMembers.filter((member) => member.role === 'member').map((member) => (
+                            <button key={member.id || member.lawyerId} type="button" onClick={() => onSelectTeamMember(member)} className="rounded-xl border border-[#e2edf1] bg-[#f8fbfc] px-4 py-3 text-left transition hover:border-[#15a276] hover:bg-white">
+                              <p className="font-bold text-[#062552]">{member.name || 'Lawyer'}</p>
+                              <p className="mt-1 text-xs text-[#5f7488]">Has Team: {member.hasTeam ? 'Yes' : 'No'}</p>
+                              <p className="mt-1 text-xs text-[#5f7488]">Team Member · View Cases</p>
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  ) : memberDetailTab === 'team' ? (
+                    <EmptyBlock icon={<Users size={24} />} message="No team created" />
+                  ) : null}
                 </div>
               )
             ) : null}

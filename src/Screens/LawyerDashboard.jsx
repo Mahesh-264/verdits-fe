@@ -31,7 +31,6 @@ import {
   initialStats,
   initialTeamCaseForm,
   isSameId,
-  normalizeLawyerName,
   normalizeStatus,
   participantFilters,
   statCards,
@@ -75,7 +74,6 @@ export default function LawyerDashboard() {
   const [teamMode, setTeamMode] = useState('create');
   const [teamLoading, setTeamLoading] = useState(false);
   const [teamWorkspaceLoading, setTeamWorkspaceLoading] = useState(false);
-  const [teamWorkspaceLoaded, setTeamWorkspaceLoaded] = useState(false);
   const [teamError, setTeamError] = useState('');
   const [teamMessage, setTeamMessage] = useState('');
   const [teamWorkspace, setTeamWorkspace] = useState(null);
@@ -92,6 +90,11 @@ export default function LawyerDashboard() {
   const [activeTeamTab, setActiveTeamTab] = useState('my_cases');
   const [showTeamCaseForm, setShowTeamCaseForm] = useState(false);
   const [selectedTeamMemberId, setSelectedTeamMemberId] = useState('');
+  const [selectedLawyerRecord, setSelectedLawyerRecord] = useState(null);
+  const [selectedLawyerCases, setSelectedLawyerCases] = useState(null);
+  const [memberOwnedTeam, setMemberOwnedTeam] = useState(null);
+  const [memberOwnedTeamLoading, setMemberOwnedTeamLoading] = useState(false);
+  const [memberOwnedTeamError, setMemberOwnedTeamError] = useState('');
   const [selectedCaseForDetailsId, setSelectedCaseForDetailsId] = useState('');
   const [savingTeamCase, setSavingTeamCase] = useState(false);
   const [updatingTeamCaseId, setUpdatingTeamCaseId] = useState('');
@@ -243,7 +246,6 @@ export default function LawyerDashboard() {
     const effectiveTeamId = targetTeamId !== undefined ? targetTeamId : selectedTeamIdRef.current;
     try {
       setTeamWorkspaceLoading(true);
-      setTeamWorkspaceLoaded(false);
       const params = effectiveTeamId ? { teamId: effectiveTeamId } : undefined;
       const { data } = await api.get('/teams/workspace', { params });
       const teams = Array.isArray(data?.teams) ? data.teams : data?.team ? [data.team] : [];
@@ -263,7 +265,6 @@ export default function LawyerDashboard() {
       setTeamWorkspaces([]);
     } finally {
       setTeamWorkspaceLoading(false);
-      setTeamWorkspaceLoaded(true);
     }
   }, []);
 
@@ -274,6 +275,10 @@ export default function LawyerDashboard() {
     selectedTeamIdRef.current = targetId;
     setSelectedTeamIdState(targetId);
     setSelectedTeamMemberId('');
+    setSelectedLawyerRecord(null);
+    setSelectedLawyerCases(null);
+    setMemberOwnedTeam(null);
+    setMemberOwnedTeamError('');
     setSelectedCaseForDetailsId('');
     loadTeamWorkspace(targetId);
   }, [loadTeamWorkspace, teamWorkspace?.id]);
@@ -1055,42 +1060,94 @@ export default function LawyerDashboard() {
     });
   }, [displayTeam, currentLawyerId]);
 
+  const handleSelectTeamMember = useCallback((member) => {
+    const lawyerId = getEntityId(member?.lawyerId || member?.id || member?._id);
+    if (!lawyerId) return;
+    setSelectedLawyerRecord({
+      ...member,
+      id: String(member.id || member._id || lawyerId),
+      lawyerId,
+      name: String(member.name || '').replace(/\s*\(you\)$/i, '').trim(),
+      roleLabel: member.role === 'owner' ? 'Team Owner' : (member.roleLabel || 'Team Member'),
+    });
+    setSelectedLawyerCases(null);
+    setMemberOwnedTeam(null);
+    setMemberOwnedTeamError('');
+    setSelectedCaseForDetailsId('');
+    setSelectedTeamMemberId(String(lawyerId));
+  }, []);
+
   const activeTeamMember = useMemo(() => {
     if (!selectedTeamMemberId) return null;
     return visibleTeamDirectory.find((m) => 
       String(m.id) === String(selectedTeamMemberId) || 
       isSameId(m.id || m.lawyerId, selectedTeamMemberId)
-    ) || null;
-  }, [selectedTeamMemberId, visibleTeamDirectory]);
+    ) || selectedLawyerRecord || null;
+  }, [selectedLawyerRecord, selectedTeamMemberId, visibleTeamDirectory]);
 
   const activeTeamMemberId = activeTeamMember ? getEntityId(activeTeamMember.lawyerId || activeTeamMember.id) : '';
 
+  useEffect(() => {
+    if (selectedTeamMemberId) return;
+    setSelectedLawyerRecord(null);
+    setSelectedLawyerCases(null);
+    setMemberOwnedTeam(null);
+    setMemberOwnedTeamLoading(false);
+    setMemberOwnedTeamError('');
+  }, [selectedTeamMemberId]);
+
+  const loadSelectedMemberProfile = useCallback(async () => {
+    if (!displayIsTeamOwner || !displayTeam.id || !activeTeamMemberId) {
+      setMemberOwnedTeam(null);
+      setSelectedLawyerCases(null);
+      setMemberOwnedTeamLoading(false);
+      setMemberOwnedTeamError('');
+      return;
+    }
+
+    setMemberOwnedTeam(null);
+    setSelectedLawyerCases(null);
+    setMemberOwnedTeamError('');
+    setMemberOwnedTeamLoading(true);
+    try {
+      const { data } = await api.get(`/teams/${displayTeam.id}/members/${activeTeamMemberId}/owned-team`);
+      setMemberOwnedTeam(data?.team || null);
+      setSelectedLawyerCases(Array.isArray(data?.cases) ? data.cases : []);
+    } catch (error) {
+      console.error('Error loading selected lawyer profile:', error);
+      setMemberOwnedTeam(null);
+      setSelectedLawyerCases([]);
+      setMemberOwnedTeamError(error.response?.data?.message || 'Unable to load this lawyer team');
+    } finally {
+      setMemberOwnedTeamLoading(false);
+    }
+  }, [activeTeamMemberId, displayIsTeamOwner, displayTeam.id]);
+
+  useEffect(() => {
+    loadSelectedMemberProfile();
+  }, [loadSelectedMemberProfile]);
+
   const activeTeamMemberCases = useMemo(() => {
     if (!activeTeamMember) return [];
+    if (Array.isArray(selectedLawyerCases)) return selectedLawyerCases;
     const targetMemberId = getEntityId(activeTeamMember.lawyerId || activeTeamMember.id);
-    const targetMemberName = normalizeLawyerName(activeTeamMember.name);
 
     return teamCases.filter((teamCase) => {
       const caseOwnerId = getEntityId(teamCase.addedBy || teamCase.ownerId);
       if (caseOwnerId && targetMemberId && isSameId(caseOwnerId, targetMemberId)) {
         return true;
       }
-
-      const caseOwnerName = normalizeLawyerName(teamCase.addedByName || teamCase.addedBy);
-      if (caseOwnerName && targetMemberName && caseOwnerName === targetMemberName) {
-        return true;
-      }
-
       return false;
     });
-  }, [activeTeamMember, teamCases]);
+  }, [activeTeamMember, selectedLawyerCases, teamCases]);
 
   const canRemoveActiveTeamMember = useMemo(() => {
     if (!displayIsTeamOwner || !activeTeamMember) return false;
     const memberRole = String(activeTeamMember.role || '').toLowerCase();
     const isOwner = memberRole === 'owner' || isSameId(activeTeamMemberId, displayTeam.ownerId);
-    return !isOwner;
-  }, [displayIsTeamOwner, activeTeamMember, activeTeamMemberId, displayTeam.ownerId]);
+    const isDirectMember = visibleTeamDirectory.some((member) => isSameId(member.lawyerId || member.id, activeTeamMemberId));
+    return !isOwner && isDirectMember;
+  }, [displayIsTeamOwner, activeTeamMember, activeTeamMemberId, displayTeam.ownerId, visibleTeamDirectory]);
 
   const ownTeamCases = useMemo(() => {
     if (!Array.isArray(teamCases)) return [];
@@ -1101,9 +1158,9 @@ export default function LawyerDashboard() {
   const ownHearings = lawyerNextHearingsLoaded ? lawyerNextHearings : [];
 
   const hearingsLoading = !lawyerNextHearingsLoaded;
-  // Both owners and joined members can browse the directory. Backend case
-  // permissions remain the source of truth for what each person can open/edit.
-  const currentActiveTeamTab = activeTeamTab === 'join_requests' && !displayIsTeamOwner
+  // Joined team members can manage only their own cases. Team owners retain
+  // access to the member directory and join requests.
+  const currentActiveTeamTab = !displayIsTeamOwner
     ? 'my_cases'
     : activeTeamTab;
 
@@ -1271,6 +1328,7 @@ export default function LawyerDashboard() {
               loadTeamWorkspace={loadTeamWorkspace}
               activeTeamMember={activeTeamMember}
               setSelectedTeamMemberId={setSelectedTeamMemberId}
+              onSelectTeamMember={handleSelectTeamMember}
               currentLawyerId={currentLawyerId}
               teamCases={teamCases}
               canRemoveActiveTeamMember={canRemoveActiveTeamMember}
@@ -1279,6 +1337,10 @@ export default function LawyerDashboard() {
               removingTeamMemberId={removingTeamMemberId}
               activeTeamMemberId={activeTeamMemberId}
               activeTeamMemberCases={activeTeamMemberCases}
+              memberOwnedTeam={memberOwnedTeam}
+              memberOwnedTeamLoading={memberOwnedTeamLoading}
+              memberOwnedTeamError={memberOwnedTeamError}
+              loadSelectedMemberProfile={loadSelectedMemberProfile}
               updatingTeamRequestId={updatingTeamRequestId}
               handleTeamRequestDecision={handleTeamRequestDecision}
             />
