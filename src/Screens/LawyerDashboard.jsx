@@ -22,7 +22,6 @@ import {
   formatDate,
   formatTime,
   getEntityId,
-  getLawyerDisplayName,
   getNoticeRequestError,
   getTeamCaseStatusLabel,
   getUserName,
@@ -69,6 +68,8 @@ export default function LawyerDashboard() {
   const [googleCalendarStatus, setGoogleCalendarStatus] = useState({ connected: false, email: null });
   const [googleCalendarLoading, setGoogleCalendarLoading] = useState(false);
   const [googleCalendarActionLoading, setGoogleCalendarActionLoading] = useState(false);
+  const [lawyerNextHearings, setLawyerNextHearings] = useState([]);
+  const [lawyerNextHearingsLoaded, setLawyerNextHearingsLoaded] = useState(false);
 
   // Team Workspace State
   const [teamMode, setTeamMode] = useState('create');
@@ -226,6 +227,18 @@ export default function LawyerDashboard() {
     }
   }, []);
 
+  const loadLawyerNextHearings = useCallback(async () => {
+    try {
+      const { data } = await api.get('/teams/next-hearings');
+      setLawyerNextHearings(Array.isArray(data?.cases) ? data.cases : []);
+    } catch (error) {
+      console.error('Error loading lawyer-wide next hearings:', error);
+      setLawyerNextHearings([]);
+    } finally {
+      setLawyerNextHearingsLoaded(true);
+    }
+  }, []);
+
   const loadTeamWorkspace = useCallback(async (targetTeamId) => {
     const effectiveTeamId = targetTeamId !== undefined ? targetTeamId : selectedTeamIdRef.current;
     try {
@@ -323,7 +336,8 @@ export default function LawyerDashboard() {
     loadStudentInteractionPosts();
     loadOwnPosts();
     loadGoogleCalendarStatus();
-  }, [loadAppointments, loadGoogleCalendarStatus, loadOwnPosts, loadStudentInteractionPosts, user]);
+    loadLawyerNextHearings();
+  }, [loadAppointments, loadGoogleCalendarStatus, loadLawyerNextHearings, loadOwnPosts, loadStudentInteractionPosts, user]);
 
   useEffect(() => {
     if (user?.role !== 'lawyer') return;
@@ -339,13 +353,14 @@ export default function LawyerDashboard() {
   useEffect(() => {
     if (user?.role !== 'lawyer') return undefined;
     const refreshTeamWorkspace = (event) => {
+      if (/^(case|hearing)[.:]/.test(String(event?.type || '')) || event?.caseId || event?.hearingId) loadLawyerNextHearings();
       if (event?.teamId && selectedTeamIdRef.current && String(event.teamId) !== String(selectedTeamIdRef.current)) return;
       loadTeamWorkspace(selectedTeamIdRef.current);
     };
     const events = ['team:created', 'team:member-joined', 'team:member-left', 'team:join-request-created', 'team:join-request-rejected', 'case:created', 'case:updated', 'case:deleted', 'case:status-changed', 'hearing:created', 'hearing:updated', 'hearing:deleted', 'case.created', 'case.updated', 'case.deleted', 'hearing.created', 'hearing.updated', 'hearing.deleted', 'client.updated'];
     events.forEach((event) => socket.on(event, refreshTeamWorkspace));
     return () => events.forEach((event) => socket.off(event, refreshTeamWorkspace));
-  }, [loadTeamWorkspace, user?.role]);
+  }, [loadLawyerNextHearings, loadTeamWorkspace, user?.role]);
 
   // Google Calendar URL Auth Redirection Listener
   useEffect(() => {
@@ -515,7 +530,7 @@ export default function LawyerDashboard() {
       const { data } = await api.post('/teams/join-requests', { teamCode: joinTeamForm.teamCode.trim() });
       if (data?.requestPending) {
         setJoinTeamForm(initialJoinTeamForm);
-        setTeamMessage(data.message || 'Join request sent to the senior lawyer.');
+        setTeamMessage(data.message || 'Join request sent to the team owner.');
         return;
       }
       if (data?.user) dispatch(updateUser(data.user));
@@ -1023,62 +1038,22 @@ export default function LawyerDashboard() {
     : (teamMembers.length + 1);
 
   const currentLawyerId = user?._id || user?.id;
-  const currentLawyerName = getLawyerDisplayName(user);
 
   const visibleTeamDirectory = useMemo(() => {
     const rawMembers = Array.isArray(displayTeam.members) ? [...displayTeam.members] : [];
     const ownerId = getEntityId(displayTeam.seniorLawyer || displayTeam.ownerId || displayTeam.owner);
-    const ownerName = String(displayTeam.seniorLawyerName || (displayIsTeamOwner ? currentLawyerName : 'Team Owner')).trim();
-    
-    const directory = [];
-    const ownerIndexInMembers = rawMembers.findIndex((m) => {
-      const mId = getEntityId(m.lawyerId || m.id || m._id);
-      return (mId && ownerId && isSameId(mId, ownerId)) || m.role === 'owner';
-    });
-
-    if (ownerIndexInMembers >= 0) {
-      const ownerMember = rawMembers[ownerIndexInMembers];
-      const isSelfOwner = displayIsTeamOwner || isSameId(ownerId, currentLawyerId);
-      directory.push({
-        ...ownerMember,
-        id: String(ownerMember.id || ownerMember._id || ownerId || 'owner-id'),
-        lawyerId: ownerId || currentLawyerId,
-        name: isSelfOwner ? `${ownerName} (You)` : ownerName,
-        role: 'owner',
-        roleLabel: 'Team Owner',
-      });
-    } else if (ownerName || ownerId) {
-      const isSelfOwner = displayIsTeamOwner || isSameId(ownerId, currentLawyerId);
-      directory.push({
-        id: String(ownerId || 'team-owner-dir-id'),
-        lawyerId: ownerId || currentLawyerId,
-        name: isSelfOwner ? `${ownerName} (You)` : ownerName,
-        email: displayTeam.ownerEmail || (isSelfOwner ? user?.email : '') || 'Not shared',
-        phone: displayTeam.ownerPhone || (isSelfOwner ? user?.phone : '') || 'Not shared',
-        role: 'owner',
-        roleLabel: 'Team Owner',
-      });
-    }
-
-    rawMembers.forEach((member, index) => {
-      if (index === ownerIndexInMembers) return;
+    return rawMembers.flatMap((member) => {
       const memberId = getEntityId(member.lawyerId || member.id || member._id);
-      const isSelf = isSameId(memberId, currentLawyerId);
-      const isOwner = member.role === 'owner' || (ownerId && isSameId(memberId, ownerId));
-      const rawName = String(member.name || '').replace(/\s*\(you\)$/i, '').trim();
-      const displayName = isSelf ? `${rawName} (You)` : rawName;
-
-      directory.push({
+      if (!memberId || isSameId(memberId, ownerId) || isSameId(memberId, currentLawyerId) || member.role === 'owner') return [];
+      return [{
         ...member,
         id: String(member.id || member._id || memberId),
         lawyerId: memberId,
-        name: displayName,
-        roleLabel: isOwner ? 'Team Owner' : 'Lawyer Member',
-      });
+        name: String(member.name || '').replace(/\s*\(you\)$/i, '').trim(),
+        roleLabel: 'Team Member',
+      }];
     });
-
-    return directory;
-  }, [displayTeam, currentLawyerId, currentLawyerName, displayIsTeamOwner, user?.email, user?.phone]);
+  }, [displayTeam, currentLawyerId]);
 
   const activeTeamMember = useMemo(() => {
     if (!selectedTeamMemberId) return null;
@@ -1119,97 +1094,13 @@ export default function LawyerDashboard() {
 
   const ownTeamCases = useMemo(() => {
     if (!Array.isArray(teamCases)) return [];
-    return teamCases.filter((teamCase) => {
-      if (teamCase.canEdit) return true;
+    return teamCases.filter((teamCase) => isSameId(getEntityId(teamCase.addedBy || teamCase.ownerId), currentLawyerId));
+  }, [teamCases, currentLawyerId]);
 
-      const caseOwnerId = getEntityId(teamCase.addedBy || teamCase.ownerId);
-      if (caseOwnerId && currentLawyerId && isSameId(caseOwnerId, currentLawyerId)) {
-        return true;
-      }
+  // Next Hearings is intentionally lawyer-scoped, not selected-team scoped.
+  const ownHearings = lawyerNextHearingsLoaded ? lawyerNextHearings : [];
 
-      const normCaseOwnerName = normalizeLawyerName(teamCase.addedByName);
-      const normCurrentName = normalizeLawyerName(currentLawyerName);
-      if (normCaseOwnerName && normCurrentName && normCaseOwnerName === normCurrentName) {
-        return true;
-      }
-
-      if (displayIsTeamOwner) {
-        const normLeaderName = normalizeLawyerName(displayTeam?.seniorLawyerName);
-        if (normCaseOwnerName && normLeaderName && normCaseOwnerName === normLeaderName) {
-          return true;
-        }
-      }
-
-      return false;
-    });
-  }, [teamCases, displayIsTeamOwner, displayTeam?.seniorLawyerName, currentLawyerName, currentLawyerId]);
-
-  const ownHearings = useMemo(() => {
-    if (!Array.isArray(ownTeamCases) || ownTeamCases.length === 0) return [];
-    
-    const list = [];
-    ownTeamCases.forEach((teamCase) => {
-      const caseTitle = teamCase.caseName || teamCase.caseTitle || teamCase.title || 'Untitled Case';
-      const clientName = teamCase.clientName || 'Not specified';
-      const teamName = displayTeam?.firmName || 'My Team';
-      const teamCode = displayTeam?.teamCode || '';
-      const caseStatus = teamCase.status || 'new';
-
-      // 1. Extract from hearingHistory array if present
-      if (Array.isArray(teamCase.hearingHistory) && teamCase.hearingHistory.length > 0) {
-        teamCase.hearingHistory.forEach((hearing, idx) => {
-          // A hearing without a successor is the active/upcoming hearing.
-          if (hearing.nextHearingDate || hearing.nextHearing) return;
-          const rawDate = hearing.hearingDate;
-          if (!rawDate) return;
-
-          const dateObj = new Date(rawDate);
-          if (Number.isNaN(dateObj.getTime())) return;
-
-          list.push({
-            id: hearing.id || `${teamCase.id}-hh-${idx}`,
-            caseId: teamCase.id,
-            caseTitle,
-            clientName,
-            courtName: hearing.courtName || teamCase.courtName || 'N/A',
-            hearingDate: dateObj.toISOString(),
-            status: caseStatus,
-            teamName,
-            teamCode,
-            dateTime: dateObj.getTime(),
-          });
-        });
-      }
-
-      // Workspace case data keeps nextHearingAt as the active hearing's date.
-      const topDate = teamCase.hearingDate || teamCase.nextHearingDate;
-      if (topDate) {
-        const topDateObj = new Date(topDate);
-        if (!Number.isNaN(topDateObj.getTime())) {
-          const topIso = topDateObj.toISOString();
-          const alreadyAdded = list.some((item) => item.caseId === teamCase.id && item.hearingDate === topIso);
-          if (!alreadyAdded) {
-            list.push({
-              id: `${teamCase.id}-top-hearing`,
-              caseId: teamCase.id,
-              caseTitle,
-              clientName,
-              courtName: teamCase.courtName || 'N/A',
-              hearingDate: topIso,
-              status: caseStatus,
-              teamName,
-              teamCode,
-              dateTime: topDateObj.getTime(),
-            });
-          }
-        }
-      }
-    });
-
-    return list.sort((a, b) => a.dateTime - b.dateTime);
-  }, [ownTeamCases, displayTeam?.firmName, displayTeam?.teamCode]);
-
-  const hearingsLoading = !teamWorkspaceLoaded || teamWorkspaceLoading;
+  const hearingsLoading = !lawyerNextHearingsLoaded;
   // Both owners and joined members can browse the directory. Backend case
   // permissions remain the source of truth for what each person can open/edit.
   const currentActiveTeamTab = activeTeamTab === 'join_requests' && !displayIsTeamOwner
@@ -1244,7 +1135,7 @@ export default function LawyerDashboard() {
       title: 'Next Hearings',
       badge: ownHearings.length > 0 ? ownHearings.length : null,
       icon: <FaGavel className="text-2xl text-emerald-500" />,
-      desc: 'Track hearing dates from your own team cases.',
+      desc: 'Track upcoming hearings from your cases across all teams and firms.',
       onClick: () => openFeature('hearings'),
     },
     {
@@ -1268,7 +1159,7 @@ export default function LawyerDashboard() {
       icon: <Users className="h-6 w-6 text-amber-500" />,
       desc: hasTeam
         ? `${displayIsTeamOwner ? 'Created' : 'Joined'} ${displayTeam.firmName || 'your team'}.`
-        : 'Create a team or join with a senior lawyer code.',
+        : 'Create a team or join with a team code.',
       onClick: () => {
         setTeamMode(hasTeam ? 'overview' : 'create');
         setTeamError('');
@@ -1509,7 +1400,7 @@ export default function LawyerDashboard() {
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold text-[#062552]">My Upcoming Hearings</h2>
-                    <p className="text-sm text-[#5f7488] mt-1">Automatic hearing schedule for cases created by you in your team.</p>
+                    <p className="text-sm text-[#5f7488] mt-1">Upcoming hearings from cases added by you across all your teams and firms.</p>
                   </div>
                 </div>
                 {ownHearings.length > 0 && (
@@ -1525,7 +1416,7 @@ export default function LawyerDashboard() {
 
               <div className="mt-6">
                 {ownHearings.length === 0 ? (
-                  <EmptyBlock icon={<FaGavel size={24} />} message="No hearings scheduled for your cases yet. Add a new team case with a hearing date to automatically pull it here." />
+                  <EmptyBlock icon={<FaGavel size={24} />} message="No upcoming hearings from your cases yet." />
                 ) : (
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {ownHearings.slice(0, 3).map((hearing) => (
@@ -1533,7 +1424,7 @@ export default function LawyerDashboard() {
                         <div>
                           <div className="flex items-center justify-between gap-2">
                             <span className="rounded-md bg-amber-50 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-amber-700 border border-amber-200">
-                              {hearing.teamName || 'Team Case'}
+                              {hearing.teamName || 'No team'}
                             </span>
                             <span className="text-xs font-semibold text-[#5f7488]">{getTeamCaseStatusLabel(hearing.status)}</span>
                           </div>

@@ -49,23 +49,23 @@ export default function LawyerNextHearingsModal({
         </div>
 
         <div className="rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
-          <h3 className="text-lg font-bold text-[#062552]">My Hearings</h3>
+          <h3 className="text-lg font-bold text-[#062552]">My Upcoming Hearings</h3>
           <p className="mt-1 text-sm text-[#5f7488]">
-            Hearing dates from cases added by you. Other team members' matters are not shown here.
+            Upcoming hearings from cases added by you across all your teams and firms.
           </p>
         </div>
 
         {hearingsLoading ? (
           <EmptyBlock icon={<FaGavel size={24} />} message="Loading hearings..." />
         ) : ownHearings.length === 0 ? (
-          <EmptyBlock icon={<FaGavel size={24} />} message="No hearings scheduled from your team cases yet." />
+          <EmptyBlock icon={<FaGavel size={24} />} message="No upcoming hearings from your cases yet." />
         ) : (
           <div className="grid grid-cols-1 gap-4">
             {ownHearings.map((hearing) => (
               <div key={`${hearing.id}-${hearing.teamCode || 'team'}`} className="rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm hover:border-[#15a276]/50 transition-all text-[#062552]">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
-                    <p className="text-xs font-bold uppercase tracking-wide text-amber-700">{hearing.teamName || 'Team Case'}</p>
+                    <p className="text-xs font-bold uppercase tracking-wide text-amber-700">{hearing.teamName || 'No team'}</p>
                     <h3 className="mt-2 text-xl font-bold text-[#062552]">{hearing.caseTitle || 'Untitled Case'}</h3>
                     <p className="mt-1 text-sm text-[#5f7488]">Client: {hearing.clientName || 'Not added'}</p>
                   </div>

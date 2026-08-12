@@ -499,7 +499,7 @@ export default function LawyerTeamModal({
                     </div>
 
                     {visibleTeamDirectory.length === 0 ? (
-                      <EmptyBlock icon={<UserPlus size={24} />} message="No team members in directory." />
+                      <EmptyBlock icon={<UserPlus size={24} />} message="No other team members yet." />
                     ) : (
                       <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {visibleTeamDirectory.map((member) => {
