@@ -55,6 +55,8 @@ export default function LawyerTeamModal({
   handleRemoveTeamMember,
   handleLeaveTeam,
   removingTeamMemberId,
+  handleDeleteTeam,
+  deletingTeam,
   activeTeamMemberId,
   activeTeamMemberCases,
   memberOwnedTeam,
@@ -65,9 +67,13 @@ export default function LawyerTeamModal({
   handleTeamRequestDecision,
 }) {
   const [memberDetailTab, setMemberDetailTab] = React.useState('cases');
+<<<<<<< Updated upstream
   const [showTeamDetails, setShowTeamDetails] = React.useState(false);
   const [showTeamCode, setShowTeamCode] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
+=======
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = React.useState(false);
+>>>>>>> Stashed changes
 
   React.useEffect(() => {
     setMemberDetailTab('cases');
@@ -127,6 +133,33 @@ export default function LawyerTeamModal({
                 </div>
               </div>
 
+<<<<<<< Updated upstream
+=======
+              {displayIsTeamOwner ? <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-3">
+                  <KeyRound className="h-5 w-5 shrink-0 text-[#15a276]" />
+                  <span className="min-w-0 flex-1 font-mono text-lg font-bold tracking-wider text-[#062552]">
+                    {displayTeam.teamCode}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyTeamCode}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 font-bold px-5 py-3 transition border border-[#d6b85b] shadow-sm"
+                >
+                  <Copy size={18} />
+                  Copy Code
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirmation(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-5 py-3 font-bold text-red-700 transition hover:bg-red-100"
+                >
+                  <FaTrash />
+                  Delete Team
+                </button>
+              </div> : null}
+>>>>>>> Stashed changes
             </div>
 
             {confirmDelete ? <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label="Confirm team deletion">
@@ -860,6 +893,18 @@ export default function LawyerTeamModal({
             )}
           </div>
         )}
+        {showDeleteConfirmation ? (
+          <div className="fixed inset-0 z-[210] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="delete-team-title">
+            <div className="w-full max-w-md rounded-2xl border border-[#d7e9ef] bg-white p-6 shadow-2xl">
+              <h3 id="delete-team-title" className="text-xl font-bold text-[#062552]">Delete Team?</h3>
+              <p className="mt-3 text-sm leading-6 text-[#5f7488]">Are you sure you want to delete this team? This action cannot be undone.</p>
+              <div className="mt-6 flex justify-end gap-3">
+                <button type="button" onClick={() => setShowDeleteConfirmation(false)} disabled={deletingTeam} className="rounded-xl border border-[#d7e9ef] bg-white px-4 py-2.5 text-sm font-bold text-[#062552] hover:bg-[#f3f8fb] disabled:opacity-60">Cancel</button>
+                <button type="button" onClick={async () => { if (await handleDeleteTeam()) setShowDeleteConfirmation(false); }} disabled={deletingTeam} className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-60">{deletingTeam ? 'Deleting...' : 'Delete Team'}</button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </ModalShell>
   );
