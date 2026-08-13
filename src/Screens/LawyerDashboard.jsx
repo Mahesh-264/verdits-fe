@@ -133,7 +133,8 @@ export default function LawyerDashboard() {
   });
   const [jamSessionForm, setJamSessionForm] = useState({
     title: '',
-    description: '',
+    topic: '',
+    summary: '',
     scheduleDate: '',
     scheduleTime: '',
     schedule: '',
@@ -433,7 +434,8 @@ export default function LawyerDashboard() {
   const resetJamSessionForm = () => {
     setJamSessionForm({
       title: '',
-      description: '',
+      topic: '',
+      summary: '',
       scheduleDate: '',
       scheduleTime: '',
       schedule: '',
@@ -763,11 +765,25 @@ export default function LawyerDashboard() {
     }
   };
 
-  const handleCreatePost = async (payload) => {
+  const handleCreatePost = async ({ content, visibility, tags, images }) => {
+    if (!String(content || '').trim()) {
+      setPostError('Please add some text before posting.');
+      return;
+    }
+
     try {
       setPosting(true);
       setPostError('');
-      await api.post('/posts', payload);
+      const formData = new FormData();
+      formData.append('content', content.trim());
+      formData.append('visibility', visibility || 'public');
+      (tags || []).forEach((tag) => formData.append('tags', tag));
+      (images || []).slice(0, 3).forEach((image) => formData.append('images', image));
+
+      const { data } = await api.post('/posts/create', formData);
+      if (data?.post) {
+        setPublishedPosts((current) => [data.post, ...current]);
+      }
       setShowPostComposer(false);
       await loadOwnPosts();
     } catch (error) {
@@ -812,22 +828,23 @@ export default function LawyerDashboard() {
     });
   };
 
-  const handleOpenParticipantsDrawer = async (jamSession) => {
-    try {
-      const { data } = await api.get(`/auth/lawyer/jam-sessions/${jamSession.id}/participants`);
-      setDrawerFilter('All');
-      setDrawer({
-        open: true,
-        type: 'participants',
-        title: jamSession.title,
-        parentId: jamSession.id,
-        parentLabel: 'Jam Session',
-        items: Array.isArray(data) ? data : [],
-      });
-    } catch (error) {
-      console.error('Error loading participants:', error);
-      alert('Unable to load participants for this jam session right now.');
-    }
+  const handleOpenParticipantsDrawer = (jamSession) => {
+    // These are returned by the same authenticated student-interactions API
+    // that supplies participantCount, so the count and drawer always reflect
+    // the same persisted jam-session participant array.
+    const participants = Array.isArray(jamSession.joinedStudents)
+      ? jamSession.joinedStudents
+      : [];
+
+    setDrawerFilter('All');
+    setDrawer({
+      open: true,
+      type: 'participants',
+      title: jamSession.title,
+      parentId: jamSession.id,
+      parentLabel: 'Jam Session',
+      items: participants,
+    });
   };
 
   const handleApplicantDecision = async (applicantId, status) => {
@@ -985,9 +1002,9 @@ export default function LawyerDashboard() {
 
   const handleJamLike = async (item) => {
     try {
-      const { data } = await api.post(`/auth/lawyer/jam-sessions/${item.id}/like`);
+      const { data } = await api.post(`/auth/jam-sessions/${item.id}/like`);
       setPublishedJamSessions((prev) =>
-        prev.map((jam) => (jam.id === item.id ? { ...jam, likes: data.likes } : jam))
+        prev.map((jam) => (jam.id === item.id ? { ...jam, ...data } : jam))
       );
     } catch (error) {
       console.error('Error liking jam session:', error);
@@ -996,9 +1013,15 @@ export default function LawyerDashboard() {
 
   const handleJamComment = async (item, text) => {
     try {
-      const { data } = await api.post(`/auth/lawyer/jam-sessions/${item.id}/comment`, { text });
+      const { data } = await api.post(`/auth/jam-sessions/${item.id}/comments`, { text });
       setPublishedJamSessions((prev) =>
-        prev.map((jam) => (jam.id === item.id ? { ...jam, comments: data.comments } : jam))
+        prev.map((jam) => (jam.id === item.id
+          ? {
+              ...jam,
+              commentsCount: data.commentsCount,
+              comments: data.comment ? [data.comment, ...(jam.comments || [])] : jam.comments,
+            }
+          : jam))
       );
     } catch (error) {
       console.error('Error commenting on jam session:', error);

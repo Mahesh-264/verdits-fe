@@ -101,7 +101,7 @@ export default function App() {
       }
     };
 
-    if (!isAuthenticated) {
+    if (!isAuthenticated || getAccessToken()) {
       initializeAuth();
     } else {
       dispatch(setInitialized(true));
