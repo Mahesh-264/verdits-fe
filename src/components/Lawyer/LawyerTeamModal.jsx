@@ -13,6 +13,8 @@ export default function LawyerTeamModal({
   displayTeam,
   teamSize,
   handleCopyTeamCode,
+  handleDeleteTeam,
+  deletingTeam,
   teamWorkspaceLoading,
   teamWorkspaces,
   handleSelectTeam,
@@ -63,10 +65,19 @@ export default function LawyerTeamModal({
   handleTeamRequestDecision,
 }) {
   const [memberDetailTab, setMemberDetailTab] = React.useState('cases');
+  const [showTeamDetails, setShowTeamDetails] = React.useState(false);
+  const [showTeamCode, setShowTeamCode] = React.useState(false);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
 
   React.useEffect(() => {
     setMemberDetailTab('cases');
   }, [activeTeamMemberId]);
+
+  React.useEffect(() => {
+    setShowTeamDetails(false);
+    setShowTeamCode(false);
+    setConfirmDelete(false);
+  }, [displayTeam?.id]);
 
   if (!show) return null;
 
@@ -94,29 +105,37 @@ export default function LawyerTeamModal({
                   </p>
                   {!displayIsTeamOwner ? <div className="mt-3 flex flex-wrap items-center gap-3"><p className="text-sm text-[#5f7488]">Your Role: Member</p><button type="button" onClick={handleLeaveTeam} disabled={Boolean(removingTeamMemberId)} className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:opacity-60">{removingTeamMemberId ? 'Leaving...' : 'Leave Team'}</button></div> : null}
                 </div>
-                {displayIsTeamOwner ? <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-3 text-sm">
-                  <p className="text-[#5f7488]">Team size</p>
-                  <p className="mt-1 text-xl font-bold text-[#062552]">{teamSize}/{displayTeam.maxTeamSize || teamSize}</p>
-                </div> : null}
+                <div className="flex flex-wrap items-start gap-2 md:justify-end">
+                    <button
+                      type="button"
+                      onClick={() => { setTeamMode('create'); setTeamError(''); setTeamMessage(''); }}
+                      className="rounded-xl border border-[#d6b85b] bg-[#f1d15f] px-4 py-2.5 text-sm font-bold text-zinc-950 shadow-sm transition hover:bg-[#d6a400]"
+                    >
+                      Create Team
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setTeamMode('join'); setTeamError(''); setTeamMessage(''); }}
+                      className="rounded-xl border border-[#d7e9ef] bg-white px-4 py-2.5 text-sm font-bold text-[#062552] transition hover:bg-[#f3f8fb]"
+                    >
+                      Join Team
+                    </button>
+                  {displayIsTeamOwner ? <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-3 text-sm">
+                    <p className="text-[#5f7488]">Team size</p>
+                    <p className="mt-1 text-xl font-bold text-[#062552]">{teamSize}/{displayTeam.maxTeamSize || teamSize}</p>
+                  </div> : null}
+                </div>
               </div>
 
-              {displayIsTeamOwner ? <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-3">
-                  <KeyRound className="h-5 w-5 shrink-0 text-[#15a276]" />
-                  <span className="min-w-0 flex-1 font-mono text-lg font-bold tracking-wider text-[#062552]">
-                    {displayTeam.teamCode}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleCopyTeamCode}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 font-bold px-5 py-3 transition border border-[#d6b85b] shadow-sm"
-                >
-                  <Copy size={18} />
-                  Copy Code
-                </button>
-              </div> : null}
             </div>
+
+            {confirmDelete ? <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label="Confirm team deletion">
+              <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+                <h3 className="text-xl font-bold text-[#062552]">Delete {displayTeam.firmName || 'this team'}?</h3>
+                <p className="mt-3 text-sm leading-6 text-[#5f7488]">This permanently deletes the team, its cases, documents, hearings, and memberships. This cannot be undone.</p>
+                <div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setConfirmDelete(false)} disabled={deletingTeam} className="rounded-xl border border-[#d7e9ef] px-4 py-2.5 font-bold text-[#062552]">Cancel</button><button type="button" onClick={async () => { await handleDeleteTeam(); setConfirmDelete(false); }} disabled={deletingTeam} className="rounded-xl bg-red-600 px-4 py-2.5 font-bold text-white transition hover:bg-red-700 disabled:opacity-60">{deletingTeam ? 'Deleting...' : 'Delete Team'}</button></div>
+              </div>
+            </div> : null}
 
             {teamWorkspaceLoading ? (
               <p className="rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-sm font-semibold text-[#5f7488]">
@@ -124,106 +143,49 @@ export default function LawyerTeamModal({
               </p>
             ) : null}
 
+            {teamMode === 'create' ? (
+              <form onSubmit={handleCreateTeam} className="relative space-y-4 rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
+                <button type="button" onClick={() => setTeamMode('overview')} className="absolute -right-4 -top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-[#e2c878] bg-[#fffdf0] text-zinc-950 shadow-sm transition hover:border-red-600 hover:bg-red-600 hover:text-white" aria-label="Close Create Team"><FaTimes size={17} /></button>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <input name="firmName" value={createTeamForm.firmName} onChange={handleCreateTeamInput} placeholder="Firm name" className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]" required />
+                  <input name="seniorLawyerName" value={createTeamForm.seniorLawyerName} onChange={handleCreateTeamInput} placeholder="Team Owner name" className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300" required />
+                  <input type="number" min="2" name="maxTeamSize" value={createTeamForm.maxTeamSize} onChange={handleCreateTeamInput} className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]" required />
+                </div>
+                <button type="submit" disabled={teamLoading} className="verdits-primary-action inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-bold transition disabled:cursor-not-allowed"><Users size={18} />{teamLoading ? 'Creating...' : 'Create Team'}</button>
+              </form>
+            ) : null}
+
+            {teamMode === 'join' ? (
+              <form onSubmit={handleJoinTeam} className="relative space-y-4 rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
+                <button type="button" onClick={() => setTeamMode('overview')} className="absolute -right-4 -top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-[#e2c878] bg-[#fffdf0] text-zinc-950 shadow-sm transition hover:border-red-600 hover:bg-red-600 hover:text-white" aria-label="Close Join Team"><FaTimes size={17} /></button>
+                <div><label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#5f7488]">Team code</label><input name="teamCode" value={joinTeamForm.teamCode} onChange={handleJoinTeamInput} placeholder="Enter team code" className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]" required /></div>
+                <button type="submit" disabled={teamLoading} className="verdits-primary-action inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-bold transition disabled:cursor-not-allowed"><UserPlus size={18} />{teamLoading ? 'Sending...' : 'Request to Join'}</button>
+              </form>
+            ) : null}
+
             <div className="rounded-2xl border border-[#d7e9ef] bg-white p-4 shadow-sm">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Current Team</p>
                   <h3 className="mt-1 text-base font-bold text-[#062552]">{displayTeam.firmName || 'My Team'}</h3>
                 </div>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTeamMode('create');
-                      setTeamError('');
-                      setTeamMessage('');
-                    }}
-                    className="rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-4 py-2.5 text-sm font-bold transition shadow-sm border border-[#d6b85b]"
-                  >
-                    Create Team
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTeamMode('join');
-                      setTeamError('');
-                      setTeamMessage('');
-                    }}
-                    className="rounded-xl border border-[#d7e9ef] bg-white px-4 py-2.5 text-sm font-bold text-[#062552] transition hover:bg-[#f3f8fb]"
-                  >
-                    Join Team
-                  </button>
-                </div>
+                <button type="button" onClick={() => setShowTeamDetails((current) => !current)} className="self-start rounded-xl border border-[#15a276] bg-[#e8f7f2] px-4 py-2.5 text-sm font-bold text-[#0c7556] transition hover:bg-[#d8f2e9] sm:self-auto">{showTeamDetails ? 'Hide Team Details' : 'Team Details'}</button>
               </div>
 
               {teamWorkspaces.length ? <select aria-label="Select team" value={displayTeam.id || ''} onChange={(event) => { handleSelectTeam(event.target.value); setTeamMode('overview'); }} className="mt-4 w-full rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-3 text-sm font-bold text-[#062552] outline-none focus:border-[#15a276]">
                 {teamWorkspaces.map((team) => <option key={team.id || team.teamCode} value={team.id}>{team.firmName || 'Lawyer Team'} — {team.role === 'owner' ? 'Owner' : 'Member'}</option>)}
               </select> : null}
+              {displayIsTeamOwner && showTeamDetails ? <div className="mt-4 border-t border-[#d7e9ef] pt-4">
+                <div className="flex flex-wrap gap-3">
+                  <button type="button" onClick={() => setShowTeamCode((current) => !current)} className="rounded-xl border border-[#d7e9ef] bg-white px-4 py-2.5 text-sm font-bold text-[#062552] transition hover:bg-[#f3f8fb]">{showTeamCode ? 'Hide Team Code' : 'Team Code'}</button>
+                  <button type="button" onClick={() => setConfirmDelete(true)} className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700 transition hover:bg-red-100">Delete Team</button>
+                </div>
+                {showTeamCode ? <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+                  <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-3"><KeyRound className="h-5 w-5 shrink-0 text-[#15a276]" /><span className="min-w-0 flex-1 font-mono text-lg font-bold tracking-wider text-[#062552]">{displayTeam.teamCode}</span></div>
+                  <button type="button" onClick={handleCopyTeamCode} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#d6b85b] bg-[#f1d15f] px-5 py-3 font-bold text-zinc-950 shadow-sm transition hover:bg-[#d6a400]"><Copy size={18} />Copy Code</button>
+                </div> : null}
+              </div> : null}
             </div>
-
-            {teamMode === 'create' ? (
-              <form onSubmit={handleCreateTeam} className="space-y-4 rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                  <input
-                    name="firmName"
-                    value={createTeamForm.firmName}
-                    onChange={handleCreateTeamInput}
-                    placeholder="Firm name"
-                    className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
-                    required
-                  />
-                  <input
-                    name="seniorLawyerName"
-                    value={createTeamForm.seniorLawyerName}
-                    onChange={handleCreateTeamInput}
-                    placeholder="Team Owner name"
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
-                    required
-                  />
-                  <input
-                    type="number"
-                    min="2"
-                    name="maxTeamSize"
-                    value={createTeamForm.maxTeamSize}
-                    onChange={handleCreateTeamInput}
-                    className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
-                    required
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={teamLoading}
-                  className="verdits-primary-action inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-bold transition disabled:cursor-not-allowed"
-                >
-                  <Users size={18} />
-                  {teamLoading ? 'Creating...' : 'Create Team'}
-                </button>
-              </form>
-            ) : null}
-
-            {teamMode === 'join' ? (
-              <form onSubmit={handleJoinTeam} className="space-y-4 rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
-                <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#5f7488]">Team code</label>
-                  <input
-                    name="teamCode"
-                    value={joinTeamForm.teamCode}
-                    onChange={handleJoinTeamInput}
-                    placeholder="Enter team code"
-                    className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
-                    required
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={teamLoading}
-                  className="verdits-primary-action inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-bold transition disabled:cursor-not-allowed"
-                >
-                  <UserPlus size={18} />
-                  {teamLoading ? 'Sending...' : 'Request to Join'}
-                </button>
-              </form>
-            ) : null}
 
             {/* Sub-workspace Navigation Tabs */}
             {!activeTeamMember ? <div className="rounded-2xl border border-[#d7e9ef] bg-white p-2 shadow-sm flex flex-wrap items-center gap-2">

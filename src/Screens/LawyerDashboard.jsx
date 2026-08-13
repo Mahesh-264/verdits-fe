@@ -100,6 +100,7 @@ export default function LawyerDashboard() {
   const [updatingTeamCaseId, setUpdatingTeamCaseId] = useState('');
   const [updatingTeamRequestId, setUpdatingTeamRequestId] = useState('');
   const [removingTeamMemberId, setRemovingTeamMemberId] = useState('');
+  const [deletingTeam, setDeletingTeam] = useState(false);
   const [createTeamForm, setCreateTeamForm] = useState(initialCreateTeamForm);
   const [joinTeamForm, setJoinTeamForm] = useState(initialJoinTeamForm);
   const [teamCaseForm, setTeamCaseForm] = useState(initialTeamCaseForm);
@@ -562,6 +563,26 @@ export default function LawyerDashboard() {
     } catch (error) {
       console.error('Error copying team code:', error);
       setTeamMessage('Select the team code and copy it manually.');
+    }
+  };
+
+  const handleDeleteTeam = async () => {
+    if (!teamWorkspace?.id || !displayIsTeamOwner) return;
+    try {
+      setDeletingTeam(true);
+      setTeamError('');
+      await api.delete(`/teams/${teamWorkspace.id}`);
+      setSelectedTeamId('');
+      setTeamWorkspace(null);
+      setTeamWorkspaces([]);
+      await loadTeamWorkspace('');
+      setTeamMode('overview');
+      setTeamMessage('Team deleted successfully.');
+    } catch (error) {
+      console.error('Error deleting team:', error);
+      setTeamError(error.response?.data?.message || 'Failed to delete team');
+    } finally {
+      setDeletingTeam(false);
     }
   };
 
@@ -1294,6 +1315,8 @@ export default function LawyerDashboard() {
               displayTeam={displayTeam}
               teamSize={teamSize}
               handleCopyTeamCode={handleCopyTeamCode}
+              handleDeleteTeam={handleDeleteTeam}
+              deletingTeam={deletingTeam}
               teamWorkspaceLoading={teamWorkspaceLoading}
               teamWorkspaces={teamWorkspaces}
               handleSelectTeam={handleSelectTeam}
