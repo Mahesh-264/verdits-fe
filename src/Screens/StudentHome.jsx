@@ -154,7 +154,7 @@ export default function StudentHome() {
       updateFeedItem(joinTarget.id, (post) => ({
         ...post,
         joined: true,
-        participantCount: (post.participantCount || 0) + 1,
+        participantCount: data.participantCount ?? post.participantCount,
       }));
       setJoinTarget(null);
     } catch (error) {

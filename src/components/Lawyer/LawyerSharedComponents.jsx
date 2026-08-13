@@ -260,7 +260,9 @@ export function ApplicantDrawer({
         <div className="mt-6 space-y-4">
           {filteredDrawerItems.length === 0 ? (
             <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/40 p-5 text-sm text-zinc-500">
-              No records match this filter.
+              {drawer.type === 'participants'
+                ? 'No students have joined this session yet.'
+                : 'No records match this filter.'}
             </div>
           ) : (
             filteredDrawerItems.map((item) => (
@@ -273,6 +275,9 @@ export function ApplicantDrawer({
                       {item.collegeName || 'College not shared'}
                       {item.yearOfStudy ? ` | ${item.yearOfStudy}` : ''}
                     </p>
+                    {drawer.type === 'participants' && item.joinedAt ? (
+                      <p className="text-xs text-zinc-500 mt-2">Joined: {formatDate(item.joinedAt)}</p>
+                    ) : null}
                   </div>
                   <span className={`text-[11px] font-bold px-2 py-1 rounded-full border ${
                     drawer.type === 'participants'
