@@ -568,26 +568,6 @@ export default function LawyerDashboard() {
     }
   };
 
-  const handleDeleteTeam = async () => {
-    if (!teamWorkspace?.id || !displayIsTeamOwner) return;
-    try {
-      setDeletingTeam(true);
-      setTeamError('');
-      await api.delete(`/teams/${teamWorkspace.id}`);
-      setSelectedTeamId('');
-      setTeamWorkspace(null);
-      setTeamWorkspaces([]);
-      await loadTeamWorkspace('');
-      setTeamMode('overview');
-      setTeamMessage('Team deleted successfully.');
-    } catch (error) {
-      console.error('Error deleting team:', error);
-      setTeamError(error.response?.data?.message || 'Failed to delete team');
-    } finally {
-      setDeletingTeam(false);
-    }
-  };
-
   const handleAddTeamCase = async (event) => {
     event.preventDefault();
     if (!teamWorkspace?.id) return;
