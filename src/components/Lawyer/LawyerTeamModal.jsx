@@ -120,37 +120,12 @@ export default function LawyerTeamModal({
                     >
                       Join Team
                     </button>
-                  {displayIsTeamOwner ? <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-3 text-sm">
-                    <p className="text-[#5f7488]">Team size</p>
-                    <p className="mt-1 text-xl font-bold text-[#062552]">{teamSize}/{displayTeam.maxTeamSize || teamSize}</p>
+                  {displayIsTeamOwner ? <div className="inline-flex h-[42px] items-center gap-2 rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 text-sm">
+                    <span className="text-[#5f7488]">Team size</span>
+                    <span className="font-bold text-[#062552]">{teamSize}/{displayTeam.maxTeamSize || teamSize}</span>
                   </div> : null}
                 </div>
               </div>
-
-              {displayIsTeamOwner ? <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-3">
-                  <KeyRound className="h-5 w-5 shrink-0 text-[#15a276]" />
-                  <span className="min-w-0 flex-1 font-mono text-lg font-bold tracking-wider text-[#062552]">
-                    {displayTeam.teamCode}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleCopyTeamCode}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 font-bold px-5 py-3 transition border border-[#d6b85b] shadow-sm"
-                >
-                  <Copy size={18} />
-                  Copy Code
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmDelete(true)}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-5 py-3 font-bold text-red-700 transition hover:bg-red-100"
-                >
-                  <FaTrash />
-                  Delete Team
-                </button>
-              </div> : null}
             </div>
 
             {confirmDelete ? <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label="Confirm team deletion">
