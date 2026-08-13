@@ -100,6 +100,7 @@ export default function LawyerDashboard() {
   const [updatingTeamCaseId, setUpdatingTeamCaseId] = useState('');
   const [updatingTeamRequestId, setUpdatingTeamRequestId] = useState('');
   const [removingTeamMemberId, setRemovingTeamMemberId] = useState('');
+  const [deletingTeam, setDeletingTeam] = useState(false);
   const [createTeamForm, setCreateTeamForm] = useState(initialCreateTeamForm);
   const [joinTeamForm, setJoinTeamForm] = useState(initialJoinTeamForm);
   const [teamCaseForm, setTeamCaseForm] = useState(initialTeamCaseForm);
@@ -258,6 +259,8 @@ export default function LawyerDashboard() {
       if (activeId) {
         selectedTeamIdRef.current = String(activeId);
         setSelectedTeamIdState(String(activeId));
+      } else {
+        setSelectedTeamId('');
       }
       setTeamWorkspace(data?.team || null);
     } catch (error) {
@@ -267,7 +270,7 @@ export default function LawyerDashboard() {
     } finally {
       setTeamWorkspaceLoading(false);
     }
-  }, []);
+  }, [setSelectedTeamId]);
 
   const handleSelectTeam = useCallback((teamId) => {
     if (!teamId) return;
@@ -695,11 +698,45 @@ export default function LawyerDashboard() {
       setActiveTeamTab('my_cases');
       setTeamMessage('You left the team.');
       await loadTeamWorkspace();
+      await loadLawyerNextHearings();
     } catch (error) {
       console.error('Error leaving team:', error);
       setTeamError(error.response?.data?.message || 'Failed to leave team');
     } finally {
       setRemovingTeamMemberId('');
+    }
+  };
+
+  const handleDeleteTeam = async () => {
+    if (!teamWorkspace?.id || !displayIsTeamOwner) return;
+    try {
+      setDeletingTeam(true);
+      setTeamError('');
+      setTeamMessage('');
+      const { data } = await api.delete(`/teams/${teamWorkspace.id}`);
+      const workspace = data?.data;
+      const teams = Array.isArray(workspace?.teams) ? workspace.teams : [];
+      const nextTeamId = workspace?.activeTeamId || workspace?.team?.id || teams[0]?.id || '';
+      setSelectedTeamMemberId('');
+      setSelectedCaseForDetailsId('');
+      setSelectedLawyerRecord(null);
+      setSelectedLawyerCases(null);
+      setMemberOwnedTeam(null);
+      setActiveTeamTab('my_cases');
+      setShowTeamCaseForm(false);
+      setTeamWorkspaces(teams);
+      setTeamWorkspace(workspace?.team || null);
+      setSelectedTeamId(nextTeamId);
+      setTeamMode(workspace?.team ? 'overview' : 'create');
+      setTeamMessage('Team deleted successfully.');
+      await Promise.all([loadTeamWorkspace(nextTeamId), loadLawyerNextHearings()]);
+      return true;
+    } catch (error) {
+      console.error('Error deleting team:', error);
+      setTeamError(error.response?.data?.message || 'Failed to delete team');
+      return false;
+    } finally {
+      setDeletingTeam(false);
     }
   };
 
@@ -1317,6 +1354,8 @@ export default function LawyerDashboard() {
               displayTeam={displayTeam}
               teamSize={teamSize}
               handleCopyTeamCode={handleCopyTeamCode}
+              handleDeleteTeam={handleDeleteTeam}
+              deletingTeam={deletingTeam}
               teamWorkspaceLoading={teamWorkspaceLoading}
               teamWorkspaces={teamWorkspaces}
               handleSelectTeam={handleSelectTeam}
@@ -1358,6 +1397,8 @@ export default function LawyerDashboard() {
               handleRemoveTeamMember={handleRemoveTeamMember}
               handleLeaveTeam={handleLeaveTeam}
               removingTeamMemberId={removingTeamMemberId}
+              handleDeleteTeam={handleDeleteTeam}
+              deletingTeam={deletingTeam}
               activeTeamMemberId={activeTeamMemberId}
               activeTeamMemberCases={activeTeamMemberCases}
               memberOwnedTeam={memberOwnedTeam}

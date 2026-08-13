@@ -237,7 +237,14 @@ export default function Login() {
                     </div>
 
                     {errorMessage && (
-                        <div data-error-code={errorCode || undefined} className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-semibold text-red-900 shadow-sm">
+                        <div
+                            data-error-code={errorCode || undefined}
+                            className={`rounded-xl border px-4 py-3 text-sm font-semibold shadow-sm ${
+                                errorCode === 'ACCOUNT_PENDING_APPROVAL'
+                                    ? 'border-amber-300 bg-amber-50 text-amber-900'
+                                    : 'border-red-300 bg-red-50 text-red-900'
+                            }`}
+                        >
                             <p>{errorMessage}</p>
                         </div>
                     )}
