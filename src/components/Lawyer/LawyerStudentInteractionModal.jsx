@@ -250,7 +250,7 @@ export default function LawyerStudentInteractionModal({
                           <div>Schedule: {session.schedule || 'Not specified'}</div>
                           <div>Date: {new Date(session.createdAt).toLocaleDateString()}</div>
                           <div>Location: {session.location || 'Not specified'}</div>
-                          <div>{session.participantCount || 0} Participants</div>
+                          <div>{session.participantCount || 0} Students Joined</div>
                         </div>
 
                         <div className="mt-5 rounded-xl border border-zinc-800 bg-white p-4 text-zinc-950">
@@ -426,7 +426,8 @@ export default function LawyerStudentInteractionModal({
                   {showJamSessionForm && (
                     <form onSubmit={handlePublishJamSession} className="mt-5 space-y-4">
                       <input name="title" value={jamSessionForm.title} onChange={handleJamSessionInput} placeholder="Session title" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-cyan-400" required />
-                      <textarea name="description" value={jamSessionForm.description} onChange={handleJamSessionInput} placeholder="Description" rows="4" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-cyan-400" required />
+                      <input name="topic" value={jamSessionForm.topic} onChange={handleJamSessionInput} placeholder="Session topic" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-cyan-400" required />
+                      <textarea name="summary" value={jamSessionForm.summary} onChange={handleJamSessionInput} placeholder="Session summary" rows="4" className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 outline-none focus:border-cyan-400" required />
                       
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>

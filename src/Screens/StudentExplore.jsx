@@ -246,7 +246,9 @@ export default function StudentExplore() {
       setDiscovery((current) => ({
         ...current,
         jamSessions: current.jamSessions.map((post) =>
-          post.id === joinTarget.id ? { ...post, joined: true, participantCount: (post.participantCount || 0) + 1 } : post
+          post.id === joinTarget.id
+            ? { ...post, joined: true, participantCount: data.participantCount ?? post.participantCount }
+            : post
         ),
       }));
       setJoinTarget(null);
