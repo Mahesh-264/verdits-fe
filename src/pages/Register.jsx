@@ -424,6 +424,13 @@ export default function Register() {
     ]);
 
     const finishAuth = (session) => {
+        if (session.verificationToken && session.user?.role === 'lawyer') {
+            // This opaque, time-limited token only authorizes checking this
+            // application's status; it is not a dashboard login session.
+            window.sessionStorage.setItem('lawyerVerificationToken', session.verificationToken);
+            navigate('/pending-approval', { replace: true });
+            return;
+        }
         storeAuthSession(session, false);
         dispatch(setAuth(session.user));
         socket.auth.token = session.accessToken;
