@@ -47,6 +47,7 @@ export default function LawyerTeamModal({
   handleUpdateTeamCaseStatus,
   handleDeleteTeamCase,
   loadTeamWorkspace,
+  loadLawyerNextHearings,
   activeTeamMember,
   setSelectedTeamMemberId,
   onSelectTeamMember,
@@ -394,6 +395,7 @@ export default function LawyerTeamModal({
                       handleUpdateTeamCaseStatus={handleUpdateTeamCaseStatus}
                       handleDeleteTeamCase={handleDeleteTeamCase}
                       loadTeamWorkspace={loadTeamWorkspace}
+                      loadLawyerNextHearings={loadLawyerNextHearings}
                       formatDate={formatDate}
                     />
                   );

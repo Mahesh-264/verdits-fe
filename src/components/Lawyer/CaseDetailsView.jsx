@@ -13,6 +13,7 @@ const CaseDetailsView = ({
   handleUpdateTeamCaseStatus,
   handleDeleteTeamCase,
   loadTeamWorkspace,
+  loadLawyerNextHearings,
   formatDate,
 }) => {
   const { user } = useSelector((state) => state.auth);
@@ -168,7 +169,10 @@ const CaseDetailsView = ({
           })));
         }
       }
-      await loadTeamWorkspace();
+      await Promise.all([
+        loadTeamWorkspace(),
+        typeof loadLawyerNextHearings === 'function' ? loadLawyerNextHearings() : Promise.resolve(),
+      ]);
       setCaseDetailsMessage('Hearing history saved.');
     } catch (error) {
       console.error('Error saving hearing history:', error);

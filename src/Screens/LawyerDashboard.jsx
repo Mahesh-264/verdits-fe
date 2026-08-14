@@ -1403,6 +1403,7 @@ export default function LawyerDashboard() {
               handleUpdateTeamCaseStatus={handleUpdateTeamCaseStatus}
               handleDeleteTeamCase={handleDeleteTeamCase}
               loadTeamWorkspace={loadTeamWorkspace}
+              loadLawyerNextHearings={loadLawyerNextHearings}
               activeTeamMember={activeTeamMember}
               setSelectedTeamMemberId={setSelectedTeamMemberId}
               onSelectTeamMember={handleSelectTeamMember}
