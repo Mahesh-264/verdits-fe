@@ -4,6 +4,16 @@ import { FaArrowLeft, FaCheck, FaPencilAlt, FaTimes, FaTrash } from 'react-icons
 import api from '../../api/axios';
 import { formatTime, toDateInput, toTimeInput } from '../../utils/lawyerUtils';
 
+const formatHeaderLabel = (dateStr) => {
+  if (!dateStr) return 'NEW HEARING';
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return 'NEW HEARING';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year} HEARING`;
+};
+
 const CaseDetailsView = ({
   selectedCase,
   displayTeam,
@@ -51,7 +61,7 @@ const CaseDetailsView = ({
   const getInitialHearingHistory = useCallback(() => {
     if (Array.isArray(caseRecord.hearingHistory) && caseRecord.hearingHistory.length > 0) {
       return caseRecord.hearingHistory.map((item) => ({
-        id: item.id,
+        id: item.id || item._id,
         courtName: item.courtName || '',
         hearingDate: toDateInput(item.hearingDate),
         hearingTime: item.hearingTime || toTimeInput(item.hearingDate),
@@ -134,18 +144,27 @@ const CaseDetailsView = ({
 
   const handleAddHearingRow = () => {
     if (!canEditCase) return;
-    setLocalHearingHistory((rows) => [...rows, createManualHistoryRow()]);
+    setLocalHearingHistory((rows) => [createManualHistoryRow(), ...rows]);
   };
 
   const handleSaveHearingHistory = async () => {
     if (!canEditCase) return;
+    setCaseDetailsError('');
+    setCaseDetailsMessage('');
+
+    for (let i = 0; i < localHearingHistory.length; i++) {
+      const row = localHearingHistory[i];
+      if (row.hearingDate && row.nextHearingDate) {
+        if (new Date(row.nextHearingDate) < new Date(row.hearingDate)) {
+          setCaseDetailsError('Next hearing date cannot be earlier than hearing date.');
+          return;
+        }
+      }
+    }
+
     try {
-      // Ignore an older details request while this save makes the backend's
-      // returned hearing IDs the single source of truth.
       hearingHistoryVersion.current += 1;
       setSavingHearingHistory(true);
-      setCaseDetailsError('');
-      setCaseDetailsMessage('');
       const { data } = await api.put(`/teams/${displayTeam.id}/cases/${caseRecord.id}/hearings`, { hearings: localHearingHistory });
       if (data?.case) {
         setCaseDetails((prev) => ({
@@ -181,6 +200,15 @@ const CaseDetailsView = ({
       setSavingHearingHistory(false);
     }
   };
+
+  const sortedHearingHistory = [...localHearingHistory].map((item, originalIndex) => ({
+    ...item,
+    originalIndex,
+  })).sort((a, b) => {
+    if (!a.hearingDate) return -1;
+    if (!b.hearingDate) return 1;
+    return new Date(b.hearingDate) - new Date(a.hearingDate);
+  });
 
   return (
     <div className="space-y-6 rounded-2xl border border-[#d7e9ef] bg-white p-6 shadow-sm">
@@ -365,20 +393,32 @@ const CaseDetailsView = ({
 
         {localHearingHistory.length === 0 ? <p className="rounded-lg border border-dashed border-[#d7e9ef] bg-white px-4 py-6 text-center text-sm text-[#5f7488]">No hearing history recorded yet.</p> : (
           <div className="space-y-4 border-l-2 border-[#d7e9ef] pl-5">
-            {localHearingHistory.map((row, index) => (
-              <div key={row.id || row.tempKey} className="relative rounded-xl border border-[#d7e9ef] bg-white p-4 shadow-sm">
-                <span className="absolute -left-[1.82rem] top-5 h-3 w-3 rounded-full border-2 border-white bg-[#15a276]" />
-                <div className="mb-3 flex items-center justify-between gap-3"><p className="text-xs font-bold uppercase tracking-wide text-[#15a276]">{index === 0 ? 'Next Hearing' : 'Previous Hearing'}</p>{canEditCase ? <button type="button" onClick={() => handleRemoveHearingRow(index)} className="text-red-500 hover:text-red-700" title="Remove hearing"><FaTrash size={14} /></button> : null}</div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <label className="text-xs font-bold text-[#5f7488]">Court{canEditCase ? <input type="text" value={row.courtName} onChange={(e) => handleHearingHistoryChange(index, 'courtName', e.target.value)} placeholder="Court name" className="mt-1 block w-full rounded-md border border-[#d7e9ef] px-3 py-2 text-sm text-[#062552] outline-none focus:border-[#15a276]" /> : <span className="mt-1 block text-sm text-[#062552]">{row.courtName || 'Not provided'}</span>}</label>
-                  <label className="text-xs font-bold text-[#5f7488]">Hearing date{canEditCase ? <input type="date" value={row.hearingDate} onChange={(e) => handleHearingHistoryChange(index, 'hearingDate', e.target.value)} className="mt-1 block w-full rounded-md border border-[#d7e9ef] px-3 py-2 text-sm text-[#062552] outline-none focus:border-[#15a276]" /> : <span className="mt-1 block text-sm text-[#062552]">{formatDate(row.hearingDate) || 'Not provided'}</span>}</label>
-                  <label className="text-xs font-bold text-[#5f7488]">Hearing time{canEditCase ? <span className="mt-1 flex gap-2"><input type="time" value={row.hearingTime} onChange={(e) => handleHearingHistoryChange(index, 'hearingTime', e.target.value)} className="min-w-0 flex-1 rounded-md border border-[#d7e9ef] px-3 py-2 text-sm text-[#062552] outline-none focus:border-[#15a276]" /><button type="button" onClick={() => handleHearingHistoryChange(index, 'hearingTime', '')} className="rounded border border-[#d7e9ef] px-2 text-xs text-[#5f7488]">Clear</button></span> : <span className="mt-1 block text-sm text-[#062552]">{formatTime(`${row.hearingDate}T${row.hearingTime}`) || 'Not provided'}</span>}</label>
-                  <label className="text-xs font-bold text-[#5f7488]">Next hearing date{canEditCase ? <input type="date" value={row.nextHearingDate} onChange={(e) => handleHearingHistoryChange(index, 'nextHearingDate', e.target.value)} className="mt-1 block w-full rounded-md border border-[#d7e9ef] px-3 py-2 text-sm text-[#062552] outline-none focus:border-[#15a276]" /> : <span className="mt-1 block text-sm text-[#062552]">{formatDate(row.nextHearingDate) || 'Not scheduled'}</span>}</label>
-                  <label className="text-xs font-bold text-[#5f7488]">Next hearing time{canEditCase ? <span className="mt-1 flex gap-2"><input type="time" value={row.nextHearingTime} onChange={(e) => handleHearingHistoryChange(index, 'nextHearingTime', e.target.value)} className="min-w-0 flex-1 rounded-md border border-[#d7e9ef] px-3 py-2 text-sm text-[#062552] outline-none focus:border-[#15a276]" /><button type="button" onClick={() => handleHearingHistoryChange(index, 'nextHearingTime', '')} className="rounded border border-[#d7e9ef] px-2 text-xs text-[#5f7488]">Clear</button></span> : <span className="mt-1 block text-sm text-[#062552]">{formatTime(`${row.nextHearingDate}T${row.nextHearingTime}`) || 'Not provided'}</span>}</label>
-                  <label className="text-xs font-bold text-[#5f7488] sm:col-span-2">Hearing details{canEditCase ? <input type="text" value={row.hearingDetails} onChange={(e) => handleHearingHistoryChange(index, 'hearingDetails', e.target.value)} placeholder="Hearing details" className="mt-1 block w-full rounded-md border border-[#d7e9ef] px-3 py-2 text-sm text-[#062552] outline-none focus:border-[#15a276]" /> : <span className="mt-1 block text-sm text-[#062552]">{row.hearingDetails || 'No details added.'}</span>}</label>
+            {sortedHearingHistory.map((row) => {
+              const index = row.originalIndex;
+              return (
+                <div key={row.id || row.tempKey} className="relative rounded-xl border border-[#d7e9ef] bg-white p-4 shadow-sm">
+                  <span className="absolute -left-[1.82rem] top-5 h-3 w-3 rounded-full border-2 border-white bg-[#15a276]" />
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-xs font-bold uppercase tracking-wide text-[#15a276]">
+                      {formatHeaderLabel(row.hearingDate)}
+                    </p>
+                    {canEditCase ? (
+                      <button type="button" onClick={() => handleRemoveHearingRow(index)} className="text-red-500 hover:text-red-700" title="Remove hearing">
+                        <FaTrash size={14} />
+                      </button>
+                    ) : null}
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <label className="text-xs font-bold text-[#5f7488]">Court{canEditCase ? <input type="text" value={row.courtName} onChange={(e) => handleHearingHistoryChange(index, 'courtName', e.target.value)} placeholder="Court name" className="mt-1 block w-full rounded-md border border-[#d7e9ef] px-3 py-2 text-sm text-[#062552] outline-none focus:border-[#15a276]" /> : <span className="mt-1 block text-sm text-[#062552]">{row.courtName || 'Not provided'}</span>}</label>
+                    <label className="text-xs font-bold text-[#5f7488]">Hearing date{canEditCase ? <input type="date" value={row.hearingDate} onChange={(e) => handleHearingHistoryChange(index, 'hearingDate', e.target.value)} className="mt-1 block w-full rounded-md border border-[#d7e9ef] px-3 py-2 text-sm text-[#062552] outline-none focus:border-[#15a276]" /> : <span className="mt-1 block text-sm text-[#062552]">{formatDate(row.hearingDate) || 'Not provided'}</span>}</label>
+                    <label className="text-xs font-bold text-[#5f7488]">Hearing time{canEditCase ? <span className="mt-1 flex gap-2"><input type="time" value={row.hearingTime} onChange={(e) => handleHearingHistoryChange(index, 'hearingTime', e.target.value)} className="min-w-0 flex-1 rounded-md border border-[#d7e9ef] px-3 py-2 text-sm text-[#062552] outline-none focus:border-[#15a276]" /><button type="button" onClick={() => handleHearingHistoryChange(index, 'hearingTime', '')} className="rounded border border-[#d7e9ef] px-2 text-xs text-[#5f7488]">Clear</button></span> : <span className="mt-1 block text-sm text-[#062552]">{formatTime(`${row.hearingDate}T${row.hearingTime}`) || 'Not provided'}</span>}</label>
+                    <label className="text-xs font-bold text-[#5f7488]">Next hearing date{canEditCase ? <input type="date" value={row.nextHearingDate} onChange={(e) => handleHearingHistoryChange(index, 'nextHearingDate', e.target.value)} className="mt-1 block w-full rounded-md border border-[#d7e9ef] px-3 py-2 text-sm text-[#062552] outline-none focus:border-[#15a276]" /> : <span className="mt-1 block text-sm text-[#062552]">{formatDate(row.nextHearingDate) || 'Not scheduled'}</span>}</label>
+                    <label className="text-xs font-bold text-[#5f7488]">Next hearing time{canEditCase ? <span className="mt-1 flex gap-2"><input type="time" value={row.nextHearingTime} onChange={(e) => handleHearingHistoryChange(index, 'nextHearingTime', e.target.value)} className="min-w-0 flex-1 rounded-md border border-[#d7e9ef] px-3 py-2 text-sm text-[#062552] outline-none focus:border-[#15a276]" /><button type="button" onClick={() => handleHearingHistoryChange(index, 'nextHearingTime', '')} className="rounded border border-[#d7e9ef] px-2 text-xs text-[#5f7488]">Clear</button></span> : <span className="mt-1 block text-sm text-[#062552]">{formatTime(`${row.nextHearingDate}T${row.nextHearingTime}`) || 'Not provided'}</span>}</label>
+                    <label className="text-xs font-bold text-[#5f7488] sm:col-span-2">Hearing details{canEditCase ? <input type="text" value={row.hearingDetails} onChange={(e) => handleHearingHistoryChange(index, 'hearingDetails', e.target.value)} placeholder="Hearing details" className="mt-1 block w-full rounded-md border border-[#d7e9ef] px-3 py-2 text-sm text-[#062552] outline-none focus:border-[#15a276]" /> : <span className="mt-1 block text-sm text-[#062552]">{row.hearingDetails || 'No details added.'}</span>}</label>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
