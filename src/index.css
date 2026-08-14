@@ -129,6 +129,15 @@ body {
   color: var(--verdicts-ink) !important;
 }
 
+/* This action starts light, then uses the dashboard action's gold hover. */
+.new-post-action {
+  background-color: #f1d15f !important;
+}
+
+.new-post-action:hover {
+  background-color: #d6a400 !important;
+}
+
 .verdits-primary-action:disabled {
   background-color: #e6d79a !important;
   color: #6f633f !important;

@@ -87,7 +87,7 @@ const InstantConsult = () => {
 
   return (
     <div className="min-h-screen bg-[#f3f8fb]">
-      <AppHeader variant="user" profileTo="/profile" />
+      <AppHeader variant="user" profileTo="/profile" showBackButton backTo="/user-home" />
 
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4">
         <div className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm">

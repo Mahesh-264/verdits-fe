@@ -167,15 +167,15 @@ export default function StudentHome() {
 
   return (
     <StudentLayout>
-      <div className="space-y-8">
-        <section className="overflow-hidden rounded-[32px] border border-[#ead79c] bg-[linear-gradient(135deg,#f4e6ae_0%,#fff2c9_52%,#fff6dc_52%,#fffdf7_100%)] p-6 text-[#102144] shadow-[0_20px_60px_rgba(91,65,17,0.16)] md:p-8">
+      <div className="min-w-0 space-y-8">
+        <section className="overflow-hidden rounded-[28px] border border-[#ead79c] bg-[linear-gradient(135deg,#f4e6ae_0%,#fff2c9_52%,#fff6dc_52%,#fffdf7_100%)] p-4 text-[#102144] shadow-[0_20px_60px_rgba(91,65,17,0.16)] sm:rounded-[32px] sm:p-6 md:p-8">
           <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr] lg:items-end">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full bg-[#fff7de]/20 px-4 py-2 text-sm font-semibold backdrop-blur">
                 <Sparkles size={16} />
                 Personalized Feed
               </div>
-              <h1 className="mt-5 max-w-2xl text-[34px] font-semibold tracking-tight md:text-[46px]">
+              <h1 className="mt-5 max-w-2xl text-[30px] font-semibold leading-tight tracking-tight sm:text-[34px] md:text-[46px]">
                 Network-first legal updates, opportunities, and conversations.
               </h1>
               <p className="mt-4 max-w-2xl text-[16px] leading-8 text-[#44516d]">

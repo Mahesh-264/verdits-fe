@@ -41,6 +41,13 @@ export default function StudentExplore() {
   const [searchTerm, setSearchTerm] = useState('');
   const [internshipFilters, setInternshipFilters] = useState(createInitialInternshipFilters());
   const [discovery, setDiscovery] = useState({ internships: [], jamSessions: [], lawyers: [] });
+  const hasActiveInternshipFilters = Object.entries(internshipFilters).some(([key, value]) => (
+    value !== createInitialInternshipFilters()[key]
+  ));
+
+  const clearInternshipFilters = () => {
+    setInternshipFilters(createInitialInternshipFilters());
+  };
   const [loading, setLoading] = useState(false);
   const [discoveryError, setDiscoveryError] = useState('');
   const [applicationTarget, setApplicationTarget] = useState(null);
@@ -264,13 +271,13 @@ export default function StudentExplore() {
     <StudentLayout>
       <div className="space-y-8">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight text-[#0b1f44] md:text-5xl">Explore Opportunities</h1>
-          <p className="mt-3 text-lg text-[#5e6c87]">
+          <h1 className="text-3xl font-bold tracking-tight text-[#0b1f44] sm:text-4xl md:text-5xl">Explore Opportunities</h1>
+          <p className="mt-3 text-base text-[#5e6c87] sm:text-lg">
             Search across internships, jam sessions, and lawyers from one place.
           </p>
         </div>
 
-        <section className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
+        <section className="min-w-0 rounded-[28px] border border-[#dbe2ef] bg-white p-4 shadow-[0_2px_12px_rgba(11,31,68,0.04)] sm:p-6">
           {discoveryError ? (
             <p className="mb-5 rounded-2xl bg-[#fff7ed] px-4 py-3 text-sm font-medium text-[#c2410c]">
               {discoveryError}
@@ -308,7 +315,7 @@ export default function StudentExplore() {
               </div>
 
               {activeTab === 'internships' ? (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-6">
                   <FilterSelect
                     icon={<SlidersHorizontal size={18} className="text-[#7f8ba2]" />}
                     value={internshipFilters.location}
@@ -336,6 +343,14 @@ export default function StudentExplore() {
                     labels={Object.fromEntries(internshipSortOptions.map((item) => [item.id, item.label]))}
                     onChange={(value) => setInternshipFilters((current) => ({ ...current, sortBy: value }))}
                   />
+                  <button
+                    type="button"
+                    onClick={clearInternshipFilters}
+                    disabled={!hasActiveInternshipFilters}
+                    className="rounded-2xl border border-[#d7e9ef] bg-white px-4 py-3 text-sm font-bold text-[#062552] transition hover:border-[#15a276] hover:bg-[#e8f7f2] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Clear filters
+                  </button>
                 </div>
               ) : null}
             </div>
@@ -465,12 +480,12 @@ export default function StudentExplore() {
 
 function FilterSelect({ icon, value, options, labels = {}, onChange }) {
   return (
-    <div className="relative min-w-[170px]">
+    <div className="relative min-w-0">
       {icon ? <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">{icon}</div> : null}
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`w-full appearance-none rounded-2xl bg-[#f4f6fb] py-4 ${
+        className={`w-full min-w-0 appearance-none rounded-xl bg-[#f4f6fb] py-3 text-xs sm:rounded-2xl sm:py-4 sm:text-sm ${
           icon ? 'pl-12' : 'pl-4'
         } pr-12 text-sm font-medium text-[#0b1f44] outline-none`}
       >

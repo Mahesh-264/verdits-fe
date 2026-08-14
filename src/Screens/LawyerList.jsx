@@ -66,7 +66,7 @@ const LawyerList = () => {
 
   return (
     <div className="min-h-screen bg-[#f3f8fb]">
-      <AppHeader variant="user" profileTo="/profile" />
+      <AppHeader variant="user" profileTo="/profile" showBackButton backTo="/book-lawyer" />
 
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4">
         <div>

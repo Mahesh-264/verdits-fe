@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
-import { BriefcaseBusiness, CalendarDays, Clock3, IndianRupee, MapPin, Trash2, Users, X } from 'lucide-react';
+import { BriefcaseBusiness, CalendarDays, Clock3, ExternalLink, FileText, IndianRupee, MapPin, Trash2, Users, X } from 'lucide-react';
 import api from '../../api/axios.jsx';
 import ReactionBar from './ReactionBar.jsx';
 
@@ -16,6 +16,37 @@ const typeLabels = {
   jam: 'Jam Session',
 };
 
+const getAttachmentName = (url, fallback) => {
+  try {
+    const name = decodeURIComponent(new URL(url).pathname.split('/').pop() || '');
+    return name || fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const normalizeAttachment = (item, index) => {
+  if (typeof item === 'string') {
+    return { url: item, name: getAttachmentName(item, `Image ${index + 1}`), type: 'image/*' };
+  }
+
+  const url = item?.url || item?.secure_url || item?.path || '';
+  return {
+    url,
+    name: item?.name || item?.fileName || getAttachmentName(url, `Attachment ${index + 1}`),
+    type: item?.type || item?.mimeType || item?.contentType || '',
+  };
+};
+
+const isImageAttachment = (attachment) => (
+  attachment.type.startsWith('image/') || /\.(avif|gif|jpe?g|png|svg|webp)(?:\?|$)/i.test(attachment.url)
+);
+
+const formatAttachmentType = (type) => {
+  if (!type || type === 'image/*') return 'Image';
+  return type.split('/').pop().replace(/[-_]/g, ' ').toUpperCase();
+};
+
 export default function FeedPostCard({ post, onApply, onJoin, onDelete, deleting }) {
   const { user } = useSelector((state) => state.auth);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -27,6 +58,9 @@ export default function FeedPostCard({ post, onApply, onJoin, onDelete, deleting
   const isJam = post.type === 'jam';
   const hasPrimaryAction = isInternship || isJam;
   const isDisabled = isInternship ? post.applied || post.status === 'closed' : post.joined;
+  const attachments = (Array.isArray(post.media) ? post.media : [])
+    .map(normalizeAttachment)
+    .filter((attachment) => attachment.url);
 
   const actionLabel = isInternship
     ? post.applied
@@ -105,17 +139,36 @@ export default function FeedPostCard({ post, onApply, onJoin, onDelete, deleting
 
         <p className="text-[16px] leading-8 text-[#243b67]">{post.content || post.summary || post.description}</p>
 
-        {post.media?.length ? (
-          <div className={`grid gap-3 ${post.media.length === 1 ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3'}`}>
-            {post.media.map((imageUrl) => (
-              <button
-                key={imageUrl}
-                type="button"
-                onClick={() => setSelectedImage(imageUrl)}
-                className="overflow-hidden rounded-[24px] border border-[#dbe2ef] bg-[#f7f9fd] text-left transition hover:border-[#15a276]"
-              >
-                <img src={imageUrl} alt={post.title || creatorName} className="max-h-[520px] w-full object-contain" />
-              </button>
+        {attachments.length ? (
+          <div className={`grid gap-3 ${attachments.length === 1 ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3'}`}>
+            {attachments.map((attachment) => isImageAttachment(attachment) ? (
+              <div key={attachment.url} className="overflow-hidden rounded-[24px] border border-[#dbe2ef] bg-[#f7f9fd]">
+                <button
+                  type="button"
+                  onClick={() => setSelectedImage(attachment.url)}
+                  className="block w-full text-left transition hover:opacity-90"
+                  aria-label={`Preview ${attachment.name}`}
+                >
+                  <img src={attachment.url} alt={attachment.name || post.title || creatorName} className="max-h-[520px] w-full object-contain" />
+                </button>
+                <a href={attachment.url} target="_blank" rel="noreferrer" className="flex items-center justify-between gap-3 border-t border-[#dbe2ef] px-4 py-3 text-sm font-semibold text-[#243b67] transition hover:bg-[#e8f7f2]">
+                  <span className="min-w-0 truncate">{attachment.name}</span>
+                  <span className="inline-flex shrink-0 items-center gap-1 text-[#15a276]">View <ExternalLink size={14} /></span>
+                </a>
+              </div>
+            ) : (
+              <div key={attachment.url} className="flex min-w-0 flex-col justify-between gap-4 rounded-[24px] border border-[#dbe2ef] bg-[#f7f9fd] p-4">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#15a276]"><FileText size={20} /></div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[#0b1f44]" title={attachment.name}>{attachment.name}</p>
+                    <p className="mt-1 text-xs uppercase tracking-wide text-[#6d7a92]">{formatAttachmentType(attachment.type)}</p>
+                  </div>
+                </div>
+                <a href={attachment.url} target="_blank" rel="noreferrer" className="inline-flex w-fit items-center gap-2 rounded-xl border border-[#dbe2ef] bg-white px-3 py-2 text-sm font-semibold text-[#243b67] transition hover:border-[#15a276] hover:bg-[#e8f7f2]">
+                  View / Open <ExternalLink size={15} />
+                </a>
+              </div>
             ))}
           </div>
         ) : null}

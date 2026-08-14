@@ -196,7 +196,7 @@ export default function StudentLayout({ children }) {
         </div>
       </header>
 
-      <main className="max-w-[1440px] mx-auto px-4 py-6 md:px-6 md:py-8">
+      <main className="mx-auto w-full min-w-0 max-w-[1440px] px-4 py-6 md:px-6 md:py-8">
         {children}
       </main>
     </div>

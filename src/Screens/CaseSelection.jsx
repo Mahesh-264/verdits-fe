@@ -16,7 +16,7 @@ const CaseSelection = () => {
     return (
         <div className="min-h-screen bg-[#f3f8fb] flex flex-col items-center">
             <div className="w-full">
-                <AppHeader variant="user" profileTo="/profile" />
+                <AppHeader variant="user" profileTo="/profile" showBackButton backTo="/user-home" />
             </div>
 
             <div className="w-full max-w-md p-6 mt-4">

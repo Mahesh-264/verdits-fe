@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { ImagePlus, Plus, X } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { FileText, ImagePlus, Plus, X } from 'lucide-react';
 
 const baseInputClassName =
   'w-full rounded-2xl border border-[#dbe2ef] bg-[#fbfcff] px-4 py-3 text-[#0b1f44] outline-none transition focus:border-[#15a276]';
@@ -76,24 +76,62 @@ export default function PostComposerModal({
   const [visibility, setVisibility] = useState('public');
   const [tags, setTags] = useState([]);
   const [images, setImages] = useState([]);
+  const [selectedPreview, setSelectedPreview] = useState(null);
 
   const previews = useMemo(
     () => images.map((file) => ({ file, preview: URL.createObjectURL(file) })),
     [images]
   );
 
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const bodyStyle = document.body.style;
+    const htmlStyle = document.documentElement.style;
+    const previousBodyOverflow = bodyStyle.overflow;
+    const previousBodyPaddingRight = bodyStyle.paddingRight;
+    const previousHtmlOverflow = htmlStyle.overflow;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    // The dialog owns scrolling while it is open, so the dashboard behind it cannot move.
+    bodyStyle.overflow = 'hidden';
+    htmlStyle.overflow = 'hidden';
+    if (scrollbarWidth > 0) bodyStyle.paddingRight = `${scrollbarWidth}px`;
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape' && !submitting) onClose();
+    };
+    window.addEventListener('keydown', handleEscape);
+
+    return () => {
+      bodyStyle.overflow = previousBodyOverflow;
+      bodyStyle.paddingRight = previousBodyPaddingRight;
+      htmlStyle.overflow = previousHtmlOverflow;
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [open, onClose, submitting]);
+
+  useEffect(() => () => {
+    previews.forEach(({ preview }) => URL.revokeObjectURL(preview));
+  }, [previews]);
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[130] flex items-center justify-center bg-[#081124]/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-[32px] bg-white p-6 shadow-[0_24px_60px_rgba(8,17,36,0.26)]">
-        <div className="flex items-start justify-between gap-4">
+    <div
+      className="fixed inset-0 z-[130] flex items-center justify-center overflow-hidden bg-[#081124]/60 p-3 backdrop-blur-sm sm:p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="post-composer-title"
+    >
+      <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-[32px] bg-white shadow-[0_24px_60px_rgba(8,17,36,0.26)] sm:max-h-[calc(100dvh-3rem)]">
+        <div className="flex shrink-0 items-start justify-between gap-4 px-5 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#15a276]">Create Post</p>
-            <h2 className="mt-2 text-[26px] font-semibold text-[#0b1f44]">{title}</h2>
+            <h2 id="post-composer-title" className="mt-2 text-[26px] font-semibold text-[#0b1f44]">{title}</h2>
             <p className="mt-2 text-sm text-[#5e6c87]">{description}</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-full border border-[#dbe2ef] p-2 text-[#5e6c87] transition hover:bg-[#f7f9fd]">
+          <button type="button" onClick={onClose} disabled={submitting} className="shrink-0 rounded-full border border-[#dbe2ef] p-2 text-[#5e6c87] transition hover:bg-[#f7f9fd] disabled:cursor-not-allowed disabled:opacity-60" aria-label="Close create post dialog">
             <X size={18} />
           </button>
         </div>
@@ -103,8 +141,10 @@ export default function PostComposerModal({
             event.preventDefault();
             onSubmit({ content, visibility, tags, images });
           }}
-          className="mt-6 space-y-5"
+          className="flex min-h-0 flex-1 flex-col"
         >
+          <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-5 pb-5 sm:px-6 sm:pb-6">
+            <div className="space-y-5">
           <div>
             <label className="mb-2 block text-sm font-semibold text-[#243b67]">Text Content</label>
             <textarea
@@ -131,13 +171,13 @@ export default function PostComposerModal({
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-[#243b67]">Images</label>
+              <label className="mb-2 block text-sm font-semibold text-[#243b67]">Attachments</label>
               <label className={`${baseInputClassName} flex cursor-pointer items-center justify-between`}>
-                <span className="text-sm text-[#44516d]">Upload 1-3 images</span>
+                <span className="text-sm text-[#44516d]">Upload 1-3 files</span>
                 <ImagePlus size={18} />
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
                   multiple
                   className="hidden"
                   onChange={(event) => {
@@ -158,9 +198,36 @@ export default function PostComposerModal({
             <div>
               <p className="mb-3 text-sm font-semibold text-[#243b67]">Preview</p>
               <div className={`grid gap-3 ${previews.length === 1 ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-3'}`}>
-                {previews.map((item) => (
+                {previews.map((item, index) => item.file.type.startsWith('image/') ? (
                   <div key={`${item.file.name}-${item.file.size}`} className="overflow-hidden rounded-2xl border border-[#dbe2ef] bg-[#fbfcff]">
                     <img src={item.preview} alt={item.file.name} className="h-40 w-full object-cover" />
+                    <div className="flex items-center justify-between gap-2 border-t border-[#dbe2ef] px-3 py-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPreview(item)}
+                        className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#15a276] transition hover:bg-[#e8f7f2]"
+                      >
+                        View image
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedPreview(null);
+                          setImages((current) => current.filter((_, currentIndex) => currentIndex !== index));
+                        }}
+                        className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-50"
+                      >
+                        Remove image
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div key={`${item.file.name}-${item.file.size}`} className="flex min-w-0 items-center gap-3 rounded-2xl border border-[#dbe2ef] bg-[#fbfcff] p-4">
+                    <FileText className="shrink-0 text-[#15a276]" size={22} />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-[#243b67]" title={item.file.name}>{item.file.name}</p>
+                      <p className="mt-1 text-xs uppercase tracking-wide text-[#6d7a92]">{item.file.type || 'File'}</p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -172,9 +239,11 @@ export default function PostComposerModal({
               {error}
             </div>
           ) : null}
+            </div>
+          </div>
 
-          <div className="flex items-center justify-between gap-3">
-            <button type="button" onClick={onClose} className="rounded-2xl border border-[#dbe2ef] px-5 py-3 font-semibold text-[#243b67]">
+          <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[#edf1f7] bg-white px-5 py-4 sm:px-6">
+            <button type="button" onClick={onClose} disabled={submitting} className="rounded-2xl border border-[#dbe2ef] px-5 py-3 font-semibold text-[#243b67] disabled:cursor-not-allowed disabled:opacity-60">
               Cancel
             </button>
             <button
@@ -187,6 +256,24 @@ export default function PostComposerModal({
           </div>
         </form>
       </div>
+
+      {selectedPreview ? (
+        <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm">
+          <button
+            type="button"
+            onClick={() => setSelectedPreview(null)}
+            className="absolute right-4 top-4 rounded-full bg-white/95 p-2 text-[#0b1f44] shadow-lg transition hover:bg-[#fff2bf]"
+            aria-label="Close image preview"
+          >
+            <X size={20} />
+          </button>
+          <img
+            src={selectedPreview.preview}
+            alt={selectedPreview.file.name}
+            className="max-h-[92vh] max-w-[94vw] rounded-2xl object-contain shadow-2xl"
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
