@@ -749,107 +749,280 @@ export default function LawyerTeamModal({
           </div>
         ) : (
           <div className="space-y-5">
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setTeamMode('create');
-                  setTeamError('');
-                  setTeamMessage('');
-                }}
-                className={`rounded-2xl border p-5 text-[#062552] font-bold text-center transition ${
-                  teamMode === 'create'
-                    ? 'border-[#15a276] bg-[#e8f7f2] shadow-sm'
-                    : 'border-[#d7e9ef] bg-white hover:border-[#15a276]/50'
-                }`}
-              >
-                Create Team
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setTeamMode('join');
-                  setTeamError('');
-                  setTeamMessage('');
-                }}
-                className={`rounded-2xl border p-5 text-[#062552] font-bold text-center transition ${
-                  teamMode === 'join'
-                    ? 'border-[#15a276] bg-[#e8f7f2] shadow-sm'
-                    : 'border-[#d7e9ef] bg-white hover:border-[#15a276]/50'
-                }`}
-              >
-                Join Team
-              </button>
+            {/* Header bar for No-Team state */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[#d7e9ef] pb-4">
+              <div>
+                <h3 className="text-xl font-bold text-[#062552]">My Cases</h3>
+                <p className="text-xs text-[#5f7488]">Manage your personal legal cases independently.</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTeamMode(teamMode === 'create' ? 'none' : 'create');
+                    setTeamError('');
+                    setTeamMessage('');
+                  }}
+                  className={`rounded-xl border px-3.5 py-2 text-xs font-bold transition ${
+                    teamMode === 'create'
+                      ? 'border-[#15a276] bg-[#e8f7f2] text-[#0c7556]'
+                      : 'border-[#d6b85b] bg-[#f1d15f] text-zinc-950 hover:bg-[#d6a400]'
+                  }`}
+                >
+                  Create Team
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTeamMode(teamMode === 'join' ? 'none' : 'join');
+                    setTeamError('');
+                    setTeamMessage('');
+                  }}
+                  className={`rounded-xl border px-3.5 py-2 text-xs font-bold transition ${
+                    teamMode === 'join'
+                      ? 'border-[#15a276] bg-[#e8f7f2] text-[#0c7556]'
+                      : 'border-[#d7e9ef] bg-white text-[#062552] hover:bg-[#f3f8fb]'
+                  }`}
+                >
+                  Join Team
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowTeamCaseForm((current) => !current)}
+                  className={`inline-flex items-center justify-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold shadow-sm transition ${
+                    showTeamCaseForm
+                      ? 'border-red-700 bg-red-600 text-white hover:bg-red-700'
+                      : 'border-[#15a276] bg-[#15a276] text-white hover:bg-[#0f805d]'
+                  }`}
+                >
+                  {showTeamCaseForm ? <FaTimes /> : <FaPlus />}
+                  {showTeamCaseForm ? 'Close Form' : 'Add Case'}
+                </button>
+              </div>
             </div>
 
+            {/* Create Team Form (Collapsible/Optional) */}
             {teamMode === 'create' ? (
-              <form onSubmit={handleCreateTeam} className="space-y-4 rounded-2xl border border-[#d7e9ef] bg-white p-6 shadow-sm">
-                <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#5f7488]">Firm Name</label>
-                  <input
-                    name="firmName"
-                    value={createTeamForm.firmName}
-                    onChange={handleCreateTeamInput}
-                    placeholder="Example: Apex Law Chambers"
-                    className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
-                    required
-                  />
+              <form onSubmit={handleCreateTeam} className="relative space-y-4 rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
+                <button type="button" onClick={() => setTeamMode('none')} className="absolute -right-3 -top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-[#d7e9ef] bg-white text-zinc-600 shadow-sm transition hover:bg-red-600 hover:text-white" aria-label="Close Create Team"><FaTimes size={14} /></button>
+                <h4 className="text-sm font-bold text-[#062552]">Create New Team</h4>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <input name="firmName" value={createTeamForm.firmName} onChange={handleCreateTeamInput} placeholder="Firm name" className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-2.5 text-sm text-[#062552] outline-none focus:border-[#15a276]" required />
+                  <input name="seniorLawyerName" value={createTeamForm.seniorLawyerName} onChange={handleCreateTeamInput} placeholder="Team Owner name" className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm text-white outline-none focus:border-amber-300" required />
+                  <input type="number" min="2" name="maxTeamSize" value={createTeamForm.maxTeamSize} onChange={handleCreateTeamInput} className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-2.5 text-sm text-[#062552] outline-none focus:border-[#15a276]" required />
                 </div>
-                <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Team Owner Name</label>
-                  <input
-                    name="seniorLawyerName"
-                    value={createTeamForm.seniorLawyerName}
-                    onChange={handleCreateTeamInput}
-                    placeholder="Your display name for the team"
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#5f7488]">Max Team Members</label>
-                  <input
-                    type="number"
-                    min="2"
-                    name="maxTeamSize"
-                    value={createTeamForm.maxTeamSize}
-                    onChange={handleCreateTeamInput}
-                    className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
-                    required
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={teamLoading}
-                  className="verdits-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 font-bold transition disabled:cursor-not-allowed"
-                >
-                  <Users size={18} />
-                  {teamLoading ? 'Creating...' : 'Create Team Workspace'}
-                </button>
+                <button type="submit" disabled={teamLoading} className="verdits-primary-action inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition disabled:cursor-not-allowed"><Users size={16} />{teamLoading ? 'Creating...' : 'Create Team Workspace'}</button>
               </form>
-            ) : (
-              <form onSubmit={handleJoinTeam} className="space-y-4 rounded-2xl border border-[#d7e9ef] bg-white p-6 shadow-sm">
-                <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#5f7488]">Team Code</label>
-                  <input
-                    name="teamCode"
-                    value={joinTeamForm.teamCode}
-                    onChange={handleJoinTeamInput}
-                    placeholder="Enter 6-character team code"
-                    className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]"
-                    required
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={teamLoading}
-                  className="verdits-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 font-bold transition disabled:cursor-not-allowed"
-                >
-                  <UserPlus size={18} />
-                  {teamLoading ? 'Sending...' : 'Request to Join Team'}
-                </button>
+            ) : null}
+
+            {/* Join Team Form (Collapsible/Optional) */}
+            {teamMode === 'join' ? (
+              <form onSubmit={handleJoinTeam} className="relative space-y-4 rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
+                <button type="button" onClick={() => setTeamMode('none')} className="absolute -right-3 -top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-[#d7e9ef] bg-white text-zinc-600 shadow-sm transition hover:bg-red-600 hover:text-white" aria-label="Close Join Team"><FaTimes size={14} /></button>
+                <h4 className="text-sm font-bold text-[#062552]">Join Existing Team</h4>
+                <div><label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#5f7488]">Team code</label><input name="teamCode" value={joinTeamForm.teamCode} onChange={handleJoinTeamInput} placeholder="Enter team code" className="w-full rounded-xl border border-[#d7e9ef] bg-white px-4 py-3 text-[#062552] outline-none focus:border-[#15a276]" required /></div>
+                <button type="submit" disabled={teamLoading} className="verdits-primary-action inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-bold transition disabled:cursor-not-allowed"><UserPlus size={18} />{teamLoading ? 'Sending...' : 'Request to Join'}</button>
               </form>
-            )}
+            ) : null}
+
+            {/* My Cases Content (Add Form & Case List) */}
+            <div className="space-y-5">
+              {showTeamCaseForm ? (
+                <form onSubmit={handleAddTeamCase} className="grid grid-cols-1 gap-4 rounded-xl border border-zinc-800 bg-zinc-950 p-5 md:grid-cols-2">
+                  <p className="text-sm font-semibold text-zinc-400 md:col-span-2">
+                    This case will be saved under your lawyer profile.
+                  </p>
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Client Name</label>
+                    <input
+                      name="clientName"
+                      value={teamCaseForm.clientName}
+                      onChange={handleTeamCaseInput}
+                      placeholder="Client name"
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Client Phone</label>
+                    <input
+                      name="clientPhone"
+                      value={teamCaseForm.clientPhone}
+                      onChange={handleTeamCaseInput}
+                      placeholder="Client phone number"
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Client Address</label>
+                    <input
+                      name="clientAddress"
+                      value={teamCaseForm.clientAddress}
+                      onChange={handleTeamCaseInput}
+                      placeholder="Client address"
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Case Name</label>
+                    <input
+                      name="caseName"
+                      value={teamCaseForm.caseName}
+                      onChange={handleTeamCaseInput}
+                      placeholder="Case name"
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Court Name</label>
+                    <input
+                      name="courtName"
+                      value={teamCaseForm.courtName}
+                      onChange={handleTeamCaseInput}
+                      placeholder="Court name"
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Starting Date</label>
+                    <input
+                      type="date"
+                      name="startingDate"
+                      value={teamCaseForm.startingDate}
+                      onChange={handleTeamCaseInput}
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Hearing Date</label>
+                    <input
+                      type="date"
+                      name="hearingDate"
+                      value={teamCaseForm.hearingDate}
+                      onChange={handleTeamCaseInput}
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Hearing Time</label>
+                    <input
+                      type="time"
+                      name="hearingTime"
+                      value={teamCaseForm.hearingTime}
+                      onChange={handleTeamCaseInput}
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Brief Info About the Case</label>
+                    <textarea
+                      name="briefInfo"
+                      value={teamCaseForm.briefInfo}
+                      onChange={handleTeamCaseInput}
+                      placeholder="Brief info about the case"
+                      rows="4"
+                      className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-500 outline-none focus:border-amber-300"
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-400">Status</label>
+                    <select
+                      name="status"
+                      value={teamCaseForm.status}
+                      onChange={handleTeamCaseInput}
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white outline-none focus:border-amber-300"
+                    >
+                      {teamCaseStatuses.map((status) => (
+                        <option key={status.value} value={status.value} className="text-zinc-950">
+                          {status.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="md:col-span-2 flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={savingTeamCase}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-5 py-3 font-bold transition border border-[#d6b85b] shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <FaCheck />
+                      {savingTeamCase ? 'Saving...' : 'Save Case'}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
+
+              {selectedCaseForDetailsId && ownTeamCases.some((item) => String(item.id) === String(selectedCaseForDetailsId)) ? (() => {
+                const selectedCase = ownTeamCases.find((item) => String(item.id) === String(selectedCaseForDetailsId));
+                return (
+                  <CaseDetailsView
+                    selectedCase={selectedCase}
+                    displayTeam={displayTeam}
+                    onBack={() => setSelectedCaseForDetailsId('')}
+                    teamCaseStatuses={teamCaseStatuses}
+                    updatingTeamCaseId={updatingTeamCaseId}
+                    handleUpdateTeamCaseStatus={handleUpdateTeamCaseStatus}
+                    handleDeleteTeamCase={handleDeleteTeamCase}
+                    loadTeamWorkspace={loadTeamWorkspace}
+                    formatDate={formatDate}
+                  />
+                );
+              })() : ownTeamCases.length === 0 ? (
+                <EmptyBlock icon={<FaBriefcase size={24} />} message="No cases added by you yet." />
+              ) : (
+                <div className="space-y-4">
+                  {ownTeamCases.map((teamCase) => (
+                    <div
+                      key={teamCase.id}
+                      onClick={() => setSelectedCaseForDetailsId(String(teamCase.id))}
+                      className="group cursor-pointer rounded-xl border border-zinc-800 bg-zinc-950 p-5 transition hover:border-[#15a276]"
+                    >
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                          <h4 className="text-lg font-bold text-white group-hover:text-[#15a276] transition">
+                            {teamCase.caseName || teamCase.caseTitle || teamCase.title || 'Untitled Case'}
+                          </h4>
+                          <p className="mt-1 text-sm text-zinc-400">
+                            Client: <span className="font-semibold text-blue-300 underline">{teamCase.clientName || 'Not added'}</span>
+                          </p>
+                          <p className="mt-1 text-xs text-zinc-400">Court: {teamCase.courtName || 'Not added'}</p>
+                          <p className="mt-1 text-xs text-zinc-500">Added by: You</p>
+                        </div>
+                        <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                          <select
+                            value={teamCase.status || 'new'}
+                            onChange={(event) => handleUpdateTeamCaseStatus(teamCase, event.target.value)}
+                            disabled={updatingTeamCaseId === teamCase.id}
+                            className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-amber-300 disabled:opacity-60"
+                          >
+                            {teamCaseStatuses.map((status) => (
+                              <option key={status.value} value={status.value} className="text-zinc-950">
+                                {status.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <p className="mt-4 text-sm leading-7 text-zinc-300">{teamCase.briefInfo || teamCase.caseDetails || 'No brief info added.'}</p>
+
+                      <div className="mt-4 flex items-center justify-between border-t border-zinc-900 pt-3 text-sm">
+                        <div className="flex items-center gap-4 text-xs text-zinc-400">
+                          <span>Next hearing: <strong className="text-zinc-200">{formatDate(teamCase.nextHearingAt || teamCase.hearingDate) || 'Not scheduled'}</strong></span>
+                        </div>
+                        <span className="text-xs font-bold text-[#15a276] group-hover:underline flex items-center gap-1">
+                          View Case Details &rarr;
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

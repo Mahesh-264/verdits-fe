@@ -244,6 +244,8 @@ export default function LawyerDashboard() {
     }
   }, []);
 
+  const [noTeamCases, setNoTeamCases] = useState([]);
+
   const loadTeamWorkspace = useCallback(async (targetTeamId) => {
     const effectiveTeamId = targetTeamId !== undefined ? targetTeamId : selectedTeamIdRef.current;
     try {
@@ -263,10 +265,16 @@ export default function LawyerDashboard() {
         setSelectedTeamId('');
       }
       setTeamWorkspace(data?.team || null);
+      if (Array.isArray(data?.cases)) {
+        setNoTeamCases(data.cases);
+      } else {
+        setNoTeamCases([]);
+      }
     } catch (error) {
       console.error('Error loading team workspace:', error);
       setTeamWorkspace(null);
       setTeamWorkspaces([]);
+      setNoTeamCases([]);
     } finally {
       setTeamWorkspaceLoading(false);
     }
@@ -572,12 +580,12 @@ export default function LawyerDashboard() {
 
   const handleAddTeamCase = async (event) => {
     event.preventDefault();
-    if (!teamWorkspace?.id) return;
+    const targetTeamId = teamWorkspace?.id || 'personal';
     try {
       setSavingTeamCase(true);
       setTeamError('');
       setTeamMessage('');
-      await api.post(`/teams/${teamWorkspace.id}/cases`, {
+      await api.post(`/teams/${targetTeamId}/cases`, {
         clientName: teamCaseForm.clientName.trim(),
         clientPhone: teamCaseForm.clientPhone.trim(),
         clientAddress: teamCaseForm.clientAddress.trim(),
@@ -602,11 +610,12 @@ export default function LawyerDashboard() {
   };
 
   const handleUpdateTeamCaseStatus = async (teamCase, nextStatus) => {
-    if (!teamWorkspace?.id || !teamCase?.id) return;
+    if (!teamCase?.id) return;
+    const targetTeamId = teamWorkspace?.id || 'personal';
     try {
       setUpdatingTeamCaseId(String(teamCase.id));
       setTeamError('');
-      await api.put(`/teams/${teamWorkspace.id}/cases/${teamCase.id}/status`, { status: nextStatus });
+      await api.put(`/teams/${targetTeamId}/cases/${teamCase.id}/status`, { status: nextStatus });
       await loadTeamWorkspace();
     } catch (error) {
       console.error('Error updating team case status:', error);
@@ -617,14 +626,15 @@ export default function LawyerDashboard() {
   };
 
   const handleDeleteTeamCase = async (teamCase) => {
-    if (!teamWorkspace?.id || !teamCase?.id) return;
+    if (!teamCase?.id) return;
+    const targetTeamId = teamWorkspace?.id || 'personal';
     const confirmDelete = window.confirm(`Are you sure you want to permanently delete the case "${teamCase.caseName || teamCase.title || 'Untitled Case'}"?`);
     if (!confirmDelete) return;
     try {
       setUpdatingTeamCaseId(String(teamCase.id));
       setTeamError('');
       setTeamMessage('');
-      await api.delete(`/teams/${teamWorkspace.id}/cases/${teamCase.id}`);
+      await api.delete(`/teams/${targetTeamId}/cases/${teamCase.id}`);
       setSelectedCaseForDetailsId('');
       setTeamMessage('Case deleted successfully.');
       await loadTeamWorkspace();
@@ -1095,8 +1105,10 @@ export default function LawyerDashboard() {
   }, [displayTeam.pendingJoinRequests, displayTeam.pendingRequests]);
 
   const teamCases = useMemo(() => {
-    return Array.isArray(displayTeam.cases) ? displayTeam.cases : [];
-  }, [displayTeam.cases]);
+    if (Array.isArray(displayTeam.cases) && displayTeam.cases.length) return displayTeam.cases;
+    if (Array.isArray(noTeamCases)) return noTeamCases;
+    return [];
+  }, [displayTeam.cases, noTeamCases]);
 
   const teamSize = (displayTeam.membersCount !== undefined && displayTeam.membersCount !== null)
     ? Number(displayTeam.membersCount)
@@ -1211,8 +1223,9 @@ export default function LawyerDashboard() {
 
   const ownTeamCases = useMemo(() => {
     if (!Array.isArray(teamCases)) return [];
+    if (!hasTeam) return teamCases;
     return teamCases.filter((teamCase) => isSameId(getEntityId(teamCase.addedBy || teamCase.ownerId), currentLawyerId));
-  }, [teamCases, currentLawyerId]);
+  }, [teamCases, hasTeam, currentLawyerId]);
 
   // Next Hearings is intentionally lawyer-scoped, not selected-team scoped.
   const ownHearings = lawyerNextHearingsLoaded ? lawyerNextHearings : [];
