@@ -13,7 +13,14 @@ export default function LawyerNextHearingsModal({
   handleDisconnectGoogleCalendar,
   hearingsLoading,
   ownHearings,
+  onRefresh,
 }) {
+  React.useEffect(() => {
+    if (show && typeof onRefresh === 'function') {
+      onRefresh();
+    }
+  }, [show, onRefresh]);
+
   if (!show) return null;
 
   return (

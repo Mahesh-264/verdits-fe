@@ -313,6 +313,7 @@ export default function LawyerDashboard() {
     }
     if (requestedSection === 'hearings') {
       setShowHearingsModal(true);
+      loadLawyerNextHearings();
     }
     if (requestedSection === 'notice-generator') {
       setShowNoticeGenerator(true);
@@ -600,7 +601,7 @@ export default function LawyerDashboard() {
       setTeamCaseForm(initialTeamCaseForm);
       setShowTeamCaseForm(false);
       setTeamMessage('Case saved under your lawyer profile.');
-      await loadTeamWorkspace();
+      await Promise.all([loadTeamWorkspace(), loadLawyerNextHearings()]);
     } catch (error) {
       console.error('Error adding team case:', error);
       setTeamError(error.response?.data?.message || 'Failed to add team case');
@@ -616,7 +617,7 @@ export default function LawyerDashboard() {
       setUpdatingTeamCaseId(String(teamCase.id));
       setTeamError('');
       await api.put(`/teams/${targetTeamId}/cases/${teamCase.id}/status`, { status: nextStatus });
-      await loadTeamWorkspace();
+      await Promise.all([loadTeamWorkspace(), loadLawyerNextHearings()]);
     } catch (error) {
       console.error('Error updating team case status:', error);
       setTeamError(error.response?.data?.message || 'Failed to update case status');
@@ -637,7 +638,7 @@ export default function LawyerDashboard() {
       await api.delete(`/teams/${targetTeamId}/cases/${teamCase.id}`);
       setSelectedCaseForDetailsId('');
       setTeamMessage('Case deleted successfully.');
-      await loadTeamWorkspace();
+      await Promise.all([loadTeamWorkspace(), loadLawyerNextHearings()]);
     } catch (error) {
       console.error('Error deleting team case:', error);
       setTeamError(error.response?.data?.message || 'Failed to delete case');
@@ -1357,6 +1358,7 @@ export default function LawyerDashboard() {
               handleDisconnectGoogleCalendar={handleDisconnectGoogleCalendar}
               hearingsLoading={hearingsLoading}
               ownHearings={ownHearings}
+              onRefresh={loadLawyerNextHearings}
             />
 
             <LawyerTeamModal
