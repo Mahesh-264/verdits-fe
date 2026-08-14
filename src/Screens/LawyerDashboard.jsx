@@ -125,6 +125,7 @@ export default function LawyerDashboard() {
   const [updatingApplicantId, setUpdatingApplicantId] = useState('');
   const [togglingInternshipId, setTogglingInternshipId] = useState('');
   const [deletingInternshipId, setDeletingInternshipId] = useState('');
+  const [deletingJamSessionId, setDeletingJamSessionId] = useState('');
   const [internshipForm, setInternshipForm] = useState({
     title: '',
     description: '',
@@ -787,7 +788,7 @@ export default function LawyerDashboard() {
     try {
       setTogglingInternshipId(internship.id);
       const nextStatus = internship.status === 'closed' ? 'open' : 'closed';
-      await api.patch(`/auth/lawyer/internships/${internship.id}/status`, { status: nextStatus });
+      await api.patch(`/auth/lawyer/internships/${internship.id}/toggle-status`);
       await loadStudentInteractionPosts();
     } catch (error) {
       console.error('Error toggling internship status:', error);
@@ -810,6 +811,22 @@ export default function LawyerDashboard() {
       alert(error.response?.data?.message || 'Failed to delete internship');
     } finally {
       setDeletingInternshipId('');
+    }
+  };
+
+  const handleDeleteJamSession = async (session) => {
+    const confirmDelete = window.confirm(`Are you sure you want to delete "${session.title}"?`);
+    if (!confirmDelete) return;
+
+    try {
+      setDeletingJamSessionId(session.id);
+      await api.delete(`/auth/lawyer/jam-sessions/${session.id}`);
+      await loadStudentInteractionPosts();
+    } catch (error) {
+      console.error('Error deleting jam session:', error);
+      alert(error.response?.data?.message || 'Failed to delete jam session');
+    } finally {
+      setDeletingJamSessionId('');
     }
   };
 
@@ -902,8 +919,11 @@ export default function LawyerDashboard() {
       await api.patch(`/auth/lawyer/internships/${drawer.parentId}/applicants/${applicantId}/status`, { status });
       setDrawer((current) => ({
         ...current,
-        items: current.items.map((item) => (item.id === applicantId ? { ...item, status } : item)),
+        items: current.items.map((item) => (
+          String(item.id) === String(applicantId) ? { ...item, status } : item
+        )),
       }));
+      setDrawerFilter(status === 'accepted' ? 'Accepted' : 'Rejected');
       await loadStudentInteractionPosts();
     } catch (error) {
       console.error('Error updating applicant status:', error);
@@ -1466,6 +1486,8 @@ export default function LawyerDashboard() {
               handleJamLike={handleJamLike}
               handleJamComment={handleJamComment}
               handleOpenParticipantsDrawer={handleOpenParticipantsDrawer}
+              handleDeleteJamSession={handleDeleteJamSession}
+              deletingJamSessionId={deletingJamSessionId}
               postLoading={postLoading}
               publishedPosts={publishedPosts}
               showInternshipForm={showInternshipForm}

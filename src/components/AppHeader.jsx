@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { LogOut, Mail, MapPin, Phone, UserCircle } from 'lucide-react';
+import { ArrowLeft, LogOut, Mail, MapPin, Phone, UserCircle } from 'lucide-react';
 import BrandLogo from './BrandLogo.jsx';
 import NotificationBell from './notifications/NotificationBell.jsx';
 import useSessionLogout from '../hooks/useSessionLogout.js';
@@ -37,6 +37,8 @@ export default function AppHeader({
   profileTo,
   onProfileClick,
   showBrandName = true,
+  showBackButton = false,
+  backTo,
   children,
 }) {
   const { user } = useSelector((state) => state.auth);
@@ -77,10 +79,29 @@ export default function AppHeader({
     navigate(profileTo || (variant === 'student' ? '/student-profile' : '/profile'));
   };
 
+  const handleBack = () => {
+    if (backTo) {
+      navigate(backTo);
+      return;
+    }
+
+    navigate(-1);
+  };
+
   return (
     <header className={`sticky top-0 z-40 border-b shadow-sm ${styles.shell}`}>
       <div className="mx-auto flex min-h-[72px] w-full max-w-[1440px] items-center justify-between gap-4 px-4 py-3 md:px-6">
-        <div className="flex min-w-0 items-center">
+        <div className="flex min-w-0 items-center gap-3">
+          {showBackButton ? (
+            <button
+              type="button"
+              onClick={handleBack}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#d6b85b]/45 bg-white text-[#0d1117] transition hover:bg-[#fff2bf]"
+              aria-label="Go back"
+            >
+              <ArrowLeft size={19} />
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => navigate(dashboardHome)}

@@ -66,7 +66,7 @@ export default function StudentOpportunityCard({
   };
 
   return (
-    <article className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 shadow-[0_8px_30px_rgba(11,31,68,0.06)]">
+    <article className="min-w-0 rounded-[28px] border border-[#dbe2ef] bg-white p-4 shadow-[0_8px_30px_rgba(11,31,68,0.06)] sm:p-6">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex items-start gap-4">
@@ -108,34 +108,34 @@ export default function StudentOpportunityCard({
 
         {isInternship ? (
           <>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl bg-[#f7f9fd] px-4 py-4 text-[#44516d]">
-                <div className="flex items-center gap-2 text-sm font-medium text-[#7d8aa5]">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <div className="min-w-0 rounded-xl bg-[#f7f9fd] px-2.5 py-3 text-[#44516d] sm:rounded-2xl sm:px-4 sm:py-4">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-[#7d8aa5] sm:gap-2 sm:text-sm">
                   <MapPin size={16} />
                   Location
                 </div>
-                <p className="mt-2 text-[15px] font-semibold text-[#0b1f44]">{post.location}</p>
+                <p className="mt-1.5 break-words text-sm font-semibold text-[#0b1f44] sm:mt-2 sm:text-[15px]">{post.location}</p>
               </div>
-              <div className="rounded-2xl bg-[#f7f9fd] px-4 py-4 text-[#44516d]">
-                <div className="flex items-center gap-2 text-sm font-medium text-[#7d8aa5]">
+              <div className="min-w-0 rounded-xl bg-[#f7f9fd] px-2.5 py-3 text-[#44516d] sm:rounded-2xl sm:px-4 sm:py-4">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-[#7d8aa5] sm:gap-2 sm:text-sm">
                   <CalendarDays size={16} />
                   Duration
                 </div>
-                <p className="mt-2 text-[15px] font-semibold text-[#0b1f44]">{post.duration}</p>
+                <p className="mt-1.5 break-words text-sm font-semibold text-[#0b1f44] sm:mt-2 sm:text-[15px]">{post.duration}</p>
               </div>
-              <div className="rounded-2xl bg-[#f7f9fd] px-4 py-4 text-[#44516d]">
-                <div className="flex items-center gap-2 text-sm font-medium text-[#7d8aa5]">
+              <div className="min-w-0 rounded-xl bg-[#f7f9fd] px-2.5 py-3 text-[#44516d] sm:rounded-2xl sm:px-4 sm:py-4">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-[#7d8aa5] sm:gap-2 sm:text-sm">
                   <IndianRupee size={16} />
                   Stipend
                 </div>
-                <p className="mt-2 text-[15px] font-semibold text-[#0b1f44]">{post.stipend}</p>
+                <p className="mt-1.5 break-words text-sm font-semibold text-[#0b1f44] sm:mt-2 sm:text-[15px]">{post.stipend}</p>
               </div>
-              <div className="rounded-2xl bg-[#f7f9fd] px-4 py-4 text-[#44516d]">
-                <div className="flex items-center gap-2 text-sm font-medium text-[#7d8aa5]">
+              <div className="col-span-3 min-w-0 rounded-xl bg-[#f7f9fd] px-2.5 py-3 text-[#44516d] sm:col-auto sm:rounded-2xl sm:px-4 sm:py-4">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-[#7d8aa5] sm:gap-2 sm:text-sm">
                   <BriefcaseBusiness size={16} />
                   Specialization
                 </div>
-                <p className="mt-2 text-[15px] font-semibold text-[#0b1f44]">
+                <p className="mt-1.5 break-words text-sm font-semibold text-[#0b1f44] sm:mt-2 sm:text-[15px]">
                   {post.specialization?.length ? post.specialization.join(', ') : 'General'}
                 </p>
               </div>

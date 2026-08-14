@@ -27,6 +27,8 @@ export default function LawyerStudentInteractionModal({
   handleJamLike,
   handleJamComment,
   handleOpenParticipantsDrawer,
+  handleDeleteJamSession,
+  deletingJamSessionId,
   postLoading,
   publishedPosts,
   showInternshipForm,
@@ -263,7 +265,7 @@ export default function LawyerStudentInteractionModal({
                           />
                         </div>
 
-                        <div className="mt-5">
+                        <div className="mt-5 flex flex-wrap gap-3">
                           <button
                             type="button"
                             onClick={() => handleOpenParticipantsDrawer(session)}
@@ -271,6 +273,14 @@ export default function LawyerStudentInteractionModal({
                           >
                             <Users size={16} />
                             View Participants
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteJamSession(session)}
+                            disabled={deletingJamSessionId === session.id}
+                            className="inline-flex items-center justify-center rounded-lg border border-red-900/60 bg-red-950/40 px-4 py-3 font-semibold text-red-200 transition hover:bg-red-900/60 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {deletingJamSessionId === session.id ? 'Deleting...' : 'Delete'}
                           </button>
                         </div>
                       </div>
@@ -364,8 +374,9 @@ export default function LawyerStudentInteractionModal({
                               <button
                                 type="button"
                                 onClick={() => {
-                                  onClose();
-                                  navigate(`/student-profile/${followerId}`);
+                                  navigate(`/student-profile/${followerId}`, {
+                                    state: { returnTo: '/lawyer-dash?section=student-interactions&tab=followers' },
+                                  });
                                 }}
                                 className="inline-flex items-center gap-1.5 rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-2 text-xs font-bold text-[#062552] transition hover:bg-[#15a276] hover:text-white"
                               >
@@ -469,7 +480,7 @@ export default function LawyerStudentInteractionModal({
                       setPostError('');
                       setShowPostComposer(true);
                     }}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-bold px-5 py-3 transition"
+                    className="new-post-action w-full inline-flex items-center justify-center gap-2 rounded-xl text-zinc-950 font-bold px-5 py-3 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f1d15f] focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                   >
                     <FaPlus />
                     New Post

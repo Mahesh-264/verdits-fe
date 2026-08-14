@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Award, BriefcaseBusiness, GraduationCap, MapPin, Paperclip, X } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import api from '../api/axios.jsx';
 import { updateUser } from '../redux/authSlice.jsx';
 import StudentLayout from './StudentLayout.jsx';
@@ -60,6 +60,7 @@ export default function StudentProfile() {
   const { id: profileId } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const [viewedStudent, setViewedStudent] = useState(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(Boolean(profileId));
   const [activeEditModal, setActiveEditModal] = useState(null); // 'full' | 'specializations' | 'skills' | 'internships' | 'academic' | null
@@ -250,7 +251,7 @@ export default function StudentProfile() {
         {!isOwnProfile && (
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate(location.state?.returnTo || '/lawyer-dash?section=student-interactions&tab=followers')}
             className="inline-flex items-center gap-2 rounded-2xl border border-[#dbe2ef] bg-white px-4 py-3 text-[16px] font-semibold text-[#243b67] shadow-[0_2px_12px_rgba(11,31,68,0.04)] hover:bg-[#f8faff] transition"
           >
             <ArrowLeft size={18} />
