@@ -234,32 +234,25 @@ export default function LawyerTeamModal({
                   </button>
                 </>
               ) : null}
+
+              <button
+                type="button"
+                onClick={() => setShowTeamCaseForm((current) => !current)}
+                className={`ml-auto inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold shadow-sm transition ${
+                  showTeamCaseForm
+                    ? 'border-red-700 bg-red-600 text-white hover:bg-red-700'
+                    : 'border-[#d6b85b] bg-[#f1d15f] text-zinc-950 hover:bg-[#d6a400]'
+                }`}
+              >
+                {showTeamCaseForm ? <FaTimes /> : <FaPlus />}
+                {showTeamCaseForm ? 'Close Form' : 'Add Case'}
+              </button>
+
             </div> : null}
 
             {/* My Cases Tab View */}
             {currentActiveTeamTab === 'my_cases' ? (
               <div className="space-y-5">
-                <div className="flex flex-col gap-3 rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
-                  <div>
-                  <h3 className="text-lg font-bold text-[#062552]">My Cases</h3>
-                    <p className="mt-1 text-sm text-[#5f7488]">
-                      Cases added by you for this team.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowTeamCaseForm((current) => !current)}
-                    className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition shadow-sm border ${
-                      showTeamCaseForm
-                        ? 'bg-red-600 hover:bg-red-700 text-white border-red-700'
-                        : 'bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 border-[#d6b85b]'
-                    }`}
-                  >
-                    {showTeamCaseForm ? <FaTimes /> : <FaPlus />}
-                    {showTeamCaseForm ? 'Close Form' : 'Add Case'}
-                  </button>
-                </div>
-
                 {showTeamCaseForm ? (
                   <form onSubmit={handleAddTeamCase} className="grid grid-cols-1 gap-4 rounded-xl border border-zinc-800 bg-zinc-950 p-5 md:grid-cols-2">
                     <p className="text-sm font-semibold text-zinc-400 md:col-span-2">
