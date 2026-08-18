@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { FaArrowLeft, FaCheck, FaPencilAlt, FaTimes, FaTrash } from 'react-icons/fa';
+import { FaArrowLeft, FaCheck, FaCommentDots, FaPaperPlane, FaPencilAlt, FaTimes, FaTrash } from 'react-icons/fa';
 import api from '../../api/axios';
 import { formatTime, toDateInput, toTimeInput } from '../../utils/lawyerUtils';
 
@@ -25,6 +25,7 @@ const CaseDetailsView = ({
   loadTeamWorkspace,
   loadLawyerNextHearings,
   formatDate,
+  hearingLawyerId,
 }) => {
   const { user } = useSelector((state) => state.auth);
   const [caseDetails, setCaseDetails] = useState(null);
@@ -42,6 +43,14 @@ const CaseDetailsView = ({
   const [savingHearingHistory, setSavingHearingHistory] = useState(false);
   const [caseDetailsMessage, setCaseDetailsMessage] = useState('');
   const [caseDetailsError, setCaseDetailsError] = useState('');
+  const [openHearingChatId, setOpenHearingChatId] = useState('');
+  const [hearingQuestions, setHearingQuestions] = useState({});
+  const [hearingMessages, setHearingMessages] = useState({});
+  const [hearingMessagesLoading, setHearingMessagesLoading] = useState('');
+  const [hearingNotifications, setHearingNotifications] = useState({});
+  const [hearingChatSeen, setHearingChatSeen] = useState({});
+  const [sendingHearingQuestionId, setSendingHearingQuestionId] = useState('');
+  const [hearingQuestionError, setHearingQuestionError] = useState('');
   const nextTemporaryHearingKey = useRef(0);
   const hearingHistoryVersion = useRef(0);
   const createManualHistoryRow = () => ({
@@ -146,6 +155,63 @@ const CaseDetailsView = ({
     if (!canEditCase) return;
     setLocalHearingHistory((rows) => [createManualHistoryRow(), ...rows]);
   };
+
+  const sendHearingQuestion = async (row) => {
+    const hearingId = String(row.id || row.tempKey || '');
+    const question = String(hearingQuestions[hearingId] || '').trim();
+    const caseOwnerId = hearingLawyerId || caseRecord?.addedBy?._id || caseRecord?.addedBy;
+    const teamOwnerId = displayTeam?.seniorLawyer?._id || displayTeam?.seniorLawyer || displayTeam?.ownerId || displayTeam?.owner;
+    const recipientId = String(caseOwnerId) === String(currentUserId || '') ? teamOwnerId : caseOwnerId;
+    if (!question || !recipientId || !hearingId) return;
+    try {
+      setSendingHearingQuestionId(hearingId);
+      setHearingQuestionError('');
+      const hearingDate = formatDate(row.hearingDate) || 'this hearing';
+      const { data } = await api.post('/chat/send', {
+        receiverId: recipientId,
+        messageType: 'text',
+        contextId: hearingId,
+        contextLabel: `${caseRecord.caseName || caseRecord.caseTitle || 'Case'} hearing`,
+        content: `${String(caseOwnerId) === String(currentUserId || '') ? 'Answer' : 'Question'} about ${hearingDate} hearing in ${caseRecord.caseName || caseRecord.caseTitle || 'this case'}: ${question}`,
+      });
+      setHearingQuestions((current) => ({ ...current, [hearingId]: '' }));
+      if (data?.message) setHearingMessages((current) => ({ ...current, [hearingId]: [...(current[hearingId] || []), data.message] }));
+      setCaseDetailsMessage(String(caseOwnerId) === String(currentUserId || '') ? 'Your answer was sent.' : 'Your hearing question was sent to the case lawyer.');
+    } catch (error) {
+      setHearingQuestionError(error.response?.data?.message || 'Unable to send the hearing question.');
+    } finally {
+      setSendingHearingQuestionId('');
+    }
+  };
+
+  const loadHearingMessages = async (row) => {
+    const hearingId = String(row.id || row.tempKey || '');
+    const caseOwnerId = hearingLawyerId || caseRecord?.addedBy?._id || caseRecord?.addedBy;
+    const teamOwnerId = displayTeam?.seniorLawyer?._id || displayTeam?.seniorLawyer || displayTeam?.ownerId || displayTeam?.owner;
+    const recipientId = String(caseOwnerId) === String(currentUserId || '') ? teamOwnerId : caseOwnerId;
+    if (!hearingId || !recipientId) return;
+    try {
+      setHearingMessagesLoading(hearingId);
+      const { data } = await api.get(`/chat/history/${recipientId}`, { params: { contextId: hearingId } });
+      const messages = Array.isArray(data?.messages) ? data.messages : [];
+      setHearingMessages((current) => ({ ...current, [hearingId]: messages }));
+      const latestMessage = messages[messages.length - 1];
+      if (!hearingChatSeen[hearingId] && latestMessage && String(latestMessage.sender?._id || latestMessage.sender) !== String(currentUserId || '')) {
+        setHearingNotifications((current) => ({ ...current, [hearingId]: true }));
+      }
+    } catch (error) {
+      setHearingQuestionError(error.response?.data?.message || 'Unable to load hearing chat.');
+    } finally {
+      setHearingMessagesLoading('');
+    }
+  };
+
+  // Prime unread indicators so a new answer is visible before opening a card.
+  useEffect(() => {
+    localHearingHistory.filter((row) => row.id).forEach((row) => loadHearingMessages(row));
+    // Loading is intentionally tied to the case/history, not every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseRecord?.id, localHearingHistory.length]);
 
   const handleSaveHearingHistory = async () => {
     if (!canEditCase) return;
@@ -258,15 +324,16 @@ const CaseDetailsView = ({
 
       {/* Expanded Case Details Section */}
       <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-5 space-y-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-[#eef5f8] pb-3">
-          <div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-start border-b border-[#eef5f8] pb-3">
+          <div className="sm:mr-auto">
             <h4 className="text-xs font-bold uppercase tracking-wider text-[#15a276]">Case Details</h4>
             <h3 className="mt-1 text-2xl font-bold text-[#062552]">
               {caseRecord.caseName || caseRecord.caseTitle || caseRecord.title || 'Untitled Case'}
             </h3>
           </div>
           {canEditCase ? (
-            !isEditingDetails ? (
+            <div className="order-2">
+            {!isEditingDetails ? (
               <button
                 type="button"
                 onClick={() => setIsEditingDetails(true)}
@@ -298,8 +365,32 @@ const CaseDetailsView = ({
                   <FaTimes size={12} /> Cancel
                 </button>
               </div>
-            )
+            )}
+            </div>
           ) : null}
+          {canEditCase && localHearingHistory.some((row) => row.id) ? (() => {
+            const latestHearing = [...localHearingHistory].filter((row) => row.id).sort((a, b) => new Date(b.hearingDate || 0) - new Date(a.hearingDate || 0))[0];
+            const latestHearingId = latestHearing?.id ? String(latestHearing.id) : '';
+            const hasUnreadHearingMessage = Object.values(hearingNotifications).some(Boolean);
+            return (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!latestHearing) return;
+                  setOpenHearingChatId(latestHearingId);
+                  setHearingChatSeen((current) => ({ ...current, [latestHearingId]: true }));
+                  setHearingNotifications((current) => ({ ...current, [latestHearingId]: false }));
+                  loadHearingMessages(latestHearing).finally(() => setHearingNotifications((current) => ({ ...current, [latestHearingId]: false })));
+                }}
+                className="order-1 relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#15a276] bg-[#e8f7f2] text-[#118460] transition hover:bg-[#d8f2e8]"
+                title="Open hearing conversation"
+                aria-label="Open hearing conversation"
+              >
+                <FaCommentDots size={15} />
+                {hasUnreadHearingMessage ? <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500" aria-label="Unread message" /> : null}
+              </button>
+            );
+          })() : null}
         </div>
 
         <div>
@@ -391,10 +482,17 @@ const CaseDetailsView = ({
           ) : null}
         </div>
 
+        {hearingQuestionError ? <p className="text-xs font-semibold text-red-600">{hearingQuestionError}</p> : null}
+
         {localHearingHistory.length === 0 ? <p className="rounded-lg border border-dashed border-[#d7e9ef] bg-white px-4 py-6 text-center text-sm text-[#5f7488]">No hearing history recorded yet.</p> : (
           <div className="space-y-4 border-l-2 border-[#d7e9ef] pl-5">
             {sortedHearingHistory.map((row) => {
               const index = row.originalIndex;
+              const hearingId = String(row.id || row.tempKey || index);
+              const caseOwnerId = hearingLawyerId || caseRecord?.addedBy?._id || caseRecord?.addedBy;
+              const teamOwnerId = displayTeam?.seniorLawyer?._id || displayTeam?.seniorLawyer || displayTeam?.ownerId || displayTeam?.owner;
+              const hearingRecipientId = String(caseOwnerId) === String(currentUserId || '') ? teamOwnerId : caseOwnerId;
+              const canAskCaseLawyer = Boolean(hearingRecipientId) && String(hearingRecipientId) !== String(currentUserId || '') && Boolean(row.id);
               return (
                 <div key={row.id || row.tempKey} className="relative rounded-xl border border-[#d7e9ef] bg-white p-4 shadow-sm">
                   <span className="absolute -left-[1.82rem] top-5 h-3 w-3 rounded-full border-2 border-white bg-[#15a276]" />
@@ -402,12 +500,44 @@ const CaseDetailsView = ({
                     <p className="text-xs font-bold uppercase tracking-wide text-[#15a276]">
                       {formatHeaderLabel(row.hearingDate)}
                     </p>
-                    {canEditCase ? (
-                      <button type="button" onClick={() => handleRemoveHearingRow(index)} className="text-red-500 hover:text-red-700" title="Remove hearing">
-                        <FaTrash size={14} />
-                      </button>
-                    ) : null}
+                    <div className="flex items-center gap-2">
+                      {canAskCaseLawyer && !canEditCase ? (
+                        <button type="button" onClick={() => { const next = openHearingChatId === hearingId ? '' : hearingId; setOpenHearingChatId(next); setHearingQuestionError(''); if (next) { setHearingChatSeen((current) => ({ ...current, [hearingId]: true })); setHearingNotifications((current) => ({ ...current, [hearingId]: false })); loadHearingMessages(row).finally(() => setHearingNotifications((current) => ({ ...current, [hearingId]: false }))); } }} className="relative inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#15a276] bg-[#e8f7f2] text-[#118460] transition hover:bg-[#d8f2e8]" title="Open hearing conversation" aria-label="Open hearing conversation">
+                          <FaCommentDots size={14} />
+                          {hearingNotifications[hearingId] ? <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500" aria-label="Unread message" /> : null}
+                        </button>
+                      ) : null}
+                      {canEditCase ? (
+                        <button type="button" onClick={() => handleRemoveHearingRow(index)} className="text-red-500 hover:text-red-700" title="Remove hearing">
+                          <FaTrash size={14} />
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
+                  {canAskCaseLawyer && openHearingChatId === hearingId ? (
+                    <div className="fixed bottom-5 right-5 z-50 w-[calc(100vw-2.5rem)] max-w-sm overflow-hidden rounded-2xl border border-[#d7e9ef] bg-white shadow-2xl">
+                      <div className="flex items-center justify-between border-b border-[#eef5f8] bg-[#f8fbfc] px-4 py-3">
+                        <div>
+                          <p className="text-sm font-bold text-[#062552]">Hearing conversation</p>
+                          <p className="text-[11px] text-[#5f7488]">{formatHeaderLabel(row.hearingDate)}</p>
+                        </div>
+                        <button type="button" onClick={() => setOpenHearingChatId('')} className="rounded-lg p-1.5 text-[#5f7488] transition hover:bg-white hover:text-[#062552]" aria-label="Close hearing conversation">
+                          <FaTimes size={13} />
+                        </button>
+                      </div>
+                      <div className="max-h-56 space-y-1 overflow-y-auto bg-emerald-50/60 p-3">
+                        {hearingMessagesLoading === hearingId ? <p className="text-xs text-[#5f7488]">Loading conversation...</p> : (hearingMessages[hearingId] || []).length === 0 ? <p className="text-xs text-[#5f7488]">No messages yet. Start the conversation.</p> : (hearingMessages[hearingId] || []).map((message) => (
+                          <div key={message._id} className={`rounded-md px-2 py-1.5 text-xs ${String(message.sender?._id || message.sender) === String(currentUserId || '') ? 'ml-4 bg-emerald-100 text-emerald-900' : 'mr-4 bg-white text-[#062552]'}`}>{message.content}</div>
+                        ))}
+                      </div>
+                      <div className="flex gap-2 border-t border-[#eef5f8] bg-white p-3">
+                        <input type="text" value={hearingQuestions[hearingId] || ''} onChange={(event) => setHearingQuestions((current) => ({ ...current, [hearingId]: event.target.value }))} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); sendHearingQuestion(row); } }} placeholder="Type your question..." className="min-w-0 flex-1 rounded-md border border-emerald-200 bg-white px-3 py-2 text-sm text-[#062552] outline-none focus:border-[#15a276]" />
+                        <button type="button" onClick={() => sendHearingQuestion(row)} disabled={!String(hearingQuestions[hearingId] || '').trim() || sendingHearingQuestionId === hearingId} className="inline-flex items-center justify-center gap-1.5 rounded-md bg-[#15a276] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#118460] disabled:cursor-not-allowed disabled:opacity-60">
+                          <FaPaperPlane size={11} /> {sendingHearingQuestionId === hearingId ? 'Sending...' : 'Send'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <label className="text-xs font-bold text-[#5f7488]">Court{canEditCase ? <input type="text" value={row.courtName} onChange={(e) => handleHearingHistoryChange(index, 'courtName', e.target.value)} placeholder="Court name" className="mt-1 block w-full rounded-md border border-[#d7e9ef] px-3 py-2 text-sm text-[#062552] outline-none focus:border-[#15a276]" /> : <span className="mt-1 block text-sm text-[#062552]">{row.courtName || 'Not provided'}</span>}</label>
                     <label className="text-xs font-bold text-[#5f7488]">Hearing date{canEditCase ? <input type="date" value={row.hearingDate} onChange={(e) => handleHearingHistoryChange(index, 'hearingDate', e.target.value)} className="mt-1 block w-full rounded-md border border-[#d7e9ef] px-3 py-2 text-sm text-[#062552] outline-none focus:border-[#15a276]" /> : <span className="mt-1 block text-sm text-[#062552]">{formatDate(row.hearingDate) || 'Not provided'}</span>}</label>

@@ -145,6 +145,12 @@ export default function Chat() {
                 return;
             }
 
+            if (user.role === 'lawyer' && activePartner.role === 'lawyer') {
+                setCanChat(true);
+                setAppointmentStatus('');
+                return;
+            }
+
             try {
                 setIsCheckingChatAccess(true);
 

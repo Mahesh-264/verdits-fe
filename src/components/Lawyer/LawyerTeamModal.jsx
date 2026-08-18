@@ -75,6 +75,10 @@ export default function LawyerTeamModal({
   }, [activeTeamMemberId]);
 
   React.useEffect(() => {
+    if (activeTeamMember && !activeTeamMember.hasTeam) setMemberDetailTab('cases');
+  }, [activeTeamMember]);
+
+  React.useEffect(() => {
     setShowTeamDetails(false);
     setShowTeamCode(false);
     setConfirmDelete(false);
@@ -583,16 +587,11 @@ export default function LawyerTeamModal({
                     <button type="button" onClick={() => setMemberDetailTab('cases')} className={`rounded-xl px-5 py-3 text-sm font-bold transition ${memberDetailTab === 'cases' ? 'border border-[#d6b85b] bg-[#f1d15f] text-zinc-950 shadow-sm' : 'text-[#5f7488] hover:bg-[#f8fbfc] hover:text-[#062552]'}`}>
                       {activeTeamMember.name || 'Lawyer'}'s Cases
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMemberDetailTab('team');
-                        loadSelectedMemberProfile();
-                      }}
-                      className={`rounded-xl px-5 py-3 text-sm font-bold transition ${memberDetailTab === 'team' ? 'border border-[#d6b85b] bg-[#f1d15f] text-zinc-950 shadow-sm' : 'text-[#5f7488] hover:bg-[#f8fbfc] hover:text-[#062552]'}`}
-                    >
-                      {activeTeamMember.name || 'Lawyer'}'s Team
-                    </button>
+                    {activeTeamMember.hasTeam ? (
+                      <button type="button" onClick={() => { setMemberDetailTab('team'); loadSelectedMemberProfile(); }} className={`rounded-xl px-5 py-3 text-sm font-bold transition ${memberDetailTab === 'team' ? 'border border-[#d6b85b] bg-[#f1d15f] text-zinc-950 shadow-sm' : 'text-[#5f7488] hover:bg-[#f8fbfc] hover:text-[#062552]'}`}>
+                        {activeTeamMember.name || 'Lawyer'}'s Team
+                      </button>
+                    ) : null}
                   </div>
 
                   {memberDetailTab === 'cases' ? <div className="space-y-4">
@@ -603,6 +602,7 @@ export default function LawyerTeamModal({
                         <CaseDetailsView
                           selectedCase={selectedCase}
                           displayTeam={displayTeam}
+                          hearingLawyerId={activeTeamMember?.lawyerId}
                           onBack={() => setSelectedCaseForDetailsId('')}
                           teamCaseStatuses={teamCaseStatuses}
                           updatingTeamCaseId={updatingTeamCaseId}
@@ -676,16 +676,13 @@ export default function LawyerTeamModal({
                           {ownedTeamRegularMembers.length} {ownedTeamRegularMembers.length === 1 ? 'member' : 'members'}
                         </span>
                       </div>
+                      {ownedTeamRegularMembers.length === 0 ? (
+                        <div className="mt-4">
+                          <EmptyBlock icon={<UserPlus size={24} />} message="No team members" />
+                        </div>
+                      ) : (
                       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          {ownedTeamMembers.filter((member) => member.role === 'owner').map((member) => (
-                            <div key={member.id || member.lawyerId} className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-                              <p className="font-bold text-[#062552]">{member.name || activeTeamMember.name || 'Lawyer'}</p>
-                              <p className="mt-1 text-xs font-bold text-emerald-700">Team Owner</p>
-                            </div>
-                          ))}
-                          {ownedTeamMembers.filter((member) => member.role === 'member').length === 0 ? (
-                            <EmptyBlock icon={<UserPlus size={24} />} message="No team members" />
-                          ) : ownedTeamMembers.filter((member) => member.role === 'member').map((member) => (
+                          {ownedTeamRegularMembers.length > 0 && ownedTeamMembers.filter((member) => member.role === 'member').map((member) => (
                             <button key={member.id || member.lawyerId} type="button" onClick={() => onSelectTeamMember(member)} className="rounded-xl border border-[#e2edf1] bg-[#f8fbfc] px-4 py-3 text-left transition hover:border-[#15a276] hover:bg-white">
                               <p className="font-bold text-[#062552]">{member.name || 'Lawyer'}</p>
                               <p className="mt-1 text-xs text-[#5f7488]">Has Team: {member.hasTeam ? 'Yes' : 'No'}</p>
@@ -693,6 +690,7 @@ export default function LawyerTeamModal({
                             </button>
                           ))}
                       </div>
+                      )}
                     </div>
                   ) : memberDetailTab === 'team' ? (
                     <EmptyBlock icon={<Users size={24} />} message="No team created" />
