@@ -1,7 +1,7 @@
 import React from 'react';
 import { FaGavel } from 'react-icons/fa';
 import { EmptyBlock, ModalShell } from './LawyerSharedComponents';
-import { formatDate, formatTime, getTeamCaseStatusLabel } from '../../utils/lawyerUtils';
+import { formatDate, formatHearingTime, getTeamCaseStatusLabel } from '../../utils/lawyerUtils';
 
 export default function LawyerNextHearingsModal({
   show,
@@ -77,7 +77,7 @@ export default function LawyerNextHearingsModal({
                   </div>
                   <span className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
                     {formatDate(hearing.hearingDate)}
-                    <span className="block mt-1 text-xs">{hearing.hearingTime ? formatTime(`${hearing.hearingDate?.slice(0, 10)}T${hearing.hearingTime}`) : formatTime(hearing.hearingDate)}</span>
+                    <span className="block mt-1 text-xs">{formatHearingTime(hearing.hearingTime)}</span>
                   </span>
                 </div>
 
@@ -88,7 +88,7 @@ export default function LawyerNextHearingsModal({
                   </div>
                   <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-3">
                     <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Hearing Time</p>
-                    <p className="mt-1 font-semibold text-[#062552]">{hearing.hearingTime ? formatTime(`${hearing.hearingDate?.slice(0, 10)}T${hearing.hearingTime}`) : formatTime(hearing.hearingDate)}</p>
+                    <p className="mt-1 font-semibold text-[#062552]">{formatHearingTime(hearing.hearingTime)}</p>
                   </div>
                   <div className="rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] p-3">
                     <p className="text-xs font-bold uppercase tracking-wide text-[#5f7488]">Status</p>

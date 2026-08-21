@@ -358,6 +358,20 @@ export function formatTime(value) {
   return date.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
+// Hearing times are stored separately from hearing dates. Never parse a date
+// here: date-only values would otherwise become fabricated midnight/current
+// timezone times when rendered.
+export function formatHearingTime(value) {
+  const match = String(value || '').trim().match(/^(\d{2}):(\d{2})$/);
+  if (!match) return 'Time not set';
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) return 'Time not set';
+  const suffix = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  return `${displayHours}:${String(minutes).padStart(2, '0')} ${suffix}`;
+}
+
 export function toDateInput(value) {
   if (!value) return '';
   const date = new Date(value);

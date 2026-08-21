@@ -20,7 +20,7 @@ import {
   applicantFilters,
   emptyDrawerState,
   formatDate,
-  formatTime,
+  formatHearingTime,
   getEntityId,
   getNoticeRequestError,
   getTeamCaseStatusLabel,
@@ -1650,7 +1650,7 @@ export default function LawyerDashboard() {
                         <div className="mt-4 pt-3 border-t border-[#d7e9ef] flex items-center justify-between text-xs">
                           <div>
                             <p className="text-[#5f7488] font-medium">Hearing Date</p>
-                            <p className="font-bold text-[#15a276] mt-0.5">{formatDate(hearing.hearingDate)} · {formatTime(hearing.hearingDate)}</p>
+                            <p className="font-bold text-[#15a276] mt-0.5">{formatDate(hearing.hearingDate)} · {formatHearingTime(hearing.hearingTime)}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-[#5f7488] font-medium">Court</p>
