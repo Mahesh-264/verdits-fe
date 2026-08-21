@@ -367,6 +367,312 @@ textarea::placeholder {
   color: var(--verdicts-ink) !important;
 }
 
+/* Student dashboard: compact touch layouts apply only below the mobile
+   breakpoint. Desktop dimensions and spacing remain exactly as authored. */
+@media (max-width: 767px) {
+  .student-dashboard .student-dashboard-header {
+    padding: 0.65rem 0.75rem;
+  }
+
+  .student-dashboard .student-dashboard-header > div {
+    gap: 0.65rem;
+  }
+
+  .student-dashboard .student-dashboard-header .h-16 {
+    height: 2.8rem;
+  }
+
+  .student-dashboard .student-dashboard-nav {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.2rem;
+    overflow: visible;
+  }
+
+  .student-dashboard .student-dashboard-nav-link {
+    min-width: 0;
+    justify-content: center;
+    padding: 0.55rem 0.2rem;
+    font-size: 0.68rem;
+    line-height: 1rem;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .student-dashboard .student-dashboard-nav-link svg {
+    display: none;
+  }
+
+  .student-dashboard .student-dashboard-search > div {
+    border-radius: 0.85rem;
+    padding: 0.65rem 0.75rem;
+  }
+
+  .student-dashboard main {
+    padding: 1rem 0.75rem;
+  }
+
+  .student-dashboard .student-explore-search {
+    max-width: 100%;
+    padding: 0.75rem;
+  }
+
+  .student-dashboard .student-explore-search input {
+    min-width: 0;
+    font-size: 0.8rem;
+  }
+
+  /* Keep content card-sized on phones instead of preserving desktop-like
+     padding and type scale. These selectors are limited to dashboard content. */
+  .student-dashboard main section[class*="rounded-[28px]"],
+  .student-dashboard main article[class*="rounded-[28px]"],
+  .student-dashboard main [class*="rounded-[26px]"] {
+    border-radius: 1.15rem;
+    padding: 1rem;
+  }
+
+  .student-dashboard main [class*="rounded-2xl"][class*="p-"] {
+    padding: 0.75rem;
+  }
+
+  .student-dashboard main h1 {
+    font-size: clamp(1.65rem, 8vw, 2rem);
+    line-height: 1.15;
+  }
+
+  .student-dashboard main h2 {
+    font-size: 1.1rem;
+    line-height: 1.3;
+  }
+
+  .student-dashboard main h3 {
+    font-size: 1rem;
+    line-height: 1.3;
+  }
+
+  .student-dashboard main article [class*="text-[18px]"],
+  .student-dashboard main section [class*="text-[18px]"] {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .student-dashboard main article [class*="text-[16px]"],
+  .student-dashboard main section [class*="text-[16px]"] {
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+
+  .student-dashboard main article .h-16.w-16,
+  .student-dashboard main section .h-16.w-16 {
+    height: 3rem;
+    width: 3rem;
+  }
+
+  .student-dashboard main article .h-20.w-20,
+  .student-dashboard main section .h-20.w-20 {
+    height: 3.75rem;
+    width: 3.75rem;
+  }
+
+  /* Explore and Applications use compact two-column card lists on phones.
+     The regular stacked layout remains in effect from tablet size upward. */
+  .student-dashboard .student-opportunity-grid,
+  .student-dashboard .student-application-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .student-dashboard .student-opportunity-grid > :not([hidden]) ~ :not([hidden]),
+  .student-dashboard .student-application-card-grid > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0;
+  }
+
+  .student-dashboard .student-opportunity-grid > article,
+  .student-dashboard .student-application-card-grid > article {
+    min-width: 0;
+    padding: 0.75rem;
+  }
+
+  /* An internship has more detail than a small feed tile. Give it the full
+     phone width so a lone result never leaves an empty half-column. */
+  .student-dashboard .student-opportunity-grid > .student-internship-card,
+  .student-dashboard .student-application-card-grid > .student-internship-application-card {
+    grid-column: 1 / -1;
+    padding: 1rem;
+  }
+
+  /* Jam sessions stay one-per-row so their discussion details remain easy to
+     read and do not create cramped half-width cards. */
+  .student-dashboard .student-opportunity-grid > .student-opportunity-card:not(.student-internship-card),
+  .student-dashboard .student-application-card-grid > .student-jam-application-card {
+    grid-column: 1 / -1;
+  }
+
+  .student-dashboard .student-opportunity-grid > article > div,
+  .student-dashboard .student-application-card-grid > article > div {
+    gap: 0.75rem;
+  }
+
+  .student-dashboard .student-opportunity-grid .h-\[68px\].w-\[68px\],
+  .student-dashboard .student-application-card-grid .h-16.w-16 {
+    height: 2.5rem;
+    width: 2.5rem;
+  }
+
+  .student-dashboard .student-opportunity-grid [class*="text-[24px]"],
+  .student-dashboard .student-application-card-grid .text-2xl {
+    font-size: 1rem;
+    line-height: 1.25;
+  }
+
+  .student-dashboard .student-opportunity-grid [class*="text-[19px]"],
+  .student-dashboard .student-application-card-grid [class*="text-base"] {
+    font-size: 0.75rem;
+    line-height: 1.3;
+  }
+
+  .student-dashboard .student-opportunity-grid [class*="text-[16px]"],
+  .student-dashboard .student-application-card-grid [class*="leading-7"] {
+    font-size: 0.75rem;
+    line-height: 1.35;
+  }
+
+  .student-dashboard .student-opportunity-grid [class*="grid-cols-3"],
+  .student-dashboard .student-application-card-grid [class*="grid-cols-1"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+  }
+
+  .student-dashboard .student-opportunity-grid [class*="col-span-3"] {
+    grid-column: span 2 / span 2;
+  }
+
+  .student-dashboard .student-opportunity-grid button,
+  .student-dashboard .student-application-card-grid button {
+    padding: 0.6rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .student-dashboard .student-internship-card .h-\[68px\].w-\[68px\],
+  .student-dashboard .student-internship-application-card .h-16.w-16 {
+    height: 3.25rem;
+    width: 3.25rem;
+  }
+
+  .student-dashboard .student-internship-card [class*="text-[24px]"],
+  .student-dashboard .student-internship-application-card .text-2xl {
+    font-size: 1.2rem;
+    line-height: 1.3;
+  }
+
+  .student-dashboard .student-internship-card [class*="text-[19px]"],
+  .student-dashboard .student-internship-application-card [class*="text-base"] {
+    font-size: 0.9rem;
+  }
+
+  .student-dashboard .student-internship-card [class*="text-[16px]"],
+  .student-dashboard .student-internship-application-card [class*="leading-7"] {
+    font-size: 0.875rem;
+    line-height: 1.55;
+  }
+
+  .student-dashboard .student-internship-card button,
+  .student-dashboard .student-internship-application-card button {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .student-dashboard .student-network-stat-card .h-16.w-16 {
+    height: 2.25rem;
+    width: 2.25rem;
+  }
+
+  .student-dashboard .student-network-stat-card .text-4xl {
+    font-size: 1.4rem;
+  }
+
+  .student-dashboard .student-network-stat-card [class*="text-[18px]"],
+  .student-dashboard .student-network-card-grid [class*="text-[18px]"] {
+    font-size: 0.7rem;
+    line-height: 1.25;
+  }
+
+  .student-dashboard .student-network-card-grid [class*="text-[20px]"] {
+    font-size: 0.85rem;
+    line-height: 1.25;
+  }
+
+  .student-dashboard .student-network-card-grid [class*="text-[16px]"],
+  .student-dashboard .student-network-card-grid [class*="text-[15px]"] {
+    font-size: 0.7rem;
+    line-height: 1.35;
+  }
+
+  .student-dashboard .student-network-card-grid button {
+    margin-top: 0.75rem;
+    padding: 0.65rem 0.4rem;
+    font-size: 0.72rem;
+  }
+
+  .student-dashboard .student-network-tabs,
+  .student-dashboard .student-application-tabs {
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .student-dashboard .student-network-tabs::-webkit-scrollbar,
+  .student-dashboard .student-application-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .student-dashboard .student-network-tabs > button,
+  .student-dashboard .student-application-tabs > button {
+    flex: 1 0 auto;
+    white-space: nowrap;
+  }
+
+  .student-dashboard .absolute.right-0.top-14.w-80 {
+    width: min(18rem, calc(100vw - 1.5rem));
+  }
+
+  .user-home-action-grid {
+    margin-top: 1.25rem;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .user-home-action-grid > div,
+  .user-home-action-grid > button {
+    min-width: 0;
+    gap: 0.55rem;
+    padding: 0.9rem 0.5rem;
+  }
+
+  .user-home-action-grid .user-home-icon {
+    height: 2.7rem;
+    width: 2.7rem;
+  }
+
+  .user-home-action-grid .user-home-icon svg {
+    height: 1.25rem;
+    width: 1.25rem;
+  }
+
+  .user-home-action-grid span.font-bold,
+  .user-home-action-grid span.font-medium {
+    font-size: 0.8rem;
+    line-height: 1.15;
+  }
+
+  .user-home-action-grid span.text-\[10px\] {
+    font-size: 0.6rem;
+    line-height: 1rem;
+  }
+}
+
 /* All case categories use a consistent black icon treatment. */
 .case-selection-icon {
   background-color: var(--verdicts-charcoal) !important;

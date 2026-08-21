@@ -111,9 +111,9 @@ export default function StudentLayout({ children }) {
   );
 
   return (
-    <div className="min-h-screen bg-[#f3f8fb] text-[#062552]">
+    <div className="student-dashboard min-h-screen bg-[#f3f8fb] text-[#062552]">
       <header className="sticky top-0 z-40 border-b border-[#dbe2ef] bg-white/95 shadow-sm backdrop-blur">
-        <div className="max-w-[1440px] mx-auto px-4 py-3 md:px-6">
+        <div className="student-dashboard-header max-w-[1440px] mx-auto px-4 py-3 md:px-6">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
             <div className="flex items-center justify-between gap-4 xl:shrink-0">
               <Link to="/student-home" className="shrink-0" aria-label="Go to dashboard home">
@@ -140,7 +140,7 @@ export default function StudentLayout({ children }) {
               </div>
             </div>
 
-            <nav className="flex items-center gap-2 overflow-x-auto xl:flex-1 xl:justify-center">
+            <nav className="student-dashboard-nav flex items-center gap-2 overflow-x-auto xl:flex-1 xl:justify-center" aria-label="Student dashboard navigation">
               {navItems.map((item) => {
                 const isActive = location.pathname.startsWith(item.path);
 
@@ -148,7 +148,7 @@ export default function StudentLayout({ children }) {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium whitespace-nowrap transition ${
+                    className={`student-dashboard-nav-link inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium whitespace-nowrap transition ${
                       isActive
                         ? 'bg-[#e8f7f2] text-[#15a276]'
                         : 'text-[#44516d] hover:bg-[#f3f8fb] hover:text-[#062552]'
@@ -162,7 +162,7 @@ export default function StudentLayout({ children }) {
             </nav>
 
             <div className="flex items-center gap-3 w-full xl:w-auto xl:shrink-0">
-              <div className="flex-1 xl:w-[400px]">
+              <div className="student-dashboard-search flex-1 xl:w-[400px]">
                 <div className="flex items-center gap-3 rounded-2xl border border-[#dbe2ef] bg-[#fbfcff] px-4 py-3">
                   <Search className="text-[#8a95ab] shrink-0" size={18} />
                   <input

@@ -303,14 +303,14 @@ export default function StudentExplore() {
             </div>
 
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
-              <div className="flex items-center gap-3 rounded-2xl bg-[#f4f6fb] px-4 py-4">
+              <div className="student-explore-search flex min-w-0 items-center gap-3 rounded-2xl bg-[#f4f6fb] px-4 py-4">
                 <Search className="text-[#93a0b6]" size={20} />
                 <input
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   type="text"
                   placeholder="Search titles, lawyer names, specializations, or locations..."
-                  className="w-full bg-transparent outline-none text-[#0b1f44] placeholder:text-[#7f8ba2]"
+                  className="min-w-0 w-full bg-transparent outline-none text-[#0b1f44] placeholder:text-[#7f8ba2]"
                 />
               </div>
 
@@ -370,7 +370,7 @@ export default function StudentExplore() {
             Loading discovery data...
           </div>
         ) : activeTab === 'internships' ? (
-          <div className="space-y-6">
+          <div className="student-opportunity-grid space-y-6">
             {filteredInternships.length === 0 ? (
               <EmptyState message="No internships match your current search and filters." />
             ) : (
@@ -388,7 +388,7 @@ export default function StudentExplore() {
             )}
           </div>
         ) : activeTab === 'jamSessions' ? (
-          <div className="space-y-6">
+          <div className="student-opportunity-grid space-y-6">
             {filteredJamSessions.length === 0 ? (
               <EmptyState message="No jam sessions match your current search." />
             ) : (

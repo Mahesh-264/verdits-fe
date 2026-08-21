@@ -112,7 +112,7 @@ const UserHome = () => {
             <AppHeader variant="user" profileTo="/profile" showBrandName />
 
             {/* Grid Menu */}
-            <div className="mx-auto w-full max-w-md p-6 grid grid-cols-2 gap-6 mt-10">
+            <div className="user-home-action-grid mx-auto mt-10 grid w-full max-w-md grid-cols-2 gap-6 p-6">
 
                 {/* Book a Lawyer */}
                 <div

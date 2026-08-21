@@ -132,9 +132,9 @@ export default function StudentNetwork() {
           </p>
         </div>
 
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <section className="student-network-stat-grid grid grid-cols-3 gap-3 md:gap-6">
           {statCards.map(({ label, value, Icon: StatIcon, color }) => (
-            <div key={label} className="rounded-[28px] border border-[#dbe2ef] bg-white p-8 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
+            <div key={label} className="student-network-stat-card rounded-[28px] border border-[#dbe2ef] bg-white p-3 md:p-8 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
               <div className="flex items-center gap-5">
                 <div className={`h-16 w-16 rounded-full flex items-center justify-center ${color}`}>
                   {React.createElement(StatIcon, { size: 28 })}
@@ -148,11 +148,11 @@ export default function StudentNetwork() {
           ))}
         </section>
 
-        <div className="inline-flex rounded-[22px] bg-[#e9edf5] p-1">
+        <div className="student-network-tabs inline-flex max-w-full rounded-[22px] bg-[#e9edf5] p-1">
           <button
             type="button"
             onClick={() => setActiveTab('students')}
-            className={`rounded-[18px] px-14 py-3 text-[18px] font-semibold transition ${
+            className={`rounded-[18px] px-4 py-3 text-[18px] font-semibold transition sm:px-14 ${
               activeTab === 'students' ? 'bg-white text-[#0b1f44]' : 'text-[#44516d]'
             }`}
           >
@@ -161,7 +161,7 @@ export default function StudentNetwork() {
           <button
             type="button"
             onClick={() => setActiveTab('lawyers')}
-            className={`rounded-[18px] px-14 py-3 text-[18px] font-semibold transition ${
+            className={`rounded-[18px] px-4 py-3 text-[18px] font-semibold transition sm:px-14 ${
               activeTab === 'lawyers' ? 'bg-white text-[#0b1f44]' : 'text-[#44516d]'
             }`}
           >
@@ -176,7 +176,7 @@ export default function StudentNetwork() {
             <h2 className="text-[22px] font-semibold">Connect with Fellow Students</h2>
             <p className="text-[#5e6c87] text-[18px] mt-2">Build your circle with law students from across India</p>
 
-            <div className="mt-8 grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="student-network-card-grid mt-8 grid grid-cols-2 gap-3 xl:grid-cols-3 xl:gap-6">
               {loading ? (
                 <p className="text-[#7f8ba2] text-[16px]">Loading registered students...</p>
               ) : students.length === 0 ? (
@@ -188,12 +188,12 @@ export default function StudentNetwork() {
                 <div
                   key={studentId}
                   onClick={() => navigate(`/student-profile/${studentId}`)}
-                  className="cursor-pointer rounded-[26px] border border-[#dbe2ef] p-6 text-center transition hover:-translate-y-0.5 hover:shadow-md"
+                  className="cursor-pointer rounded-[26px] border border-[#dbe2ef] p-3 text-center transition hover:-translate-y-0.5 hover:shadow-md md:p-6"
                 >
                   {student.profileImage ? (
-                    <img src={student.profileImage} alt={getDisplayName(student)} className="h-28 w-28 mx-auto rounded-full object-cover" />
+                    <img src={student.profileImage} alt={getDisplayName(student)} className="h-14 w-14 mx-auto rounded-full object-cover md:h-28 md:w-28" />
                   ) : (
-                    <div className="h-28 w-28 mx-auto rounded-full bg-gradient-to-br from-[#8de2c6] to-[#15a276] text-white text-3xl font-bold flex items-center justify-center">
+                    <div className="h-14 w-14 mx-auto rounded-full bg-gradient-to-br from-[#8de2c6] to-[#15a276] text-white text-xl font-bold flex items-center justify-center md:h-28 md:w-28 md:text-3xl">
                       {getDisplayName(student).charAt(0).toUpperCase()}
                     </div>
                   )}
@@ -254,7 +254,7 @@ export default function StudentNetwork() {
             <h2 className="text-[22px] font-semibold">Lawyers to Follow</h2>
             <p className="text-[#5e6c87] text-[18px] mt-2">Follow all registered lawyers from different practice areas</p>
 
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="student-network-card-grid mt-8 grid grid-cols-2 gap-3 md:gap-6">
               {loading ? (
                 <p className="text-[#7f8ba2] text-[16px]">Loading verified lawyers...</p>
               ) : lawyers.length === 0 ? (
@@ -266,13 +266,13 @@ export default function StudentNetwork() {
                 <div
                   key={lawyerId}
                   onClick={() => navigate(`/lawyer-profile/${lawyerId}`)}
-                  className="cursor-pointer rounded-[26px] border border-[#dbe2ef] p-6 transition hover:-translate-y-0.5 hover:shadow-md"
+                  className="cursor-pointer rounded-[26px] border border-[#dbe2ef] p-3 transition hover:-translate-y-0.5 hover:shadow-md md:p-6"
                 >
                   <div className="flex items-center gap-4">
                     {lawyer.profileImage ? (
-                      <img src={lawyer.profileImage} alt={getDisplayName(lawyer)} className="h-20 w-20 rounded-full object-cover" />
+                      <img src={lawyer.profileImage} alt={getDisplayName(lawyer)} className="h-12 w-12 rounded-full object-cover md:h-20 md:w-20" />
                     ) : (
-                      <div className="h-20 w-20 rounded-full bg-gradient-to-br from-[#ffd89b] to-[#19547b] text-white text-2xl font-bold flex items-center justify-center">
+                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-[#ffd89b] to-[#19547b] text-white text-lg font-bold flex items-center justify-center md:h-20 md:w-20 md:text-2xl">
                         {getDisplayName(lawyer).charAt(0).toUpperCase()}
                       </div>
                     )}

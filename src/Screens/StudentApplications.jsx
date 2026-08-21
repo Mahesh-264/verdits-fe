@@ -278,11 +278,11 @@ export default function StudentApplications() {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-3 border-b border-[#dbe2ef] pb-4">
+        <div className="student-application-tabs flex items-center gap-3 border-b border-[#dbe2ef] pb-4">
           <button
             type="button"
             onClick={() => handleTabChange('internships')}
-            className={`inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-base font-bold transition-all ${
+            className={`inline-flex items-center gap-2 rounded-2xl px-3 py-3 text-base font-bold transition-all sm:px-5 ${
               activeTab === 'internships'
                 ? 'bg-[#f1d15f] text-zinc-950 border border-[#d6b85b] shadow-sm'
                 : 'bg-white text-[#5e6c87] border border-[#dbe2ef] hover:bg-[#f8faff] hover:text-[#0b1f44]'
@@ -295,7 +295,7 @@ export default function StudentApplications() {
           <button
             type="button"
             onClick={() => handleTabChange('jamSessions')}
-            className={`inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-base font-bold transition-all ${
+            className={`inline-flex items-center gap-2 rounded-2xl px-3 py-3 text-base font-bold transition-all sm:px-5 ${
               activeTab === 'jamSessions'
                 ? 'bg-[#f1d15f] text-zinc-950 border border-[#d6b85b] shadow-sm'
                 : 'bg-white text-[#5e6c87] border border-[#dbe2ef] hover:bg-[#f8faff] hover:text-[#0b1f44]'
@@ -376,14 +376,14 @@ export default function StudentApplications() {
               )}
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="student-application-card-grid space-y-6">
               {filteredInternshipApplications.map((app) => {
                 const badge = getStatusBadge(app.status);
 
                 return (
                   <article
                     key={app.id}
-                    className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 md:p-8 shadow-[0_8px_30px_rgba(11,31,68,0.06)]"
+                    className="student-internship-application-card rounded-[28px] border border-[#dbe2ef] bg-white p-6 md:p-8 shadow-[0_8px_30px_rgba(11,31,68,0.06)]"
                   >
                     <div className="flex flex-col gap-6">
                       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -483,11 +483,11 @@ export default function StudentApplications() {
               </Link>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="student-application-card-grid space-y-6">
               {filteredJamSessions.map((session) => (
                 <article
                   key={session.id}
-                  className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 md:p-8 shadow-[0_8px_30px_rgba(11,31,68,0.06)]"
+                  className="student-jam-application-card rounded-[28px] border border-[#dbe2ef] bg-white p-6 md:p-8 shadow-[0_8px_30px_rgba(11,31,68,0.06)]"
                 >
                   <div className="flex flex-col gap-6">
                     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">

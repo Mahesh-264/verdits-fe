@@ -66,7 +66,7 @@ export default function StudentOpportunityCard({
   };
 
   return (
-    <article className="min-w-0 rounded-[28px] border border-[#dbe2ef] bg-white p-4 shadow-[0_8px_30px_rgba(11,31,68,0.06)] sm:p-6">
+    <article className={`student-opportunity-card ${isInternship ? 'student-internship-card' : ''} min-w-0 rounded-[28px] border border-[#dbe2ef] bg-white p-4 shadow-[0_8px_30px_rgba(11,31,68,0.06)] sm:p-6`}>
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex items-start gap-4">
