@@ -29,6 +29,12 @@ const resolveNotificationLink = (notification, user) => {
   const actorId = notification?.actor?._id || notification?.actor?.id || notification?.actor;
   const userRole = user?.role;
 
+  if (notification?.type === 'case_chat_message' || (notification?.type === 'new_message' && metadata.caseId)) {
+    const caseId = metadata.caseId;
+    const teamId = metadata.teamId || 'personal';
+    return `/lawyer-dash?section=team&teamId=${teamId}&caseId=${caseId}&openChat=true`;
+  }
+
   if (notification?.type === 'new_message') {
     const partnerId = metadata.senderId || actorId;
     return partnerId ? `/chat?partnerId=${partnerId}` : '/chat';
