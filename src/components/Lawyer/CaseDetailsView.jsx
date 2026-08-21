@@ -26,6 +26,8 @@ const CaseDetailsView = ({
   loadLawyerNextHearings,
   formatDate,
   hearingLawyerId,
+  isEditing,
+  onEditingChange,
 }) => {
   const { user } = useSelector((state) => state.auth);
   const [caseDetails, setCaseDetails] = useState(null);
@@ -36,7 +38,16 @@ const CaseDetailsView = ({
     ? Boolean(caseRecord.canEdit)
     : String(caseRecord?.addedBy?._id || caseRecord?.addedBy || caseRecord?.ownerId?._id || caseRecord?.ownerId || '') === String(currentUserId || '');
 
-  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [isEditingDetails, setIsEditingDetails] = useState(Boolean(isEditing));
+
+  useEffect(() => {
+    setIsEditingDetails(Boolean(isEditing));
+  }, [isEditing]);
+
+  const setEditingDetails = (value) => {
+    setIsEditingDetails(value);
+    onEditingChange?.(value);
+  };
   const [editingPhone, setEditingPhone] = useState(caseRecord.clientPhone || '');
   const [editingAddress, setEditingAddress] = useState(caseRecord.clientAddress || '');
   const [savingCaseDetails, setSavingCaseDetails] = useState(false);
@@ -129,7 +140,7 @@ const CaseDetailsView = ({
       }
       await loadTeamWorkspace();
       setCaseDetailsMessage('Case details saved.');
-      setIsEditingDetails(false);
+      setEditingDetails(false);
     } catch (error) {
       setCaseDetailsError(error.response?.data?.message || 'Unable to save case details.');
     } finally {
@@ -336,7 +347,7 @@ const CaseDetailsView = ({
             {!isEditingDetails ? (
               <button
                 type="button"
-                onClick={() => setIsEditingDetails(true)}
+                onClick={() => setEditingDetails(true)}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-[#d7e9ef] bg-white px-3.5 py-1.5 text-xs font-bold text-[#062552] shadow-sm transition hover:border-[#15a276] hover:text-[#15a276]"
               >
                 <FaPencilAlt size={12} /> Edit Details
@@ -354,7 +365,7 @@ const CaseDetailsView = ({
                 <button
                   type="button"
                   onClick={() => {
-                    setIsEditingDetails(false);
+                    setEditingDetails(false);
                     setEditingPhone(caseRecord.clientPhone || '');
                     setEditingAddress(caseRecord.clientAddress || '');
                     setCaseDetailsError('');

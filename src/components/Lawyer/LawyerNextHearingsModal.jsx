@@ -72,8 +72,7 @@ export default function LawyerNextHearingsModal({
               <div key={`${hearing.id}-${hearing.teamCode || 'team'}`} className="rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm hover:border-[#15a276]/50 transition-all text-[#062552]">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
-                    <p className="text-xs font-bold uppercase tracking-wide text-amber-700">{hearing.teamName || 'No team'}</p>
-                    <h3 className="mt-2 text-xl font-bold text-[#062552]">{hearing.caseTitle || 'Untitled Case'}</h3>
+                    <h3 className="text-xl font-bold text-[#062552]">{hearing.caseTitle || 'Untitled Case'}</h3>
                     <p className="mt-1 text-sm text-[#5f7488]">Client: {hearing.clientName || 'Not added'}</p>
                   </div>
                   <span className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">

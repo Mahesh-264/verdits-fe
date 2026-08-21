@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   BriefcaseBusiness,
@@ -13,6 +13,19 @@ import {
 } from 'lucide-react';
 import api from '../api/axios.jsx';
 import StudentLayout from './StudentLayout.jsx';
+import { updateUser } from '../redux/authSlice.jsx';
+
+const applicationStatusFilters = [
+  { value: 'all', label: 'All' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'accepted', label: 'Accepted' },
+  { value: 'rejected', label: 'Rejected' },
+];
+
+const jamSessionFilters = [
+  { value: 'all', label: 'All' },
+  { value: 'joined', label: 'Joined' },
+];
 
 const formatAppliedTime = (value) => {
   if (!value) return '';
@@ -50,8 +63,17 @@ const getStatusBadge = (status) => {
 
 export default function StudentApplications() {
   const { user } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') === 'jamSessions' ? 'jamSessions' : 'internships';
+  const requestedStatus = searchParams.get('status');
+  const activeStatusFilter = applicationStatusFilters.some((filter) => filter.value === requestedStatus)
+    ? requestedStatus
+    : 'all';
+  const requestedJamFilter = searchParams.get('jamFilter');
+  const activeJamFilter = jamSessionFilters.some((filter) => filter.value === requestedJamFilter)
+    ? requestedJamFilter
+    : 'all';
 
   const [loading, setLoading] = useState(true);
   const [publishedInternships, setPublishedInternships] = useState([]);
@@ -63,12 +85,17 @@ export default function StudentApplications() {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [internshipsRes, jamRes] = await Promise.allSettled([
+        const [profileRes, internshipsRes, jamRes] = await Promise.allSettled([
+          api.get('/auth/me'),
           api.get('/auth/published-internships'),
           api.get('/auth/published-jam-sessions'),
         ]);
 
         if (!active) return;
+
+        if (profileRes.status === 'fulfilled') {
+          dispatch(updateUser(profileRes.value.data));
+        }
 
         if (internshipsRes.status === 'fulfilled') {
           const list = internshipsRes.value.data?.internships || [];
@@ -91,10 +118,30 @@ export default function StudentApplications() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [dispatch]);
 
   const handleTabChange = (tab) => {
-    setSearchParams({ tab }, { replace: true });
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', tab);
+    if (tab === 'jamSessions') next.delete('status');
+    else next.delete('jamFilter');
+    setSearchParams(next, { replace: true });
+  };
+
+  const handleStatusFilterChange = (status) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', 'internships');
+    if (status === 'all') next.delete('status');
+    else next.set('status', status);
+    setSearchParams(next, { replace: true });
+  };
+
+  const handleJamFilterChange = (filter) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', 'jamSessions');
+    if (filter === 'all') next.delete('jamFilter');
+    else next.set('jamFilter', filter);
+    setSearchParams(next, { replace: true });
   };
 
   // 1. Process Internship Applications
@@ -163,6 +210,7 @@ export default function StudentApplications() {
           summary: session.summary || session.content || '',
           participantCount: session.participantCount || 1,
           joinedAt: studentRecord?.joinedAt || session.createdAt,
+          isJoined: true,
         });
       }
     });
@@ -184,12 +232,40 @@ export default function StudentApplications() {
           summary: '',
           participantCount: 1,
           joinedAt: item.joinedAt,
+          isJoined: true,
         });
       }
     });
 
     return combined.sort((a, b) => new Date(b.joinedAt || 0) - new Date(a.joinedAt || 0));
   }, [user?.studentProfile?.joinedJamSessions, publishedJamSessions]);
+
+  const allJamSessionsList = useMemo(() => (
+    publishedJamSessions.map((session) => ({
+      id: String(session.id || session._id || ''),
+      title: session.title || 'Jam Session',
+      lawyerName: session.lawyerName || session.author || 'Lawyer',
+      profileImage: session.profileImage || '',
+      avatar: session.avatar || (session.lawyerName || session.author || 'L').charAt(0).toUpperCase(),
+      topic: session.topic || 'Legal Case Discussion',
+      schedule: session.schedule || session.time || 'Scheduled',
+      location: session.location || 'Online / TBA',
+      summary: session.summary || session.content || '',
+      participantCount: session.participantCount || 0,
+      joinedAt: session.joinedAt || session.createdAt,
+      isJoined: Boolean(session.joined),
+    }))
+  ), [publishedJamSessions]);
+
+  const filteredInternshipApplications = useMemo(() => (
+    activeStatusFilter === 'all'
+      ? internshipApplicationsList
+      : internshipApplicationsList.filter((application) => (
+        String(application.status || 'pending').toLowerCase() === activeStatusFilter
+      ))
+  ), [activeStatusFilter, internshipApplicationsList]);
+
+  const filteredJamSessions = activeJamFilter === 'joined' ? joinedJamSessionsList : allJamSessionsList;
 
   return (
     <StudentLayout>
@@ -230,32 +306,78 @@ export default function StudentApplications() {
           </button>
         </div>
 
+        {activeTab === 'internships' ? (
+          <div className="flex flex-wrap items-center gap-2" aria-label="Filter internship applications by status">
+            {applicationStatusFilters.map((filter) => {
+              const count = filter.value === 'all'
+                ? internshipApplicationsList.length
+                : internshipApplicationsList.filter((application) => String(application.status || 'pending').toLowerCase() === filter.value).length;
+              const isActive = activeStatusFilter === filter.value;
+
+              return (
+                <button
+                  key={filter.value}
+                  type="button"
+                  onClick={() => handleStatusFilterChange(filter.value)}
+                  className={`rounded-full border px-4 py-2 text-sm font-bold transition-colors ${
+                    isActive
+                      ? 'border-[#d6b85b] bg-[#f1d15f] text-zinc-950'
+                      : 'border-[#dbe2ef] bg-white text-[#5e6c87] hover:border-[#d6b85b] hover:text-[#0b1f44]'
+                  }`}
+                >
+                  {filter.label} ({count})
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {activeTab === 'jamSessions' ? (
+          <div className="flex flex-wrap items-center gap-2" aria-label="Filter jam sessions">
+            {jamSessionFilters.map((filter) => {
+              const count = filter.value === 'all' ? allJamSessionsList.length : joinedJamSessionsList.length;
+              const isActive = activeJamFilter === filter.value;
+              return (
+                <button key={filter.value} type="button" onClick={() => handleJamFilterChange(filter.value)} className={`rounded-full border px-4 py-2 text-sm font-bold transition-colors ${isActive ? 'border-[#d6b85b] bg-[#f1d15f] text-zinc-950' : 'border-[#dbe2ef] bg-white text-[#5e6c87] hover:border-[#d6b85b] hover:text-[#0b1f44]'}`}>
+                  {filter.label} ({count})
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
         {/* Content Section */}
         {loading ? (
           <div className="rounded-[28px] border border-[#dbe2ef] bg-white p-8 text-[#5e6c87] shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
             Loading your applications...
           </div>
         ) : activeTab === 'internships' ? (
-          internshipApplicationsList.length === 0 ? (
+          filteredInternshipApplications.length === 0 ? (
             <div className="rounded-[28px] border border-[#dbe2ef] bg-white p-10 text-center shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#fff4bf] text-[#755617]">
                 <FileText size={32} />
               </div>
-              <h2 className="mt-4 text-xl font-bold text-[#0b1f44]">You haven't applied to any internships yet.</h2>
+              <h2 className="mt-4 text-xl font-bold text-[#0b1f44]">
+                {internshipApplicationsList.length === 0 ? "You haven't applied to any internships yet." : `No ${activeStatusFilter} applications.`}
+              </h2>
               <p className="mt-2 text-[#5e6c87]">
-                Explore open internship opportunities from verified lawyers and firms to get started.
+                {internshipApplicationsList.length === 0
+                  ? 'Explore open internship opportunities from verified lawyers and firms to get started.'
+                  : 'Choose another status filter to view your other applications.'}
               </p>
-              <Link
-                to="/student-explore?tab=internships"
-                className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-6 py-3 font-bold border border-[#d6b85b] shadow-sm transition-colors"
-              >
-                <BriefcaseBusiness size={18} />
-                Explore Internships
-              </Link>
+              {internshipApplicationsList.length === 0 ? (
+                <Link to="/student-explore?tab=internships" className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-6 py-3 font-bold border border-[#d6b85b] shadow-sm transition-colors">
+                  <BriefcaseBusiness size={18} /> Explore Internships
+                </Link>
+              ) : (
+                <button type="button" onClick={() => handleStatusFilterChange('all')} className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-6 py-3 font-bold border border-[#d6b85b] shadow-sm transition-colors">
+                  Show All Applications
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-6">
-              {internshipApplicationsList.map((app) => {
+              {filteredInternshipApplications.map((app) => {
                 const badge = getStatusBadge(app.status);
 
                 return (
@@ -341,12 +463,14 @@ export default function StudentApplications() {
             </div>
           )
         ) : (
-          joinedJamSessionsList.length === 0 ? (
+          filteredJamSessions.length === 0 ? (
             <div className="rounded-[28px] border border-[#dbe2ef] bg-white p-10 text-center shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#fff4bf] text-[#755617]">
                 <Users size={32} />
               </div>
-              <h2 className="mt-4 text-xl font-bold text-[#0b1f44]">You haven't joined any jam sessions yet.</h2>
+              <h2 className="mt-4 text-xl font-bold text-[#0b1f44]">
+                {activeJamFilter === 'joined' ? "You haven't joined any jam sessions yet." : 'No jam sessions are available right now.'}
+              </h2>
               <p className="mt-2 text-[#5e6c87]">
                 Join live case discussions and interactive sessions with experienced lawyers and peers.
               </p>
@@ -360,7 +484,7 @@ export default function StudentApplications() {
             </div>
           ) : (
             <div className="space-y-6">
-              {joinedJamSessionsList.map((session) => (
+              {filteredJamSessions.map((session) => (
                 <article
                   key={session.id}
                   className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 md:p-8 shadow-[0_8px_30px_rgba(11,31,68,0.06)]"
@@ -378,9 +502,11 @@ export default function StudentApplications() {
                         <div>
                           <div className="flex flex-wrap items-center gap-3">
                             <h2 className="text-2xl font-bold text-[#0b1f44]">{session.title}</h2>
-                            <span className="rounded-full bg-[#f1d15f]/20 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-[#755617] border border-[#d6b85b]/40">
-                              Joined ✓
-                            </span>
+                            {session.isJoined ? (
+                              <span className="rounded-full bg-[#f1d15f]/20 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-[#755617] border border-[#d6b85b]/40">
+                                Joined
+                              </span>
+                            ) : null}
                           </div>
                           <p className="mt-1 text-base font-semibold text-[#44516d]">Hosted by {session.lawyerName}</p>
                         </div>
@@ -418,7 +544,7 @@ export default function StudentApplications() {
 
                     <div className="border-t border-[#e3e8f3] pt-4">
                       <span className="text-xs text-[#7d8aa5]">
-                        Joined on {formatAppliedTime(session.joinedAt)}
+                        {session.isJoined ? 'Joined' : 'Published'} on {formatAppliedTime(session.joinedAt)}
                       </span>
                     </div>
                   </div>

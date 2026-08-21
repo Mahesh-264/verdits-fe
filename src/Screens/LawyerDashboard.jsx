@@ -105,6 +105,42 @@ export default function LawyerDashboard() {
   const [joinTeamForm, setJoinTeamForm] = useState(initialJoinTeamForm);
   const [teamCaseForm, setTeamCaseForm] = useState(initialTeamCaseForm);
 
+  // Team is rendered inside the dashboard modal, so its nested views must be
+  // represented in the route for browser/device back to restore them.
+  const updateTeamRoute = useCallback((updates) => {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set('section', 'team');
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === undefined || value === null || value === '') next.delete(key);
+        else next.set(key, String(value));
+      });
+      return next;
+    });
+  }, [setSearchParams]);
+
+  const setTeamModeInHistory = useCallback((mode) => {
+    updateTeamRoute({ mode: mode === 'overview' ? '' : mode, caseId: '', memberId: '' });
+  }, [updateTeamRoute]);
+
+  const setActiveTeamTabInHistory = useCallback((tab) => {
+    updateTeamRoute({ teamTab: tab, caseId: '', memberId: '' });
+  }, [updateTeamRoute]);
+
+  const setShowTeamCaseFormInHistory = useCallback((nextValue) => {
+    const current = searchParams.get('teamForm') === 'add-case';
+    const visible = typeof nextValue === 'function' ? nextValue(current) : nextValue;
+    updateTeamRoute({ teamForm: visible ? 'add-case' : '' });
+  }, [searchParams, updateTeamRoute]);
+
+  const setSelectedCaseInHistory = useCallback((caseId) => {
+    updateTeamRoute({ caseId, edit: '' });
+  }, [updateTeamRoute]);
+
+  const setSelectedTeamMemberInHistory = useCallback((memberId) => {
+    updateTeamRoute({ memberId, caseId: '', edit: '' });
+  }, [updateTeamRoute]);
+
   // Student Interaction State
   const [studentInteractionTab, setStudentInteractionTab] = useState('internships');
   const [publishedInternships, setPublishedInternships] = useState([]);
@@ -330,6 +366,10 @@ export default function LawyerDashboard() {
         setSelectedTeamIdState(String(requestedTeamId));
       }
       setTeamMode(requestedMode === 'join' ? 'join' : 'overview');
+      setActiveTeamTab(searchParams.get('teamTab') || 'my_cases');
+      setShowTeamCaseForm(searchParams.get('teamForm') === 'add-case');
+      setSelectedTeamMemberId(searchParams.get('memberId') || '');
+      setSelectedCaseForDetailsId(searchParams.get('caseId') || '');
       setTeamError('');
       setTeamMessage('');
       setShowTeamModal(true);
@@ -1263,6 +1303,10 @@ export default function LawyerDashboard() {
   };
 
   const closeAllFeatures = () => {
+    if (searchParams.get('section') === 'team') {
+      navigate(-1);
+      return;
+    }
     setShowAppointmentsModal(false);
     setShowClientsModal(false);
     setShowHearingsModal(false);
@@ -1393,9 +1437,12 @@ export default function LawyerDashboard() {
               deletingTeam={deletingTeam}
               teamWorkspaceLoading={teamWorkspaceLoading}
               teamWorkspaces={teamWorkspaces}
-              handleSelectTeam={handleSelectTeam}
+              handleSelectTeam={(teamId) => {
+                handleSelectTeam(teamId);
+                updateTeamRoute({ teamId, memberId: '', caseId: '', edit: '' });
+              }}
               teamMode={teamMode}
-              setTeamMode={setTeamMode}
+              setTeamMode={setTeamModeInHistory}
               setTeamError={setTeamError}
               setTeamMessage={setTeamMessage}
               createTeamForm={createTeamForm}
@@ -1405,28 +1452,33 @@ export default function LawyerDashboard() {
               joinTeamForm={joinTeamForm}
               handleJoinTeamInput={handleJoinTeamInput}
               handleJoinTeam={handleJoinTeam}
-              setActiveTeamTab={setActiveTeamTab}
+              setActiveTeamTab={setActiveTeamTabInHistory}
               currentActiveTeamTab={currentActiveTeamTab}
               ownTeamCases={ownTeamCases}
               visibleTeamDirectory={visibleTeamDirectory}
               teamPendingRequests={teamPendingRequests}
               showTeamCaseForm={showTeamCaseForm}
-              setShowTeamCaseForm={setShowTeamCaseForm}
+              setShowTeamCaseForm={setShowTeamCaseFormInHistory}
               teamCaseForm={teamCaseForm}
               handleTeamCaseInput={handleTeamCaseInput}
               handleAddTeamCase={handleAddTeamCase}
               savingTeamCase={savingTeamCase}
               teamCaseStatuses={teamCaseStatuses}
               selectedCaseForDetailsId={selectedCaseForDetailsId}
-              setSelectedCaseForDetailsId={setSelectedCaseForDetailsId}
+              setSelectedCaseForDetailsId={setSelectedCaseInHistory}
+              onCaseBack={() => navigate(-1)}
               updatingTeamCaseId={updatingTeamCaseId}
               handleUpdateTeamCaseStatus={handleUpdateTeamCaseStatus}
               handleDeleteTeamCase={handleDeleteTeamCase}
               loadTeamWorkspace={loadTeamWorkspace}
               loadLawyerNextHearings={loadLawyerNextHearings}
               activeTeamMember={activeTeamMember}
-              setSelectedTeamMemberId={setSelectedTeamMemberId}
-              onSelectTeamMember={handleSelectTeamMember}
+              setSelectedTeamMemberId={setSelectedTeamMemberInHistory}
+              onMemberBack={() => navigate(-1)}
+              onSelectTeamMember={(member) => {
+                handleSelectTeamMember(member);
+                setSelectedTeamMemberInHistory(getEntityId(member?.lawyerId || member?.id || member?._id));
+              }}
               currentLawyerId={currentLawyerId}
               teamCases={teamCases}
               canRemoveActiveTeamMember={canRemoveActiveTeamMember}
@@ -1443,6 +1495,8 @@ export default function LawyerDashboard() {
               loadSelectedMemberProfile={loadSelectedMemberProfile}
               updatingTeamRequestId={updatingTeamRequestId}
               handleTeamRequestDecision={handleTeamRequestDecision}
+              isEditingCase={searchParams.get('edit') === 'case-details'}
+              setIsEditingCase={(editing) => updateTeamRoute({ edit: editing ? 'case-details' : '' })}
             />
 
             <LawyerNoticeGeneratorModal
@@ -1587,9 +1641,6 @@ export default function LawyerDashboard() {
                       <div key={`${hearing.id}-${hearing.teamCode || 'team'}`} className="rounded-2xl border border-[#d7e9ef] bg-white p-5 flex flex-col justify-between hover:border-[#15a276]/50 shadow-sm transition-all text-[#062552]">
                         <div>
                           <div className="flex items-center justify-between gap-2">
-                            <span className="rounded-md bg-amber-50 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-amber-700 border border-amber-200">
-                              {hearing.teamName || 'No team'}
-                            </span>
                             <span className="text-xs font-semibold text-[#5f7488]">{getTeamCaseStatusLabel(hearing.status)}</span>
                           </div>
                           <h3 className="mt-3 text-lg font-bold text-[#062552] truncate">{hearing.caseTitle || 'Untitled Case'}</h3>

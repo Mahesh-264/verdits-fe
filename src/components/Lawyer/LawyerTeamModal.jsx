@@ -43,6 +43,7 @@ export default function LawyerTeamModal({
   teamCaseStatuses,
   selectedCaseForDetailsId,
   setSelectedCaseForDetailsId,
+  onCaseBack,
   updatingTeamCaseId,
   handleUpdateTeamCaseStatus,
   handleDeleteTeamCase,
@@ -50,6 +51,7 @@ export default function LawyerTeamModal({
   loadLawyerNextHearings,
   activeTeamMember,
   setSelectedTeamMemberId,
+  onMemberBack,
   onSelectTeamMember,
   teamCases,
   canRemoveActiveTeamMember,
@@ -64,6 +66,8 @@ export default function LawyerTeamModal({
   loadSelectedMemberProfile,
   updatingTeamRequestId,
   handleTeamRequestDecision,
+  isEditingCase,
+  setIsEditingCase,
 }) {
   const [memberDetailTab, setMemberDetailTab] = React.useState('cases');
   const [showTeamDetails, setShowTeamDetails] = React.useState(false);
@@ -393,7 +397,9 @@ export default function LawyerTeamModal({
                     <CaseDetailsView
                       selectedCase={selectedCase}
                       displayTeam={displayTeam}
-                      onBack={() => setSelectedCaseForDetailsId('')}
+                      onBack={onCaseBack}
+                      isEditing={isEditingCase}
+                      onEditingChange={setIsEditingCase}
                       teamCaseStatuses={teamCaseStatuses}
                       updatingTeamCaseId={updatingTeamCaseId}
                       handleUpdateTeamCaseStatus={handleUpdateTeamCaseStatus}
@@ -543,7 +549,7 @@ export default function LawyerTeamModal({
                   <div className="flex flex-col gap-3 rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
                     <button
                       type="button"
-                      onClick={() => setSelectedTeamMemberId('')}
+                      onClick={onMemberBack}
                       className="inline-flex items-center gap-2 rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-2 text-xs font-bold text-[#062552] transition hover:bg-[#eef5f8] self-start sm:self-auto"
                     >
                       <FaArrowLeft />
@@ -603,7 +609,9 @@ export default function LawyerTeamModal({
                           selectedCase={selectedCase}
                           displayTeam={displayTeam}
                           hearingLawyerId={activeTeamMember?.lawyerId}
-                          onBack={() => setSelectedCaseForDetailsId('')}
+                          onBack={onCaseBack}
+                          isEditing={isEditingCase}
+                          onEditingChange={setIsEditingCase}
                           teamCaseStatuses={teamCaseStatuses}
                           updatingTeamCaseId={updatingTeamCaseId}
                           handleUpdateTeamCaseStatus={handleUpdateTeamCaseStatus}
@@ -962,7 +970,9 @@ export default function LawyerTeamModal({
                   <CaseDetailsView
                     selectedCase={selectedCase}
                     displayTeam={displayTeam}
-                    onBack={() => setSelectedCaseForDetailsId('')}
+                    onBack={onCaseBack}
+                    isEditing={isEditingCase}
+                    onEditingChange={setIsEditingCase}
                     teamCaseStatuses={teamCaseStatuses}
                     updatingTeamCaseId={updatingTeamCaseId}
                     handleUpdateTeamCaseStatus={handleUpdateTeamCaseStatus}
