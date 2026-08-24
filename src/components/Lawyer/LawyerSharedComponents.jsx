@@ -2,32 +2,34 @@ import React, { useEffect, useState } from 'react';
 import { FaArrowLeft, FaCircle, FaTimes } from 'react-icons/fa';
 import { capitalize, formatDate, normalizeExternalUrl } from '../../utils/lawyerUtils';
 
-export function FeaturePageShell({ title, icon, onClose, children }) {
+export function FeaturePageShell({ title, icon, onClose, onBack = onClose, showClose = true, children }) {
   return (
     <div className="w-full animate-in fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-4 border-b border-[#dbe2ef]">
         <div className="flex items-center gap-4">
           <button
-            onClick={onClose}
+            onClick={onBack}
             type="button"
             className="flex items-center gap-2 rounded-xl bg-[#f1d15f] hover:bg-[#d6a400] text-zinc-950 px-4 py-2.5 text-sm font-bold transition shadow-sm cursor-pointer border border-[#d6b85b]"
           >
             <FaArrowLeft size={16} />
-            <span>Back to Dashboard</span>
+            <span>{onBack === onClose ? 'Back to Dashboard' : 'Back'}</span>
           </button>
           <div className="h-6 w-px bg-[#dbe2ef] hidden sm:block" />
           <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3 text-[#062552]">
             {icon} {title}
           </h1>
         </div>
-        <button
-          onClick={onClose}
-          type="button"
-          className="self-end sm:self-auto text-[#5f7488] hover:text-[#062552] bg-white border border-[#d7e9ef] hover:bg-gray-100 rounded-full transition p-2.5 shadow-sm cursor-pointer"
-          aria-label="Close feature page"
-        >
-          <FaTimes size={18} />
-        </button>
+        {showClose ? (
+          <button
+            onClick={onClose}
+            type="button"
+            className="self-end sm:self-auto text-[#5f7488] hover:text-[#062552] bg-white border border-[#d7e9ef] hover:bg-gray-100 rounded-full transition p-2.5 shadow-sm cursor-pointer"
+            aria-label="Close feature page"
+          >
+            <FaTimes size={18} />
+          </button>
+        ) : null}
       </div>
 
       <div className="w-full">{children}</div>

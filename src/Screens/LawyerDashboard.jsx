@@ -90,6 +90,7 @@ export default function LawyerDashboard() {
   const [activeTeamTab, setActiveTeamTab] = useState('my_cases');
   const [showTeamCaseForm, setShowTeamCaseForm] = useState(false);
   const [selectedTeamMemberId, setSelectedTeamMemberId] = useState('');
+  const [memberNavigationPath, setMemberNavigationPath] = useState([]);
   const [selectedLawyerRecord, setSelectedLawyerRecord] = useState(null);
   const [selectedLawyerCases, setSelectedLawyerCases] = useState(null);
   const [memberOwnedTeam, setMemberOwnedTeam] = useState(null);
@@ -324,6 +325,7 @@ export default function LawyerDashboard() {
     selectedTeamIdRef.current = targetId;
     setSelectedTeamIdState(targetId);
     setSelectedTeamMemberId('');
+    setMemberNavigationPath([]);
     setSelectedLawyerRecord(null);
     setSelectedLawyerCases(null);
     setMemberOwnedTeam(null);
@@ -608,11 +610,24 @@ export default function LawyerDashboard() {
     }
   };
 
-  const handleCopyTeamCode = async () => {
-    const teamCode = teamWorkspace?.teamCode;
+  const handleCopyTeamCode = async (code) => {
+    const teamCode = code || teamWorkspace?.teamCode;
     if (!teamCode) return;
     try {
-      await navigator.clipboard.writeText(teamCode);
+      if (navigator.clipboard?.writeText && window.isSecureContext) {
+        await navigator.clipboard.writeText(teamCode);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = teamCode;
+        textArea.setAttribute('readonly', '');
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        const copied = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        if (!copied) throw new Error('Clipboard access was denied');
+      }
       setTeamMessage('Team code copied.');
     } catch (error) {
       console.error('Error copying team code:', error);
@@ -1196,27 +1211,49 @@ export default function LawyerDashboard() {
   const handleSelectTeamMember = useCallback((member) => {
     const lawyerId = getEntityId(member?.lawyerId || member?.id || member?._id);
     if (!lawyerId) return;
-    setSelectedLawyerRecord({
+    const selectedMember = {
       ...member,
       id: String(member.id || member._id || lawyerId),
       lawyerId,
       name: String(member.name || '').replace(/\s*\(you\)$/i, '').trim(),
       roleLabel: member.role === 'owner' ? 'Team Owner' : (member.roleLabel || 'Team Member'),
+    };
+    setSelectedLawyerRecord(selectedMember);
+    setMemberNavigationPath((currentPath) => {
+      if (!selectedTeamMemberId) return [selectedMember];
+      const currentIndex = currentPath.findIndex((item) => isSameId(item.lawyerId || item.id, selectedTeamMemberId));
+      const pathToCurrentMember = currentIndex >= 0 ? currentPath.slice(0, currentIndex + 1) : currentPath;
+      if (pathToCurrentMember.some((item) => isSameId(item.lawyerId || item.id, lawyerId))) return pathToCurrentMember;
+      return [...pathToCurrentMember, selectedMember];
     });
     setSelectedLawyerCases(null);
     setMemberOwnedTeam(null);
     setMemberOwnedTeamError('');
     setSelectedCaseForDetailsId('');
     setSelectedTeamMemberId(String(lawyerId));
-  }, []);
+  }, [selectedTeamMemberId]);
 
   const activeTeamMember = useMemo(() => {
     if (!selectedTeamMemberId) return null;
     return visibleTeamDirectory.find((m) => 
       String(m.id) === String(selectedTeamMemberId) || 
       isSameId(m.id || m.lawyerId, selectedTeamMemberId)
-    ) || selectedLawyerRecord || null;
-  }, [selectedLawyerRecord, selectedTeamMemberId, visibleTeamDirectory]);
+    ) || memberNavigationPath.find((member) => isSameId(member.lawyerId || member.id, selectedTeamMemberId)) || selectedLawyerRecord || null;
+  }, [memberNavigationPath, selectedLawyerRecord, selectedTeamMemberId, visibleTeamDirectory]);
+
+  // Keep the displayed breadcrumb aligned with browser/device Back navigation.
+  // Going back from a junior member therefore restores their immediate senior
+  // member instead of returning directly to the team directory.
+  useEffect(() => {
+    if (!selectedTeamMemberId) {
+      setMemberNavigationPath([]);
+      return;
+    }
+    setMemberNavigationPath((currentPath) => {
+      const selectedIndex = currentPath.findIndex((member) => isSameId(member.lawyerId || member.id, selectedTeamMemberId));
+      return selectedIndex >= 0 ? currentPath.slice(0, selectedIndex + 1) : currentPath;
+    });
+  }, [selectedTeamMemberId]);
 
   const activeTeamMemberId = activeTeamMember ? getEntityId(activeTeamMember.lawyerId || activeTeamMember.id) : '';
 
@@ -1428,11 +1465,12 @@ export default function LawyerDashboard() {
             <LawyerTeamModal
               show={showTeamModal}
               onClose={closeAllFeatures}
+              onBack={() => navigate(-1)}
               hasTeam={hasTeam}
               displayIsTeamOwner={displayIsTeamOwner}
               displayTeam={displayTeam}
               teamSize={teamSize}
-              handleCopyTeamCode={handleCopyTeamCode}
+              handleCopyTeamCode={() => handleCopyTeamCode(displayTeam.teamCode)}
               handleDeleteTeam={handleDeleteTeam}
               deletingTeam={deletingTeam}
               teamWorkspaceLoading={teamWorkspaceLoading}
@@ -1473,8 +1511,7 @@ export default function LawyerDashboard() {
               loadTeamWorkspace={loadTeamWorkspace}
               loadLawyerNextHearings={loadLawyerNextHearings}
               activeTeamMember={activeTeamMember}
-              setSelectedTeamMemberId={setSelectedTeamMemberInHistory}
-              onMemberBack={() => navigate(-1)}
+              memberNavigationPath={memberNavigationPath}
               onSelectTeamMember={(member) => {
                 handleSelectTeamMember(member);
                 setSelectedTeamMemberInHistory(getEntityId(member?.lawyerId || member?.id || member?._id));

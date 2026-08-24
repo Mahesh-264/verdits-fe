@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaArrowLeft, FaBriefcase, FaCheck, FaPlus, FaTimes, FaTrash } from 'react-icons/fa';
+import { FaBriefcase, FaCheck, FaPlus, FaTimes, FaTrash } from 'react-icons/fa';
 import { Copy, KeyRound, UserPlus, Users } from 'lucide-react';
 import CaseDetailsView from './CaseDetailsView';
 import { EmptyBlock, ModalShell } from './LawyerSharedComponents';
@@ -8,6 +8,7 @@ import { formatDate, getEntityId, getTeamCaseStatusLabel } from '../../utils/law
 export default function LawyerTeamModal({
   show,
   onClose,
+  onBack,
   hasTeam,
   displayIsTeamOwner,
   displayTeam,
@@ -50,8 +51,7 @@ export default function LawyerTeamModal({
   loadTeamWorkspace,
   loadLawyerNextHearings,
   activeTeamMember,
-  setSelectedTeamMemberId,
-  onMemberBack,
+  memberNavigationPath,
   onSelectTeamMember,
   teamCases,
   canRemoveActiveTeamMember,
@@ -98,10 +98,14 @@ export default function LawyerTeamModal({
       title="My Team"
       icon={<Users className="h-6 w-6 text-[#15a276]" />}
       onClose={onClose}
+      onBack={onBack}
+      showClose={false}
     >
       <div className="lawyer-team-workspace text-[#062552]">
         {hasTeam ? (
           <div className="space-y-5">
+            {!activeTeamMember ? (
+              <>
             <div className="border-b border-[#d7e9ef] pb-5">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
@@ -258,6 +262,8 @@ export default function LawyerTeamModal({
               </button>
 
             </div> : null}
+              </>
+            ) : null}
 
             {/* My Cases Tab View */}
             {currentActiveTeamTab === 'my_cases' ? (
@@ -546,36 +552,20 @@ export default function LawyerTeamModal({
                 </div>
               ) : (
                 <div className="space-y-5">
-                  <div className="flex flex-col gap-3 rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-                    <button
-                      type="button"
-                      onClick={onMemberBack}
-                      className="inline-flex items-center gap-2 rounded-xl border border-[#d7e9ef] bg-[#f8fbfc] px-4 py-2 text-xs font-bold text-[#062552] transition hover:bg-[#eef5f8] self-start sm:self-auto"
-                    >
-                      <FaArrowLeft />
-                      Back to Team Directory
-                    </button>
-
-                    <div className="flex items-center gap-3">
-                      {canRemoveActiveTeamMember ? (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTeamMember(activeTeamMember)}
-                          disabled={removingTeamMemberId === activeTeamMemberId}
-                          className="inline-flex items-center justify-center rounded-xl border border-red-200 bg-red-50 px-3.5 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {removingTeamMemberId === activeTeamMemberId ? 'Removing...' : 'Remove Member'}
-                        </button>
-                      ) : null}
-                      <span className="rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-3 py-1 text-xs font-bold text-[#5f7488]">
-                        {activeTeamMemberCases.length} {activeTeamMemberCases.length === 1 ? 'case' : 'cases'}
-                      </span>
-                    </div>
-                  </div>
-
                   <div className="rounded-2xl border border-[#d7e9ef] bg-white p-6 shadow-sm">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
+                        <p className="mb-3 flex flex-wrap items-center gap-1.5 text-xs font-semibold text-[#5f7488]" aria-label="Team member navigation path">
+                          <span className="text-[#15a276]">You</span>
+                          {(memberNavigationPath?.length ? memberNavigationPath : [activeTeamMember]).map((member, index) => (
+                            <React.Fragment key={member.lawyerId || member.id || index}>
+                              <span className="text-[#a8bac5]">›</span>
+                              <span className={index === (memberNavigationPath?.length ? memberNavigationPath.length : 1) - 1 ? 'font-bold text-[#062552]' : ''}>
+                                {member.name || 'Lawyer'}
+                              </span>
+                            </React.Fragment>
+                          ))}
+                        </p>
                         <div className="flex items-center gap-3">
                           <h3 className="text-xl font-bold text-[#062552]">{activeTeamMember.name || 'Lawyer'}</h3>
                           <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
@@ -585,6 +575,21 @@ export default function LawyerTeamModal({
                         <p className="mt-1 text-sm text-[#5f7488]">
                           Email: {activeTeamMember.email || 'Not shared'} | Phone: {activeTeamMember.phone || 'Not shared'}
                         </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {canRemoveActiveTeamMember ? (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTeamMember(activeTeamMember)}
+                            disabled={removingTeamMemberId === activeTeamMemberId}
+                            className="inline-flex items-center justify-center rounded-xl border border-red-200 bg-red-50 px-3.5 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {removingTeamMemberId === activeTeamMemberId ? 'Removing...' : 'Remove Member'}
+                          </button>
+                        ) : null}
+                        <span className="rounded-full border border-[#d7e9ef] bg-[#f8fbfc] px-3 py-1 text-xs font-bold text-[#5f7488]">
+                          {activeTeamMemberCases.length} {activeTeamMemberCases.length === 1 ? 'case' : 'cases'}
+                        </span>
                       </div>
                     </div>
                   </div>
