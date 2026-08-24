@@ -48,6 +48,26 @@ body {
   color: var(--verdicts-ink);
 }
 
+/* User-entered values such as emails, URLs, file names, and long names must
+   remain inside their cards instead of creating horizontal overflow. */
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+span,
+a,
+li,
+dd,
+td,
+th,
+label,
+button {
+  overflow-wrap: anywhere;
+}
+
 #root {
   min-height: 100vh;
   background: transparent;

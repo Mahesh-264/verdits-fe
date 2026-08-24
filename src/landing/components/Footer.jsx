@@ -44,7 +44,6 @@ export default function Footer() {
               ))}
             </div>
           </div>
-
           <FooterColumn title="Quick Links" items={quickLinks} />
           <FooterColumn
             title="Resources"

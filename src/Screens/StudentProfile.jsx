@@ -262,7 +262,7 @@ export default function StudentProfile() {
         <section className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 md:p-8 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-              <div className="flex items-start gap-5">
+              <div className="flex min-w-0 items-start gap-5">
                 {profileUser?.profileImage ? (
                   <img
                     src={profileUser.profileImage}
@@ -274,7 +274,7 @@ export default function StudentProfile() {
                     {studentName.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <div>
+                <div className="min-w-0">
                   <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-[#0b1f44]">{studentName}</h1>
                   <div className="mt-3 space-y-2 text-[17px] text-[#44516d]">
                     <div className="flex items-center gap-2">
@@ -305,7 +305,7 @@ export default function StudentProfile() {
         </section>
 
         <div className="grid grid-cols-1 xl:grid-cols-[340px_minmax(0,1fr)] gap-8">
-          <div className="space-y-8">
+          <div className="min-w-0 space-y-8">
             <section className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-[22px] font-semibold">Specialization</h2>
@@ -407,7 +407,7 @@ export default function StudentProfile() {
 
           </div>
 
-          <div className="space-y-8">
+          <div className="min-w-0 space-y-8">
             <section className="rounded-[28px] border border-[#dbe2ef] bg-white p-6 md:p-8 shadow-[0_2px_12px_rgba(11,31,68,0.04)]">
               <div className="flex items-center justify-between gap-4">
                 <div>
