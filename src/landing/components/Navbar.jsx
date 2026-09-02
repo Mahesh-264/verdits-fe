@@ -94,7 +94,7 @@ export default function Navbar() {
 
           <div className="hidden items-center gap-3 lg:flex">
             <Link
-              to="/role-selection"
+              to="/login?role=lawyer"
               className="rounded-full border border-verdits-line bg-white px-5 py-2.5 text-sm font-semibold text-verdits-navy transition hover:border-verdits-teal hover:bg-verdits-mint"
             >
               Login
@@ -131,7 +131,7 @@ export default function Navbar() {
             </div>
             <div className="mt-3 grid gap-3">
               <Link
-                to="/role-selection"
+                to="/login?role=lawyer"
                 onClick={() => setOpen(false)}
                 className="rounded-xl border border-verdits-line px-4 py-3 text-center text-sm font-semibold text-verdits-navy"
               >

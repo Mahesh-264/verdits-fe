@@ -9,7 +9,7 @@ const quickLinks = [
   ['Services', '/services'],
   ['How We Work', '/#how-we-work'],
   ['Contact Us', '/contact'],
-  ['Login', '/role-selection'],
+  ['Login', '/login?role=lawyer'],
 ];
 
 const socialLinks = [

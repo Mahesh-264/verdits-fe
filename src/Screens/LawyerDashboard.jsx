@@ -1610,7 +1610,7 @@ export default function LawyerDashboard() {
                 <div
                   key={idx}
                   onClick={card.onClick}
-                  className="lawyer-dashboard-card group bg-white border border-[#d7e9ef] hover:border-[#15a276] rounded-2xl p-6 transition-all duration-300 hover:shadow-xl cursor-pointer flex flex-col relative overflow-hidden"
+                  className="lawyer-dashboard-card group bg-white border border-[#d7e9ef] hover:border-[#15a276] rounded-2xl p-4 md:p-6 transition-all duration-300 hover:shadow-xl cursor-pointer flex flex-col relative overflow-hidden"
                 >
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-14 h-14 rounded-full bg-[#f8fbfc] border border-[#d7e9ef] flex items-center justify-center group-hover:bg-[#e8f7f2] group-hover:border-[#15a276]/30 transition-colors shrink-0">
@@ -1622,7 +1622,12 @@ export default function LawyerDashboard() {
                       </span>
                     )}
                   </div>
-                  <h2 className="mb-2 text-lg font-bold leading-tight text-[#062552]">{card.title}</h2>
+                  <h2
+                    className="mb-2 text-base font-bold leading-tight text-[#062552]"
+                    style={{ overflowWrap: 'normal', wordBreak: 'normal' }}
+                  >
+                    {card.title}
+                  </h2>
                   <p className="break-words text-sm leading-relaxed text-[#5f7488]">{card.desc}</p>
                 </div>
               ))}

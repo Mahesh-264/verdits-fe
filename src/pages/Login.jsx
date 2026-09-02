@@ -29,7 +29,7 @@ const getPasswordErrorMessage = (value) => {
 
 export default function Login() {
     const [searchParams] = useSearchParams();
-    const role = searchParams.get('role') || 'user';
+    const role = searchParams.get('role') || 'lawyer';
     
     // States for All users
     const [email, setEmail] = useState('');
