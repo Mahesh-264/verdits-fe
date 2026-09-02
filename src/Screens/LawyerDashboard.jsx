@@ -365,7 +365,7 @@ export default function LawyerDashboard() {
         selectedTeamIdRef.current = String(requestedTeamId);
         setSelectedTeamIdState(String(requestedTeamId));
       }
-      setTeamMode(requestedMode === 'join' ? 'join' : 'overview');
+      setTeamMode(['create', 'join'].includes(requestedMode) ? requestedMode : 'overview');
       setActiveTeamTab(searchParams.get('teamTab') || 'my_cases');
       setShowTeamCaseForm(searchParams.get('teamForm') === 'add-case');
       setSelectedTeamMemberId(searchParams.get('memberId') || '');
@@ -567,7 +567,7 @@ export default function LawyerDashboard() {
       };
       const { data } = await api.post('/teams', payload);
       if (data?.user) dispatch(updateUser(data.user));
-      setTeamMode('overview');
+      setTeamModeInHistory('overview');
       setTeamMessage(`Team created. Code: ${data?.team?.teamCode || ''}`);
       const teams = Array.isArray(data?.teams) ? data.teams : data?.team ? [data.team] : [];
       setTeamWorkspaces(teams);
@@ -594,7 +594,7 @@ export default function LawyerDashboard() {
         return;
       }
       if (data?.user) dispatch(updateUser(data.user));
-      setTeamMode('overview');
+      setTeamModeInHistory('overview');
       setJoinTeamForm(initialJoinTeamForm);
       setTeamMessage('Team joined successfully.');
       const workspaceResponse = await api.get('/teams/workspace');
@@ -1339,7 +1339,7 @@ export default function LawyerDashboard() {
 
   const closeAllFeatures = () => {
     if (searchParams.get('section') === 'team') {
-      navigate(-1);
+      setSearchParams({}, { replace: true });
       return;
     }
     setShowAppointmentsModal(false);
@@ -1451,7 +1451,7 @@ export default function LawyerDashboard() {
             <LawyerTeamModal
               show={showTeamModal}
               onClose={closeAllFeatures}
-              onBack={() => navigate(-1)}
+              onBack={closeAllFeatures}
               hasTeam={hasTeam}
               displayIsTeamOwner={displayIsTeamOwner}
               displayTeam={displayTeam}
@@ -1469,6 +1469,8 @@ export default function LawyerDashboard() {
               setTeamMode={setTeamModeInHistory}
               setTeamError={setTeamError}
               setTeamMessage={setTeamMessage}
+              teamError={teamError}
+              teamMessage={teamMessage}
               createTeamForm={createTeamForm}
               handleCreateTeamInput={handleCreateTeamInput}
               handleCreateTeam={handleCreateTeam}
