@@ -102,7 +102,7 @@ export default function Contact() {
           <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-verdits-text">
             Whether you need legal support, a consultation, or access to internships and mentorship, Verdits is here for you.
           </p>
-          <Link to="/role-selection" className="button-gradient mt-8 inline-flex rounded-full px-7 py-3 text-base font-semibold">
+          <Link to="/login?role=lawyer" className="button-gradient mt-8 inline-flex rounded-full px-7 py-3 text-base font-semibold">
             Book Now
           </Link>
         </div>

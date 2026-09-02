@@ -27,7 +27,7 @@ export default function Hero() {
           </p>
           <div className="mt-9 flex flex-col gap-4 sm:flex-row">
             <Link
-              to="/role-selection"
+              to="/login?role=lawyer"
               className="button-gradient inline-flex items-center justify-center gap-2 rounded-full px-7 py-4 text-base font-semibold"
             >
               Get Started

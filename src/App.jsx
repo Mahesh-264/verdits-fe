@@ -18,7 +18,6 @@ import PendingApproval from './pages/PendingApproval.jsx';
 // Existing Pages
 import Chat from './pages/Chat.jsx';
 
-import LandingPage from './LandingPage.jsx';
 import MarketingSite from './landing/MarketingSite.jsx';
 import UserHome from './Screens/UserHome.jsx';
 import CaseSelection from './Screens/CaseSelection.jsx';
@@ -123,7 +122,7 @@ export default function App() {
         dispatch(logout());
         window.localStorage.clear();
         window.sessionStorage.clear();
-        window.location.replace('/role-selection');
+        window.location.replace('/');
       }
     };
     window.addEventListener('storage', syncLogout);
@@ -259,7 +258,7 @@ export default function App() {
           </ProtectedRoute>
         } />
 
-        <Route path="/role-selection" element={<LandingPage />} />
+        <Route path="/role-selection" element={<Navigate to="/login?role=lawyer" replace />} />
         {/* --- Global Redirects --- */}
         <Route path="/*" element={<MarketingSite />} />
         <Route path="*" element={<Navigate to="/" />} />

@@ -4,9 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   FaBriefcase,
   FaCalendarPlus,
-  FaFileSignature,
   FaGavel,
-  FaUserGraduate,
 } from 'react-icons/fa';
 import { Users } from 'lucide-react';
 import api from '../api/axios';
@@ -1371,12 +1369,6 @@ export default function LawyerDashboard() {
       onClick: () => openFeature('hearings'),
     },
     {
-      title: 'Notice Generator',
-      icon: <FaFileSignature className="text-2xl text-[#15a276]" />,
-      desc: 'Quickly draft and send legal notices to parties.',
-      onClick: () => openFeature('notice-generator'),
-    },
-    {
       title: 'My Clients',
       badge: clientCount > 0 ? clientCount : null,
       icon: <FaBriefcase className="text-2xl text-[#062552]" />,
@@ -1398,12 +1390,6 @@ export default function LawyerDashboard() {
         setTeamMessage('');
         openFeature('team');
       },
-    },
-    {
-      title: 'Student Interaction',
-      icon: <FaUserGraduate className="text-2xl text-cyan-400" />,
-      desc: 'Publish internships and jam sessions for students.',
-      onClick: () => openFeature('student-interactions'),
     },
   ];
 
@@ -1605,7 +1591,7 @@ export default function LawyerDashboard() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-6 lg:grid-cols-3 xl:grid-cols-6">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-6 lg:grid-cols-4">
               {cards.map((card, idx) => (
                 <div
                   key={idx}

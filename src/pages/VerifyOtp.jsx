@@ -102,8 +102,8 @@ export default function VerifyOtp() {
         <p className="mt-2 text-center text-sm text-[#5f7488]">
           Enter the 6-digit code sent to <span className="font-semibold text-[#062552]">{email}</span>
         </p>
-        <Link to="/role-selection" className="mt-6 inline-flex text-sm font-semibold text-[#15a276] hover:underline">
-          &larr; Back to Role Selection
+        <Link to="/" className="mt-6 inline-flex text-sm font-semibold text-[#15a276] hover:underline">
+          &larr; Back to website
         </Link>
 
         <form onSubmit={handleSubmit} className="mt-8">

@@ -22,6 +22,6 @@ export default function useSessionLogout() {
     window.localStorage.setItem('auth:logout', String(Date.now()));
     window.localStorage.clear();
     window.sessionStorage.clear();
-    window.location.replace('/role-selection');
+    window.location.replace('/');
   }, [dispatch]);
 }
