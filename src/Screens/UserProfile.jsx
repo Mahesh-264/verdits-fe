@@ -139,10 +139,7 @@ const UserProfile = () => {
       setLoading(true);
 
       const payload = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
         age: formData.age,
-        gender: formData.gender,
         email: formData.email,
         address: {
           city: formData.city,
@@ -155,7 +152,6 @@ const UserProfile = () => {
 
       if (isLawyer) {
         payload.lawyerProfile = {
-          barId: formData.barId,
           specialization: formData.specialization,
           experienceYears: formData.experienceYears,
           languages: formData.languages,
@@ -163,6 +159,10 @@ const UserProfile = () => {
           about: formData.about,
           isOnline: formData.isOnline,
         };
+      } else {
+        payload.firstName = formData.firstName;
+        payload.lastName = formData.lastName;
+        payload.gender = formData.gender;
       }
 
       const response = await api.put('/auth/update-profile', payload);
@@ -248,10 +248,10 @@ const UserProfile = () => {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          {renderField({ icon: User, label: 'First Name', name: 'firstName', value: formData.firstName })}
-          {renderField({ icon: User, label: 'Last Name', name: 'lastName', value: formData.lastName })}
+          {renderField({ icon: User, label: 'First Name', name: 'firstName', value: formData.firstName, readOnly: isLawyer })}
+          {renderField({ icon: User, label: 'Last Name', name: 'lastName', value: formData.lastName, readOnly: isLawyer })}
           {renderField({ icon: Calendar, label: 'Age', name: 'age', value: formData.age, type: 'number' })}
-          {renderField({ icon: User, label: 'Gender', name: 'gender', value: formData.gender })}
+          {renderField({ icon: User, label: 'Gender', name: 'gender', value: formData.gender, readOnly: isLawyer })}
           {renderField({ icon: Mail, label: 'Email', name: 'email', value: formData.email, type: 'email' })}
           {renderField({ icon: Phone, label: 'Phone', name: 'phone', value: formData.phone, readOnly: true })}
           {renderField({ icon: MapPin, label: 'City', name: 'city', value: formData.city })}
@@ -355,7 +355,7 @@ const UserProfile = () => {
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
-              {renderField({ icon: User, label: 'Bar ID', name: 'barId', value: formData.barId })}
+              {renderField({ icon: User, label: 'Bar ID', name: 'barId', value: formData.barId, readOnly: true })}
               {renderField({ icon: User, label: 'Specialization', name: 'specialization', value: formData.specialization })}
               {renderField({ icon: Calendar, label: 'Experience (years)', name: 'experienceYears', value: formData.experienceYears, type: 'number' })}
               {renderField({ icon: User, label: 'Languages', name: 'languages', value: formData.languages })}

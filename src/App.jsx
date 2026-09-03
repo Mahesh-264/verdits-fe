@@ -41,8 +41,9 @@ const DashboardHub = () => {
   if (user.role === 'admin') return <Navigate to="/admin-dash" />;
 
   if (user.role === 'lawyer') {
-    const isApproved = user.accountStatus === 'active' && user.lawyerProfile?.isVerified === true;
-    if (!isApproved) {
+    // Account status controls access. `isVerified` is a profile/display flag
+    // and must never send an active lawyer to the registration-only portal.
+    if (user.accountStatus !== 'active') {
       return <Navigate to="/pending-approval" replace />;
     }
     return <Navigate to="/lawyer-dash" />;
@@ -64,7 +65,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   if (
     user?.role === 'lawyer' &&
     location.pathname !== '/pending-approval' &&
-    (user?.accountStatus !== 'active' || user?.lawyerProfile?.isVerified === false)
+    user?.accountStatus !== 'active'
   ) {
     return <Navigate to="/pending-approval" replace />;
   }

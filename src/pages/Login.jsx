@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { setAuth, setLoading } from '../redux/authSlice';
+import { logout, setAuth, setLoading } from '../redux/authSlice';
 import { useNavigate, Link, useLocation, useSearchParams } from 'react-router-dom';
 import { authenticateWithGoogle, loginAccount } from '../api/authApi.js';
 import { storeAuthSession } from '../utils/authStorage';
@@ -91,6 +91,15 @@ export default function Login() {
                 password,
                 role,
             });
+            if (data.verificationToken && data.user?.role === 'lawyer') {
+                // Pending applications intentionally do not receive a product
+                // session. Replace any previous browser state before storing
+                // this lawyer-specific status token.
+                dispatch(logout());
+                window.sessionStorage.setItem('lawyerVerificationToken', data.verificationToken);
+                navigate('/pending-approval', { replace: true });
+                return;
+            }
             storeAuthSession(data, remember);
             dispatch(setAuth(data.user));
             connectSocket(data.accessToken);
