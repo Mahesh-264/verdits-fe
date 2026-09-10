@@ -82,6 +82,10 @@ const isValidMobile = (value) => /^\+?[0-9]{10,15}$/.test(normalizePhoneInput(va
 const isValidPassword = (value) => /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(String(value || ''));
 const PASSWORD_REQUIREMENTS_MESSAGE = 'Password must include at least 1 capital letter, 1 special character, and 1 number.';
 
+const AVAILABLE_LANGUAGES = [
+    'English', 'Hindi', 'Bengali', 'Telugu', 'Marathi', 'Tamil', 'Urdu', 'Gujarati', 'Kannada', 'Odia', 'Malayalam', 'Punjabi', 'Assamese', 'Maithili', 'Santali', 'Kashmiri'
+];
+
 export default function Register() {
     const [searchParams] = useSearchParams();
     const role = searchParams.get('role') || 'user';
@@ -94,7 +98,9 @@ export default function Register() {
     const lastGeocodedSignatureRef = useRef('');
     const pincodeLookupRequestRef = useRef(0);
     const geocodeRequestRef = useRef(0);
+    const languageDropdownRef = useRef(null);
 
+    const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
     const [loadingAddr, setLoadingAddr] = useState(false);
     const [locationHint, setLocationHint] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -160,6 +166,16 @@ export default function Register() {
         const timer = window.setTimeout(() => setEmailResendSeconds((seconds) => Math.max(seconds - 1, 0)), 1000);
         return () => window.clearTimeout(timer);
     }, [emailResendSeconds]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (languageDropdownRef.current && !languageDropdownRef.current.contains(event.target)) {
+                setShowLanguageDropdown(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const syncResolvedAddress = useCallback((resolvedAddress, hint = '') => {
         const normalizedAddress = normalizeAddressPayload(resolvedAddress);
@@ -799,13 +815,41 @@ export default function Register() {
                                 className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none"
                                 onChange={(event) => setFormData({ ...formData, specialization: event.target.value })}
                             />
-                            <input
-                                type="text"
-                                placeholder="Languages Known (comma separated)"
-                                required
-                                className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus:border-[#15a276] outline-none"
-                                onChange={(event) => setFormData({ ...formData, languages: event.target.value })}
-                            />
+                            <div className="relative" ref={languageDropdownRef}>
+                                <div
+                                    className="bg-[#f7fbfc] p-3 rounded-xl border border-[#d7e9ef] focus-within:border-[#15a276] outline-none cursor-pointer flex justify-between items-center h-full min-h-[50px]"
+                                    onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+                                >
+                                    <span className={formData.languages ? "text-zinc-950 truncate" : "text-gray-400 truncate"}>
+                                        {formData.languages ? formData.languages.split(',').join(', ') : "Languages Known"}
+                                    </span>
+                                    <span className="text-gray-400 ml-2">&#9662;</span>
+                                </div>
+                                {showLanguageDropdown && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-[#d7e9ef] rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                                        {AVAILABLE_LANGUAGES.map((lang) => (
+                                            <label key={lang} className="flex items-center p-3 hover:bg-[#f7fbfc] cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    className="mr-3 accent-[#15a276] w-4 h-4 cursor-pointer"
+                                                    checked={formData.languages.split(',').includes(lang)}
+                                                    onChange={() => {
+                                                        const currentLanguages = formData.languages ? formData.languages.split(',').filter(Boolean) : [];
+                                                        let nextLanguages;
+                                                        if (currentLanguages.includes(lang)) {
+                                                            nextLanguages = currentLanguages.filter(l => l !== lang);
+                                                        } else {
+                                                            nextLanguages = [...currentLanguages, lang];
+                                                        }
+                                                        setFormData({ ...formData, languages: nextLanguages.join(',') });
+                                                    }}
+                                                />
+                                                <span className="text-sm font-medium text-[#062552]">{lang}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                             <input
                                 type="number"
                                 placeholder="Experience (Years)"
