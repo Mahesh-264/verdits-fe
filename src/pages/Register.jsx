@@ -778,6 +778,9 @@ export default function Register() {
                                 {showConfirmPassword ? 'Hide' : 'View'}
                             </button>
                         )}
+                        {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                            <p className="mt-2 text-sm text-red-600">Passwords do not match.</p>
+                        )}
                     </div>
 
                     {role === 'lawyer' && (
