@@ -2,6 +2,7 @@ import React from 'react';
 import { FaGavel } from 'react-icons/fa';
 import { EmptyBlock, ModalShell } from './LawyerSharedComponents';
 import { formatDate, formatHearingTime, getTeamCaseStatusLabel } from '../../utils/lawyerUtils';
+import LawyerHearingsCalendar from './LawyerHearingsCalendar';
 
 export default function LawyerNextHearingsModal({
   show,
@@ -15,6 +16,8 @@ export default function LawyerNextHearingsModal({
   ownHearings,
   onRefresh,
 }) {
+  const [viewMode, setViewMode] = React.useState('list');
+
   React.useEffect(() => {
     if (show && typeof onRefresh === 'function') {
       onRefresh();
@@ -56,18 +59,37 @@ export default function LawyerNextHearingsModal({
         </div>
 
         <div className="rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm">
-          <h3 className="text-lg font-bold text-[#062552]">My Upcoming Hearings</h3>
-          <p className="mt-1 text-sm text-[#5f7488]">
-            Upcoming hearings from cases added by you across all your teams and firms.
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-[#062552]">My Upcoming Hearings</h3>
+              <p className="mt-1 text-sm text-[#5f7488]">
+                Upcoming hearings from cases added by you across all your teams and firms.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setViewMode(prev => prev === 'list' ? 'calendar' : 'list')}
+              className="shrink-0 rounded-xl bg-white border border-[#d7e9ef] hover:bg-gray-50 px-4 py-2.5 text-sm font-bold text-[#062552] transition shadow-sm flex items-center gap-2 cursor-pointer"
+            >
+              {viewMode === 'list' ? (
+                <>📅 View Calendar</>
+              ) : (
+                <>📋 View List</>
+              )}
+            </button>
+          </div>
         </div>
 
         {hearingsLoading ? (
           <EmptyBlock icon={<FaGavel size={24} />} message="Loading hearings..." />
         ) : ownHearings.length === 0 ? (
           <EmptyBlock icon={<FaGavel size={24} />} message="No upcoming hearings from your cases yet." />
+        ) : viewMode === 'calendar' ? (
+          <div className="animate-in fade-in">
+            <LawyerHearingsCalendar hearings={ownHearings} />
+          </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-4 animate-in fade-in">
             {ownHearings.map((hearing) => (
               <div key={`${hearing.id}-${hearing.teamCode || 'team'}`} className="rounded-2xl border border-[#d7e9ef] bg-white p-5 shadow-sm hover:border-[#15a276]/50 transition-all text-[#062552]">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
